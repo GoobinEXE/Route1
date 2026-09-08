@@ -141,7 +141,52 @@ pytest -q
 
 A janela do app abre automaticamente. Feche a janela para encerrar.
 
-**Aviso:** use um cartão SD de teste. O app não escreve na NAND do DSi, mas binários incorretos no cartão podem brickar o console se instalados via Unlaunch.
+Use sempre um **cartão SD de teste** na primeira utilização. Detalhes de risco e responsabilidade estão em [Aviso legal / Termos de uso](#aviso-legal--termos-de-uso).
+
+---
+
+## Aviso legal / Termos de uso
+
+Este software é oferecido **“como está” (AS IS)**, **sem garantias** de qualquer tipo — expressas ou implícitas — incluindo, sem limitação, comercialização, adequação a um fim específico e não violação. Na máxima extensão permitida pela lei aplicável, os autores e contribuidores **não respondem** por danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos (perda de dados, dano a hardware, impossibilidade de uso do console, etc.) decorrentes do uso ou da impossibilidade de uso do Route 1 Kit.
+
+Ao usar o app, você assume **toda a responsabilidade** pelas operações no cartão SD e pelas ações subsequentes na consola (incluindo instalação de Unlaunch ou outro software).
+
+### Risco de brick e papel do app
+
+- O Route 1 Kit **prepara ficheiros no cartão SD**. **Não grava na NAND** do Nintendo DSi por si só.
+- O **Unlaunch** (e fluxos semelhantes), quando executados **na consola**, **escrevem na NAND**. Há um **risco real, ainda que pequeno, de brick** (consola inutilizável). Só avance se tiver **backup da NAND** e compreender o guia oficial ([dsi.cfw.guide](https://dsi.cfw.guide/)).
+- Binários incorretos, incompletos ou de origem não verificada no cartão podem causar falhas graves se forem instalados via Unlaunch ou outros instaladores.
+- A UI do assistente reforça estes avisos nas etapas críticas; leia-os antes de continuar.
+
+### Afiliação e marcas
+
+O Route 1 Kit **não é afiliado, endossado ou patrocinado** pela Nintendo Co., Ltd. nem pelas respetivas subsidiárias. **Nintendo**, **DSi** e demais marcas relacionadas são propriedade dos seus titulares. Nomes de flashcards (GEi, AceKard, R4, etc.) e de projetos homebrew são usados apenas para identificação; pertencem aos respetivos donos.
+
+### Licença do código deste repositório
+
+O **código-fonte do Route 1 Kit** (Python, HTML/CSS/JS da UI embutida, scripts e documentação deste repositório, salvo indicação em contrário) está licenciado sob a **GNU General Public License versão 3** — ver [`LICENSE`](LICENSE).
+
+### Componentes descarregados (terceiros)
+
+Durante o uso, o app pode **descarregar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++). Esses componentes:
+
+- mantêm as **licenças, autores e termos dos projetos originais**;
+- **não** são “relicenciados” sob a GPL-3.0 do Route 1 Kit só por serem descarregados ou copiados para o SD;
+- são obtidos de URLs documentadas em `core/cache.py`, com verificação **SHA-256 pinada** (integridade, não uma garantia de isenção de risco).
+
+Respeite as licenças e créditos de cada projeto ao redistribuir ou modificar esses ficheiros fora do fluxo do app.
+
+### ROMs, dumps e conteúdo no cartão
+
+O organizador de ROMs **não fornece** jogos, ROMs nem dumps protegidos por direitos de autor. Apenas reorganiza ficheiros que **você** coloca no cartão. É **sua responsabilidade** garantir que possui o direito legal de possuir e usar esse conteúdo na sua jurisdição.
+
+### Formatação e unidades
+
+A formatação **FAT32** **apaga todos os dados** do volume selecionado. O app tenta restringir operações a volumes **removíveis / USB / SD** reconhecidos; ainda assim, confirme sempre a unidade correta. Erros de seleção ou limitações do sistema operativo podem ter consequências graves.
+
+### Segurança
+
+Para reportar vulnerabilidades de segurança, consulte [`SECURITY.md`](SECURITY.md).
 
 ---
 
