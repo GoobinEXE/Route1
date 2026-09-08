@@ -10,7 +10,7 @@ A interface abre numa **janela nativa** (via [pywebview](https://pywebview.flowr
 
 ---
 
-## Descarregar (release 1.0.1)
+## Descarregar (release 1.0.2)
 
 Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releases).
 

@@ -82,7 +82,8 @@ jobs:
     name: GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Publica mesmo se um SO falhar, desde que existam artefactos.
+    if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result != 'cancelled'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -92,9 +93,14 @@ jobs:
         with:
           path: release_download
           merge-multiple: true
+          pattern: route1kit-*
 
-      - name: List artefacts
-        run: find release_download -type f -print
+      - name: Require at least one artefact
+        run: |
+          count=$(find release_download -type f 2>/dev/null | wc -l | tr -d ' ')
+          echo "Ficheiros: ${count}"
+          find release_download -type f -print || true
+          test "$count" -gt 0
 
       - name: Create / update release
         uses: softprops/action-gh-release@v2
@@ -104,7 +110,7 @@ jobs:
           body: |
             ## Route 1 Kit ${{ github.ref_name }}
 
-            Primeira release pública com builds **portátil** e **instalável**.
+            Builds **portátil** e **instalável**.
 
             ### Downloads
 

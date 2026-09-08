@@ -7,6 +7,13 @@ e este projeto adere a [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Unreleased]
 
+## [1.0.2] — 2026-09-08
+
+### Corrigido
+
+- Spec PyInstaller só importa `BUNDLE` no macOS (quebrava o build Windows)
+- Script Windows usa `cygpath` para o ZIP; workflow publica artefactos mesmo se um SO falhar
+
 ## [1.0.1] — 2026-09-08
 
 ### Corrigido

@@ -5,7 +5,6 @@ import os
 import sys
 
 from PyInstaller.building.api import COLLECT, EXE, PYZ
-from PyInstaller.building.osx import BUNDLE
 from PyInstaller.building.build_main import Analysis
 from PyInstaller.utils.hooks import collect_all, collect_submodules
 
@@ -78,6 +77,8 @@ coll = COLLECT(
 )
 
 if sys.platform == "darwin":
+    from PyInstaller.building.osx import BUNDLE
+
     app = BUNDLE(
         coll,
         name="Route 1 Kit.app",
@@ -86,8 +87,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Route 1 Kit",
             "CFBundleDisplayName": "Route 1 Kit",
-            "CFBundleShortVersionString": "1.0.1",
-            "CFBundleVersion": "1.0.1",
+            "CFBundleShortVersionString": "1.0.2",
+            "CFBundleVersion": "1.0.2",
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
         },
