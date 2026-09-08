@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSi SD Studio</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/app-icon-256.png">
+  <link rel="stylesheet" href="tailwind.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-paper text-ink min-h-screen font-sans flex flex-col antialiased selection:bg-brand/20 selection:text-ink">
+
+  <header class="border-b border-paper-line bg-paper-raised/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3 min-w-0">
+        <img src="assets/logo.svg" alt="" width="36" height="36" class="rounded-[9px] shadow-sm shrink-0 brand-mark">
+        <div class="min-w-0">
+          <h1 class="text-[15px] font-semibold tracking-tight text-ink leading-none">DSi SD Studio</h1>
+          <p class="text-[11px] text-ink-mute mt-1 truncate">Prepare e organize o cartão do Nintendo DSi</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button type="button" onclick="toggleIdGuide()" class="btn-ghost">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="hidden sm:inline">Identificar DSi</span>
+        </button>
+        <button id="btn-refresh" type="button" onclick="fetchDrives()" class="btn-ghost">
+          <svg id="refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          <span class="hidden sm:inline">Atualizar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-5 py-7 flex-1 w-full space-y-6">
+
+    <!-- Drive -->
+    <section class="panel p-5 drive-panel">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-5">
+        <div class="flex-1 space-y-2.5">
+          <div class="flex items-center gap-2">
+            <span id="drive-status-dot" class="status-dot status-dot--idle" aria-hidden="true"></span>
+            <h2 class="section-label">Cartão SD</h2>
+          </div>
+          <select id="drive-select" onchange="onDriveSelected()" class="field-select w-full md:max-w-lg">
+            <option value="">Procurando unidades externas…</option>
+          </select>
+        </div>
+
+        <div id="drive-info-badge" class="hidden stats-row">
+          <div>
+            <span class="stat-label">Formato</span>
+            <span id="info-fs" class="stat-value">—</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div>
+            <span class="stat-label">Capacidade</span>
+            <span id="info-size" class="stat-value">—</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div>
+            <span class="stat-label">Livre</span>
+            <span id="info-free" class="stat-value text-brand-deep">—</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Guia identificação -->
+    <section id="id-guide-panel" class="hidden panel p-5 space-y-5 guide-enter">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-semibold text-ink">Identificar o DSi</h2>
+          <p class="text-[12px] text-ink-mute mt-1 leading-relaxed max-w-2xl">
+            Confirme câmera, firmware e tipo de cartão no console antes de gravar o SD.
+            O Memory Pit errado impede o exploit de abrir.
+          </p>
+        </div>
+        <button type="button" onclick="toggleIdGuide()" class="btn-ghost !px-2.5 !py-1.5 text-[11px]">Fechar</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <article class="guide-card">
+          <div class="flex items-center gap-2.5 mb-2.5">
+            <span class="step-num">1</span>
+            <h3 class="text-[13px] font-semibold text-ink">Câmera: com ou sem Facebook?</h3>
+          </div>
+          <ol class="guide-list list-decimal">
+            <li>Ligue o DSi e vá ao menu principal.</li>
+            <li>Abra o app <strong>Câmera Nintendo DSi</strong>.</li>
+            <li>Olhe a barra inferior / atalhos da câmera.</li>
+          </ol>
+          <div class="mt-3 space-y-2">
+            <div class="note note--ok">
+              <strong>Com Facebook</strong> — aparece o ícone do Facebook. Use no Passo 1. Típico de EUA/Europa (câmera ~1.4+).
+            </div>
+            <div class="note note--warn">
+              <strong>Sem Facebook</strong> — sem ícone/opção Facebook. Comum em 1.0–1.3 e na maioria dos DSi japoneses.
+            </div>
+          </div>
+        </article>
+
+        <article class="guide-card">
+          <div class="flex items-center gap-2.5 mb-2.5">
+            <span class="step-num">2</span>
+            <h3 class="text-[13px] font-semibold text-ink">Versão do sistema</h3>
+          </div>
+          <ol class="guide-list list-decimal">
+            <li>Abra <strong>Configurações do Sistema</strong>.</li>
+            <li>Na última página, toque em <strong>Dados do Console</strong>.</li>
+            <li>Anote a linha <strong>Ver.</strong> (ex.: <code>1.4.5U</code>).</li>
+          </ol>
+          <div class="note mt-3">
+            <p><strong>Leitura:</strong> número = firmware · letra = região.</p>
+            <p class="mt-1 font-mono text-[11px] text-brand-deep">U EUA · E Europa · J Japão · A Austrália · C China · K Coreia</p>
+          </div>
+        </article>
+
+        <article class="guide-card">
+          <div class="flex items-center gap-2.5 mb-2.5">
+            <span class="step-num">3</span>
+            <h3 class="text-[13px] font-semibold text-ink">Modelo e região</h3>
+          </div>
+          <ul class="guide-list">
+            <li><strong>DSi</strong> — corpo menor; slot SD na lateral.</li>
+            <li><strong>DSi XL / LL</strong> — telas maiores; mesmo softmod.</li>
+            <li><strong>Etiqueta traseira</strong> — <code>TWL-001</code> (DSi) ou <code>UTL-001</code> (XL).</li>
+            <li><strong>Menu em japonês</strong> — forte indício de região J (geralmente Sem Facebook).</li>
+            <li><strong>DS / DS Lite / 3DS</strong> — <span class="text-warn">não usam este softmod</span>.</li>
+          </ul>
+        </article>
+
+        <article class="guide-card">
+          <div class="flex items-center gap-2.5 mb-2.5">
+            <span class="step-num">4</span>
+            <h3 class="text-[13px] font-semibold text-ink">Softmod ou Flashcard?</h3>
+          </div>
+          <div class="space-y-2">
+            <div class="note note--ok">
+              <strong>Passos 1 e 2</strong> — SD no slot lateral do DSi (Unlaunch + TWiLight).
+            </div>
+            <div class="note note--warn">
+              <strong>Modo Flashcard</strong> — MicroSD dentro de cartucho Slot-1 (GEi, R4…). Não substitui o Unlaunch.
+            </div>
+            <div class="note">
+              Confira o nome no plástico/PCB. Clones “R4” pedem o kernel do clone.
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <p class="text-[11px] text-ink-mute">
+        Referência: <span class="text-brand-deep font-medium">dsi.cfw.guide</span>
+      </p>
+    </section>
+
+    <!-- Workflow -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <section class="panel p-5 flex flex-col justify-between gap-5 action-card">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <span class="chip chip--brand">Passo 1</span>
+            <span class="text-[11px] text-ink-mute">Memory Pit · dumpTool</span>
+          </div>
+          <h3 class="text-[15px] font-semibold text-ink leading-snug">Exploit e backup da NAND</h3>
+          <p class="text-[12px] text-ink-mute leading-relaxed">
+            Prepara o SD para o exploit na Câmera e carrega o dumpTool para salvar a NAND.
+          </p>
+
+          <div>
+            <p class="text-[11px] font-medium text-ink-soft mb-2">Versão da câmera</p>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="choice">
+                <input type="radio" name="camera-version" value="facebook" checked>
+                <span>
+                  <span class="choice-title">Com Facebook</span>
+                  <span class="choice-sub">1.4+ EUA / Europa</span>
+                </span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="camera-version" value="no-facebook">
+                <span>
+                  <span class="choice-title">Sem Facebook</span>
+                  <span class="choice-sub">1.0–1.3 / Japão</span>
+                </span>
+              </label>
+            </div>
+            <button type="button" onclick="toggleIdGuide()" class="mt-3 text-[11px] text-brand font-medium inline-flex items-center gap-1.5 hover:text-brand-deep transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Como identificar?
+              <svg id="id-guide-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="button" onclick="runAction('setup-nand-dump')" class="btn-primary">Configurar no SD</button>
+      </section>
+
+      <section class="panel p-5 flex flex-col justify-between gap-5 action-card">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <span class="chip chip--ok">Passo 2</span>
+            <span class="text-[11px] text-ink-mute">Unlaunch · TWiLight</span>
+          </div>
+          <h3 class="text-[15px] font-semibold text-ink leading-snug">TWiLight Menu++ e Unlaunch</h3>
+          <p class="text-[12px] text-ink-mute leading-relaxed">
+            Depois do backup da NAND, prepara o boot permanente com TWiLight e o instalador seguro do Unlaunch.
+          </p>
+          <div class="note note--ok">
+            Instala ou restaura o TWiLight Menu++ e coloca o unlaunch-installer.dsi na raiz.
+          </div>
+        </div>
+        <button type="button" onclick="runAction('setup-unlaunch')" class="btn-primary btn-primary--ok">Configurar no SD</button>
+      </section>
+
+      <section class="panel p-5 flex flex-col justify-between gap-5 action-card">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <span class="chip">Organizar</span>
+            <span class="text-[11px] text-ink-mute">ROMs · Saves</span>
+          </div>
+          <h3 class="text-[15px] font-semibold text-ink leading-snug">Organização de jogos</h3>
+          <p class="text-[12px] text-ink-mute leading-relaxed">
+            Detecta a plataforma, limpa nomes, vincula saves e move para as pastas do TWiLight Menu++.
+          </p>
+          <ul class="text-[11px] text-ink-mute space-y-1 leading-relaxed">
+            <li><code>/roms/nds/</code> · <code>/roms/dsi/</code> · <code>/roms/gba/</code> e demais sistemas</li>
+            <li>DSiWare vai para <code>/roms/dsi/</code>, não para NDS</li>
+            <li>Saves ao lado do jogo; avulsos em <code>/roms/saves/</code></li>
+          </ul>
+        </div>
+        <button type="button" onclick="runAction('organize-roms')" class="btn-secondary">Organizar jogos</button>
+      </section>
+
+      <section class="panel p-5 flex flex-col justify-between gap-5 action-card">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <span class="chip chip--warn">Flashcard</span>
+            <span class="text-[11px] text-ink-mute">Slot-1</span>
+          </div>
+          <h3 class="text-[15px] font-semibold text-ink leading-snug">Kernel GEi (v4.2 EN)</h3>
+          <p class="text-[12px] text-ink-mute leading-relaxed">
+            Para MicroSD dentro do cartucho Galaxy Eagle i — não é o SD lateral do DSi.
+          </p>
+          <div class="note note--warn">
+            Só use se estiver escrito Galaxy Eagle i (ou clone com o mesmo kernel). R4/AceKard pedem outro firmware.
+          </div>
+        </div>
+        <button type="button" onclick="runAction('setup-gei')" class="btn-secondary">Instalar kernel GEi</button>
+      </section>
+
+    </div>
+
+    <!-- Utilities -->
+    <section class="panel p-5 space-y-3">
+      <h3 class="section-label">Utilitários</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <button type="button" onclick="runAction('backup')" class="util-btn">
+          <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+          <span>
+            <span class="util-title">Backup do cartão</span>
+            <span class="util-sub">Copia o conteúdo do SD para o Desktop</span>
+          </span>
+        </button>
+
+        <button type="button" onclick="runAction('clean-sd')" class="util-btn">
+          <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          <span>
+            <span class="util-title">Limpar metadados</span>
+            <span class="util-sub">Remove ._* , .DS_Store e residual do sistema</span>
+          </span>
+        </button>
+
+        <button type="button" onclick="confirmFormat()" class="util-btn util-btn--danger">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span>
+            <span class="util-title">Formatar FAT32</span>
+            <span class="util-sub">Apaga o cartão e cria partição MBR</span>
+          </span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Activity log -->
+    <section class="panel overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-3 border-b border-paper-line bg-brand-mist/60">
+        <h3 class="section-label !normal-case tracking-normal text-ink-soft">Atividade</h3>
+        <button type="button" onclick="clearLogs()" class="text-[11px] font-medium text-ink-mute hover:text-ink transition">Limpar</button>
+      </div>
+      <div id="log-container" class="h-44 overflow-y-auto px-5 py-3 font-mono text-[11px] space-y-1 text-ink-soft">
+        <div class="text-ink-mute">Pronto. Selecione um cartão e escolha uma ação.</div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="border-t border-paper-line py-4 text-center text-[11px] text-ink-mute">
+    DSi SD Studio · Ferramenta para softmod e gestão de cartões DSi
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

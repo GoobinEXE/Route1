@@ -1,0 +1,118 @@
+import os
+import sys
+import shutil
+import subprocess
+from datetime import datetime
+
+from core.logging_util import emit_log
+
+_BACKUP_IGNORE_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
+
+
+def _backup_ignore(_dir, names):
+    ignored = []
+    for n in names:
+        if n in _BACKUP_IGNORE_NAMES or n.startswith("._"):
+            ignored.append(n)
+    return ignored
+
+
+def clean_macos_metadata(mount_path, log_callback=None):
+    """Remove arquivos ocultos do macOS e lixo comum de cartões SD (multiplataforma)."""
+    log = lambda msg: emit_log(log_callback, msg)
+
+    log(f"Iniciando limpeza de metadados em {mount_path}...")
+
+    if sys.platform == "darwin":
+        try:
+            subprocess.run(["dot_clean", mount_path], stderr=subprocess.DEVNULL, check=False)
+            log("✅ dot_clean executado com sucesso.")
+        except Exception as e:
+            log(f"⚠️ Aviso ao rodar dot_clean: {e}")
+
+    deleted_count = 0
+    junk_files = {".DS_Store", "Thumbs.db", "desktop.ini"}
+    junk_dirs = {".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems"}
+
+    for root, dirs, files in os.walk(mount_path, topdown=False):
+        for f in files:
+            if f.startswith("._") or f in junk_files:
+                p = os.path.join(root, f)
+                try:
+                    os.remove(p)
+                    deleted_count += 1
+                except Exception:
+                    pass
+        for d in dirs:
+            if d in junk_dirs:
+                p = os.path.join(root, d)
+                try:
+                    shutil.rmtree(p, ignore_errors=True)
+                    deleted_count += 1
+                except Exception:
+                    pass
+
+    if sys.platform != "win32":
+        try:
+            subprocess.run(["sync"], check=False)
+        except Exception:
+            pass
+
+    log(f"✅ Limpeza finalizada! {deleted_count} itens temporários removidos.")
+    return True, f"{deleted_count} itens limpos com sucesso."
+
+
+def _count_files(path):
+    total = 0
+    for _root, _dirs, files in os.walk(path):
+        total += len(files)
+    return total
+
+
+def backup_drive(mount_path, log_callback=None):
+    """Cria um backup completo do cartão SD no Desktop do usuário."""
+    log = lambda msg: emit_log(log_callback, msg)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    vol_name = os.path.basename(mount_path.rstrip("\\/")) or "SD"
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    if not os.path.isdir(desktop):
+        for candidate in (
+            os.path.join(os.path.expanduser("~"), "Área de Trabalho"),
+            os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop"),
+            os.path.expanduser("~"),
+        ):
+            if os.path.isdir(candidate):
+                desktop = candidate
+                break
+
+    backup_dir = os.path.join(desktop, f"Backup_{vol_name}_{timestamp}")
+
+    log(f"Criando pasta de backup: {backup_dir}")
+    os.makedirs(backup_dir, exist_ok=True)
+
+    copied = 0
+    file_count = 0
+    for item in os.listdir(mount_path):
+        if item.startswith("."):
+            continue
+        src = os.path.join(mount_path, item)
+        dst = os.path.join(backup_dir, item)
+        log(f"Copiando: {item} ...")
+        try:
+            if os.path.isdir(src):
+                n_files = _count_files(src)
+                shutil.copytree(src, dst, ignore=_backup_ignore)
+                file_count += n_files
+                log(f"   ↳ {item}/ ({n_files} arquivos)")
+            else:
+                if item in _BACKUP_IGNORE_NAMES or item.startswith("._"):
+                    continue
+                shutil.copy2(src, dst)
+                file_count += 1
+            copied += 1
+        except Exception as e:
+            log(f"⚠️ Erro ao copiar {item}: {e}")
+
+    log(f"✅ Backup concluído em: {backup_dir} ({copied} itens, ~{file_count} arquivos)")
+    return True, backup_dir
