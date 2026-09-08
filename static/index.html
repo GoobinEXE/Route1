@@ -3,26 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DSi SD Studio</title>
-  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#171A21">
+  <title>Route 1 Kit</title>
+  <link rel="icon" type="image/svg+xml" href="assets/logo-small.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/app-icon-256.png">
+  <link rel="stylesheet" href="themes.css">
   <link rel="stylesheet" href="tailwind.css">
   <link rel="stylesheet" href="style.css">
+  <!-- Aplica o tema guardado antes do primeiro paint (evita flash). -->
+  <script src="theme.js"></script>
 </head>
-<body class="bg-paper text-ink min-h-screen font-sans flex flex-col antialiased selection:bg-brand/20 selection:text-ink">
+<body class="bg-bg text-fg min-h-screen font-sans flex flex-col antialiased selection:bg-accent/30 selection:text-fg">
 
-  <header class="border-b border-paper-line bg-paper-raised/90 backdrop-blur sticky top-0 z-50">
+  <header class="app-header sticky top-0 z-50">
     <div class="max-w-5xl mx-auto px-5 h-16 flex items-center justify-between gap-4">
       <div class="flex items-center gap-3 min-w-0">
-        <img src="assets/logo.svg" alt="" width="36" height="36" class="rounded-[9px] shadow-sm shrink-0 brand-mark">
+        <img src="assets/logo.svg" alt="" width="36" height="36" class="rounded-[9px] shrink-0 brand-mark">
         <div class="min-w-0">
-          <h1 class="text-[15px] font-semibold tracking-tight text-ink leading-none">DSi SD Studio</h1>
-          <p class="text-[11px] text-ink-mute mt-1 truncate">Prepare e organize o cartão do Nintendo DSi</p>
+          <h1 class="brand-name text-[15px] font-semibold text-fg leading-none">Route 1 Kit</h1>
+          <p class="text-[11px] text-fg-mute mt-1 truncate">Prepare e organize o cartão do Nintendo DSi</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
-        <button type="button" onclick="toggleIdGuide()" class="btn-ghost">
+        <div class="mode-switch" role="tablist" aria-label="Modo da aplicação">
+          <button type="button" id="mode-wizard" class="mode-tab mode-tab--active" role="tab" onclick="setAppMode('wizard')">Assistente</button>
+          <button type="button" id="mode-advanced" class="mode-tab" role="tab" onclick="setAppMode('advanced')">Avançado</button>
+        </div>
+        <button type="button" id="btn-id-guide" onclick="toggleIdGuide()" class="btn-ghost hidden">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span class="hidden sm:inline">Identificar DSi</span>
         </button>
@@ -30,11 +42,30 @@
           <svg id="refresh-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           <span class="hidden sm:inline">Atualizar</span>
         </button>
+
+        <div id="theme-picker" class="relative">
+          <button type="button" id="btn-theme" class="btn-icon" onclick="Theme.toggleMenu()"
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="theme-menu" aria-label="Alterar tema" title="Tema">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 3a9 9 0 1 0 0 18c1.1 0 1.8-.9 1.8-1.9 0-.5-.2-.9-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h2.1A4.3 4.3 0 0 0 21 10.4C21 6.3 16.9 3 12 3z"/>
+              <circle cx="7.5" cy="11.5" r="1.1" fill="currentColor" stroke="none"/>
+              <circle cx="10.5" cy="7.5" r="1.1" fill="currentColor" stroke="none"/>
+              <circle cx="15" cy="7.5" r="1.1" fill="currentColor" stroke="none"/>
+            </svg>
+          </button>
+          <div id="theme-menu" class="theme-menu hidden" role="menu" aria-label="Escolher tema"></div>
+        </div>
       </div>
     </div>
   </header>
 
-  <main class="max-w-5xl mx-auto px-5 py-7 flex-1 w-full space-y-6">
+  <!-- Assistente (entrada padrão) -->
+  <main id="view-wizard" class="max-w-5xl mx-auto px-5 py-7 flex-1 w-full">
+    <div id="wizard-root" class="panel p-5 sm:p-6"></div>
+  </main>
+
+  <!-- Modo avançado (dashboard original) -->
+  <main id="view-advanced" class="hidden max-w-5xl mx-auto px-5 py-7 flex-1 w-full space-y-6">
 
     <!-- Drive -->
     <section class="panel p-5 drive-panel">
@@ -44,7 +75,7 @@
             <span id="drive-status-dot" class="status-dot status-dot--idle" aria-hidden="true"></span>
             <h2 class="section-label">Cartão SD</h2>
           </div>
-          <select id="drive-select" onchange="onDriveSelected()" class="field-select w-full md:max-w-lg">
+          <select id="drive-select" onchange="onDriveSelected(false)" class="field-select w-full md:max-w-lg">
             <option value="">Procurando unidades externas…</option>
           </select>
         </div>
@@ -62,7 +93,7 @@
           <div class="stat-divider"></div>
           <div>
             <span class="stat-label">Livre</span>
-            <span id="info-free" class="stat-value text-brand-deep">—</span>
+            <span id="info-free" class="stat-value text-accent-fg">—</span>
           </div>
         </div>
       </div>
@@ -72,8 +103,8 @@
     <section id="id-guide-panel" class="hidden panel p-5 space-y-5 guide-enter">
       <div class="flex items-start justify-between gap-4">
         <div>
-          <h2 class="text-sm font-semibold text-ink">Identificar o DSi</h2>
-          <p class="text-[12px] text-ink-mute mt-1 leading-relaxed max-w-2xl">
+          <h2 class="text-sm font-semibold text-fg">Identificar o DSi</h2>
+          <p class="text-[12px] text-fg-mute mt-1 leading-relaxed max-w-2xl">
             Confirme câmera, firmware e tipo de cartão no console antes de gravar o SD.
             O Memory Pit errado impede o exploit de abrir.
           </p>
@@ -85,7 +116,7 @@
         <article class="guide-card">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">1</span>
-            <h3 class="text-[13px] font-semibold text-ink">Câmera: com ou sem Facebook?</h3>
+            <h3 class="text-[13px] font-semibold text-fg">Câmera: com ou sem Facebook?</h3>
           </div>
           <ol class="guide-list list-decimal">
             <li>Ligue o DSi e vá ao menu principal.</li>
@@ -105,7 +136,7 @@
         <article class="guide-card">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">2</span>
-            <h3 class="text-[13px] font-semibold text-ink">Versão do sistema</h3>
+            <h3 class="text-[13px] font-semibold text-fg">Versão do sistema</h3>
           </div>
           <ol class="guide-list list-decimal">
             <li>Abra <strong>Configurações do Sistema</strong>.</li>
@@ -114,14 +145,14 @@
           </ol>
           <div class="note mt-3">
             <p><strong>Leitura:</strong> número = firmware · letra = região.</p>
-            <p class="mt-1 font-mono text-[11px] text-brand-deep">U EUA · E Europa · J Japão · A Austrália · C China · K Coreia</p>
+            <p class="mt-1 font-mono text-[11px] text-accent-fg">U EUA · E Europa · J Japão · A Austrália · C China · K Coreia</p>
           </div>
         </article>
 
         <article class="guide-card">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">3</span>
-            <h3 class="text-[13px] font-semibold text-ink">Modelo e região</h3>
+            <h3 class="text-[13px] font-semibold text-fg">Modelo e região</h3>
           </div>
           <ul class="guide-list">
             <li><strong>DSi</strong> — corpo menor; slot SD na lateral.</li>
@@ -135,7 +166,7 @@
         <article class="guide-card">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">4</span>
-            <h3 class="text-[13px] font-semibold text-ink">Softmod ou Flashcard?</h3>
+            <h3 class="text-[13px] font-semibold text-fg">Softmod ou Flashcard?</h3>
           </div>
           <div class="space-y-2">
             <div class="note note--ok">
@@ -151,8 +182,8 @@
         </article>
       </div>
 
-      <p class="text-[11px] text-ink-mute">
-        Referência: <span class="text-brand-deep font-medium">dsi.cfw.guide</span>
+      <p class="text-[11px] text-fg-mute">
+        Referência: <span class="text-accent-fg font-medium">dsi.cfw.guide</span>
       </p>
     </section>
 
@@ -162,16 +193,16 @@
       <section class="panel p-5 flex flex-col justify-between gap-5 action-card">
         <div class="space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <span class="chip chip--brand">Passo 1</span>
-            <span class="text-[11px] text-ink-mute">Memory Pit · dumpTool</span>
+            <span class="chip chip--accent">Passo 1</span>
+            <span class="text-[11px] text-fg-mute">Memory Pit · dumpTool</span>
           </div>
-          <h3 class="text-[15px] font-semibold text-ink leading-snug">Exploit e backup da NAND</h3>
-          <p class="text-[12px] text-ink-mute leading-relaxed">
+          <h3 class="text-[15px] font-semibold text-fg leading-snug">Exploit e backup da NAND</h3>
+          <p class="text-[12px] text-fg-mute leading-relaxed">
             Prepara o SD para o exploit na Câmera e carrega o dumpTool para salvar a NAND.
           </p>
 
           <div>
-            <p class="text-[11px] font-medium text-ink-soft mb-2">Versão da câmera</p>
+            <p class="text-[11px] font-medium text-fg-soft mb-2">Versão da câmera</p>
             <div class="grid grid-cols-2 gap-2">
               <label class="choice">
                 <input type="radio" name="camera-version" value="facebook" checked>
@@ -188,7 +219,7 @@
                 </span>
               </label>
             </div>
-            <button type="button" onclick="toggleIdGuide()" class="mt-3 text-[11px] text-brand font-medium inline-flex items-center gap-1.5 hover:text-brand-deep transition">
+            <button type="button" onclick="toggleIdGuide()" class="mt-3 text-[11px] text-accent-fg font-medium inline-flex items-center gap-1.5 hover:text-accent transition">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               Como identificar?
               <svg id="id-guide-chevron" class="w-3 h-3 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -202,10 +233,10 @@
         <div class="space-y-3">
           <div class="flex items-center justify-between gap-3">
             <span class="chip chip--ok">Passo 2</span>
-            <span class="text-[11px] text-ink-mute">Unlaunch · TWiLight</span>
+            <span class="text-[11px] text-fg-mute">Unlaunch · TWiLight</span>
           </div>
-          <h3 class="text-[15px] font-semibold text-ink leading-snug">TWiLight Menu++ e Unlaunch</h3>
-          <p class="text-[12px] text-ink-mute leading-relaxed">
+          <h3 class="text-[15px] font-semibold text-fg leading-snug">TWiLight Menu++ e Unlaunch</h3>
+          <p class="text-[12px] text-fg-mute leading-relaxed">
             Depois do backup da NAND, prepara o boot permanente com TWiLight e o instalador seguro do Unlaunch.
           </p>
           <div class="note note--ok">
@@ -219,13 +250,13 @@
         <div class="space-y-3">
           <div class="flex items-center justify-between gap-3">
             <span class="chip">Organizar</span>
-            <span class="text-[11px] text-ink-mute">ROMs · Saves</span>
+            <span class="text-[11px] text-fg-mute">ROMs · Saves</span>
           </div>
-          <h3 class="text-[15px] font-semibold text-ink leading-snug">Organização de jogos</h3>
-          <p class="text-[12px] text-ink-mute leading-relaxed">
+          <h3 class="text-[15px] font-semibold text-fg leading-snug">Organização de jogos</h3>
+          <p class="text-[12px] text-fg-mute leading-relaxed">
             Detecta a plataforma, limpa nomes, vincula saves e move para as pastas do TWiLight Menu++.
           </p>
-          <ul class="text-[11px] text-ink-mute space-y-1 leading-relaxed">
+          <ul class="text-[11px] text-fg-mute space-y-1 leading-relaxed">
             <li><code>/roms/nds/</code> · <code>/roms/dsi/</code> · <code>/roms/gba/</code> e demais sistemas</li>
             <li>DSiWare vai para <code>/roms/dsi/</code>, não para NDS</li>
             <li>Saves ao lado do jogo; avulsos em <code>/roms/saves/</code></li>
@@ -238,14 +269,14 @@
         <div class="space-y-3">
           <div class="flex items-center justify-between gap-3">
             <span class="chip chip--warn">Flashcard</span>
-            <span class="text-[11px] text-ink-mute">Slot-1</span>
+            <span class="text-[11px] text-fg-mute">Slot-1</span>
           </div>
-          <h3 class="text-[15px] font-semibold text-ink leading-snug">Kernel GEi (v4.2 EN)</h3>
-          <p class="text-[12px] text-ink-mute leading-relaxed">
+          <h3 class="text-[15px] font-semibold text-fg leading-snug">Kernel GEi (v4.2 EN)</h3>
+          <p class="text-[12px] text-fg-mute leading-relaxed">
             Para MicroSD dentro do cartucho Galaxy Eagle i — não é o SD lateral do DSi.
           </p>
           <div class="note note--warn">
-            Só use se estiver escrito Galaxy Eagle i (ou clone com o mesmo kernel). R4/AceKard pedem outro firmware.
+            Só use se estiver escrito Galaxy Eagle i (ou clone com o mesmo kernel). R4/AceKard pedem outro firmware — use o Assistente para R4.
           </div>
         </div>
         <button type="button" onclick="runAction('setup-gei')" class="btn-secondary">Instalar kernel GEi</button>
@@ -258,7 +289,7 @@
       <h3 class="section-label">Utilitários</h3>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <button type="button" onclick="runAction('backup')" class="util-btn">
-          <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
           <span>
             <span class="util-title">Backup do cartão</span>
             <span class="util-sub">Copia o conteúdo do SD para o Desktop</span>
@@ -285,21 +316,22 @@
 
     <!-- Activity log -->
     <section class="panel overflow-hidden">
-      <div class="flex items-center justify-between px-5 py-3 border-b border-paper-line bg-brand-mist/60">
-        <h3 class="section-label !normal-case tracking-normal text-ink-soft">Atividade</h3>
-        <button type="button" onclick="clearLogs()" class="text-[11px] font-medium text-ink-mute hover:text-ink transition">Limpar</button>
+      <div class="flex items-center justify-between px-5 py-3 panel-header">
+        <h3 class="section-label !normal-case tracking-normal text-fg-soft">Atividade</h3>
+        <button type="button" onclick="clearLogs()" class="text-[11px] font-medium text-fg-mute hover:text-fg transition">Limpar</button>
       </div>
-      <div id="log-container" class="h-44 overflow-y-auto px-5 py-3 font-mono text-[11px] space-y-1 text-ink-soft">
-        <div class="text-ink-mute">Pronto. Selecione um cartão e escolha uma ação.</div>
+      <div id="log-container" class="h-44 overflow-y-auto px-5 py-3 space-y-1 log-view">
+        <div class="text-fg-mute">Pronto. Selecione um cartão e escolha uma ação.</div>
       </div>
     </section>
 
   </main>
 
-  <footer class="border-t border-paper-line py-4 text-center text-[11px] text-ink-mute">
-    DSi SD Studio · Ferramenta para softmod e gestão de cartões DSi
+  <footer class="app-footer py-4 text-center text-[11px]">
+    Route 1 Kit · Assistente para iniciantes · Modo avançado para atalhos
   </footer>
 
   <script src="app.js"></script>
+  <script src="wizard.js"></script>
 </body>
 </html>

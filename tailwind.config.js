@@ -1,6 +1,17 @@
 /** @type {import('tailwindcss').Config} */
+
+// Todas as cores vêm dos tokens definidos em static/themes.css (triplas RGB),
+// para que cada tema (dark, light, Catppuccin, Dracula) redefina a paleta sem
+// recompilar o Tailwind. `<alpha-value>` mantém utilitários como `bg-accent/10`.
+const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
+
 module.exports = {
-  content: ["./static/index.html", "./static/app.js"],
+  content: [
+    "./static/index.html",
+    "./static/app.js",
+    "./static/wizard.js",
+    "./static/theme.js",
+  ],
   theme: {
     extend: {
       fontFamily: {
@@ -8,29 +19,34 @@ module.exports = {
         mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       colors: {
-        ink: {
-          DEFAULT: "#14161A",
-          soft: "#3A4150",
-          mute: "#6B7380",
+        bg: token("bg"),
+        surface: {
+          DEFAULT: token("surface"),
+          2: token("surface-2"),
         },
-        paper: {
-          DEFAULT: "#F0F2F5",
-          raised: "#FFFFFF",
-          line: "#D9DEE6",
+        line: {
+          DEFAULT: token("line"),
+          strong: token("line-strong"),
         },
-        brand: {
-          DEFAULT: "#1E4DD8",
-          deep: "#1636A8",
-          soft: "#E8EEFF",
-          mist: "#F3F6FF",
+        fg: {
+          DEFAULT: token("fg"),
+          soft: token("fg-soft"),
+          mute: token("fg-mute"),
         },
-        ok: "#0F7B5C",
-        warn: "#A85B12",
-        danger: "#C23B3B",
+        accent: {
+          DEFAULT: token("accent"),
+          strong: token("accent-strong"),
+          fg: token("accent-fg"),
+          on: token("on-accent"),
+        },
+        ok: token("ok"),
+        warn: token("warn"),
+        danger: token("danger"),
       },
       boxShadow: {
-        panel:
-          "0 1px 2px rgba(20, 22, 26, 0.04), 0 8px 24px rgba(20, 22, 26, 0.06)",
+        panel: "var(--shadow-panel)",
+        hover: "var(--shadow-hover)",
+        menu: "var(--shadow-menu)",
       },
     },
   },

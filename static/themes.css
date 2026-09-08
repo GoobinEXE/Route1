@@ -1,0 +1,231 @@
+/* ==========================================================================
+   Route 1 Kit — Design tokens & temas
+   --------------------------------------------------------------------------
+   Todos os componentes consomem apenas estes tokens. Cada tema redefine as
+   variáveis em `html[data-theme="…"]`. Cores em triplas RGB ("r g b") para o
+   Tailwind poder aplicar opacidade (`bg-accent/10`) e o CSS usar
+   `rgb(var(--c-x) / 0.5)`.
+
+   Tokens
+     --c-bg            fundo da janela
+     --c-surface       painéis / cartões
+     --c-surface-2     campos, chips e áreas rebaixadas dentro de um painel
+     --c-line          bordas padrão
+     --c-line-strong   bordas em hover / divisórias fortes
+     --c-fg            texto principal
+     --c-fg-soft       texto secundário
+     --c-fg-mute       legendas / metadados
+     --c-accent        cor da marca (ações primárias, foco, progresso)
+     --c-accent-strong accent em hover
+     --c-accent-fg     accent usado como texto/ícone sobre superfícies (contraste garantido)
+     --c-on-accent     texto sobre o accent
+     --c-ok / --c-warn / --c-danger   estados semânticos
+   ========================================================================== */
+
+:root {
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font-sans: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* --------------------------------------------------------------------------
+   Studio Dark — padrão
+   -------------------------------------------------------------------------- */
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --c-bg: 15 17 22;
+  --c-surface: 23 26 33;
+  --c-surface-2: 30 34 43;
+  --c-line: 42 47 58;
+  --c-line-strong: 58 65 80;
+  --c-fg: 232 234 240;
+  --c-fg-soft: 180 186 199;
+  --c-fg-mute: 131 140 160;
+  --c-accent: 109 139 255;
+  --c-accent-strong: 134 160 255;
+  --c-accent-fg: 109 139 255;
+  --c-on-accent: 11 14 22;
+  --c-ok: 61 214 140;
+  --c-warn: 240 179 92;
+  --c-danger: 242 109 109;
+}
+
+/* --------------------------------------------------------------------------
+   Studio Light
+   -------------------------------------------------------------------------- */
+html[data-theme="light"] {
+  color-scheme: light;
+  --c-bg: 243 244 247;
+  --c-surface: 255 255 255;
+  --c-surface-2: 245 246 249;
+  --c-line: 225 228 235;
+  --c-line-strong: 201 206 217;
+  --c-fg: 20 22 27;
+  --c-fg-soft: 61 68 82;
+  --c-fg-mute: 110 118 132;
+  --c-accent: 47 91 234;
+  --c-accent-strong: 34 71 201;
+  --c-accent-fg: 34 71 201;
+  --c-on-accent: 255 255 255;
+  --c-ok: 15 138 99;
+  --c-warn: 179 102 26;
+  --c-danger: 201 58 58;
+}
+
+/* --------------------------------------------------------------------------
+   Catppuccin — https://catppuccin.com/palette
+   bg = mantle · surface = base · surface-2 = surface0 (crust no Latte)
+   line = surface1 · fg = text · accent = blue · hover = lavender
+   ok = green · warn = peach · danger = red · on-accent = crust/base
+   -------------------------------------------------------------------------- */
+html[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 188 192 204;
+  --c-fg: 76 79 105;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 108 111 133;
+  --c-accent: 30 102 245;
+  --c-accent-strong: 114 135 253;
+  --c-accent-fg: 30 102 245;
+  --c-on-accent: 239 241 245;
+  --c-ok: 64 160 43;
+  --c-warn: 254 100 11;
+  --c-danger: 210 15 57;
+}
+
+html[data-theme="catppuccin-frappe"] {
+  color-scheme: dark;
+  --c-bg: 41 44 60;
+  --c-surface: 48 52 70;
+  --c-surface-2: 65 69 89;
+  --c-line: 81 87 109;
+  --c-line-strong: 98 104 128;
+  --c-fg: 198 208 245;
+  --c-fg-soft: 181 191 226;
+  --c-fg-mute: 165 173 206;
+  --c-accent: 140 170 238;
+  --c-accent-strong: 186 187 241;
+  --c-accent-fg: 140 170 238;
+  --c-on-accent: 35 38 52;
+  --c-ok: 166 209 137;
+  --c-warn: 239 159 118;
+  --c-danger: 231 130 132;
+}
+
+html[data-theme="catppuccin-macchiato"] {
+  color-scheme: dark;
+  --c-bg: 30 32 48;
+  --c-surface: 36 39 58;
+  --c-surface-2: 54 58 79;
+  --c-line: 73 77 100;
+  --c-line-strong: 91 96 120;
+  --c-fg: 202 211 245;
+  --c-fg-soft: 184 192 224;
+  --c-fg-mute: 165 173 203;
+  --c-accent: 138 173 244;
+  --c-accent-strong: 183 189 248;
+  --c-accent-fg: 138 173 244;
+  --c-on-accent: 24 25 38;
+  --c-ok: 166 218 149;
+  --c-warn: 245 169 127;
+  --c-danger: 237 135 150;
+}
+
+html[data-theme="catppuccin-mocha"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 88 91 112;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 137 180 250;
+  --c-accent-strong: 180 190 254;
+  --c-accent-fg: 137 180 250;
+  --c-on-accent: 17 17 27;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+/* --------------------------------------------------------------------------
+   Dracula — https://draculatheme.com/contribute
+   bg = #21222c · surface = background #282a36 · surface-2 = #343746
+   line = current line #44475a · accent = purple · ok = green
+   warn = orange · danger = red
+   -------------------------------------------------------------------------- */
+html[data-theme="dracula"] {
+  color-scheme: dark;
+  --c-bg: 33 34 44;
+  --c-surface: 40 42 54;
+  --c-surface-2: 52 55 70;
+  --c-line: 68 71 90;
+  --c-line-strong: 98 114 164;
+  --c-fg: 248 248 242;
+  --c-fg-soft: 191 194 212;
+  --c-fg-mute: 144 153 190;
+  --c-accent: 189 147 249;
+  --c-accent-strong: 211 181 255;
+  --c-accent-fg: 189 147 249;
+  --c-on-accent: 33 34 44;
+  --c-ok: 80 250 123;
+  --c-warn: 255 184 108;
+  --c-danger: 255 85 85;
+}
+
+/* --------------------------------------------------------------------------
+   Game Boy · DS Lite (retro)
+   Painéis = LCD do Game Boy DMG (#9BBC0F / #8BAC0F / #306230 / #0F380F);
+   fundo e cromo = carcaça "Polar White" do DS Lite; estados = LEDs do DS Lite
+   (energia verde, carga laranja, bateria fraca vermelho), escurecidos para
+   manter contraste sobre o verde do LCD. A "pele" (gradientes, moldura da tela,
+   botões em pílula) está em style.css → skin: Game Boy · DS Lite.
+   -------------------------------------------------------------------------- */
+html[data-theme="gameboy"] {
+  color-scheme: light;
+  --c-bg: 227 231 236;
+  --c-surface: 155 188 15;
+  --c-surface-2: 139 172 15;
+  --c-line: 107 139 20;
+  --c-line-strong: 48 98 48;
+  --c-fg: 15 56 15;
+  --c-fg-soft: 30 74 30;
+  --c-fg-mute: 48 98 48;
+  --c-accent: 48 98 48;
+  --c-accent-strong: 15 56 15;
+  --c-accent-fg: 31 79 31;
+  --c-on-accent: 234 243 194;
+  --c-ok: 14 90 74;
+  --c-warn: 138 61 5;
+  --c-danger: 143 26 26;
+}
+
+/* --------------------------------------------------------------------------
+   Derivados por esquema (claro / escuro)
+   -------------------------------------------------------------------------- */
+:root,
+html[data-scheme="dark"] {
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px rgb(0 0 0 / 0.28);
+  --shadow-hover: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 36px rgb(0 0 0 / 0.36);
+  --shadow-menu: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 12px 40px rgb(0 0 0 / 0.55);
+  --glow-alpha: 0.16;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23A3ABBF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+html[data-scheme="light"] {
+  --shadow-panel: 0 1px 2px rgb(20 22 26 / 0.04), 0 8px 24px rgb(20 22 26 / 0.06);
+  --shadow-hover: 0 2px 4px rgb(20 22 26 / 0.05), 0 14px 32px rgb(20 22 26 / 0.09);
+  --shadow-menu: 0 2px 6px rgb(20 22 26 / 0.06), 0 16px 48px rgb(20 22 26 / 0.14);
+  --glow-alpha: 0.08;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236E7684' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}

@@ -1,6 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="DSi SD Studio">
-  <rect width="64" height="64" rx="14" fill="#2B5FE8"/>
-  <rect x="16" y="12" width="32" height="18" rx="4" fill="#1636A8"/>
-  <rect x="16" y="34" width="28" height="18" rx="4" fill="#1636A8"/>
-  <rect x="44" y="39" width="5" height="8" rx="1.5" fill="#1636A8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Route 1 Kit">
+  <!--
+    Route 1 Kit: placa de rota (silhueta de cartao SD, com o chanfro) com o
+    numero 1, fincada num poste ao lado da estrada que sai da Rota 1.
+    O "1" e desenhado como path para nao depender de fontes do sistema.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F72F8"/>
+      <stop offset="1" stop-color="#6A47EC"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3350D6"/>
+      <stop offset="1" stop-color="#4433BE"/>
+    </linearGradient>
+    <linearGradient id="post" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#E4E8F8"/>
+      <stop offset="1" stop-color="#C7CEEE"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.22" cy="0.05" r="0.95">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.26"/>
+      <stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#14207A" flood-opacity="0.38"/>
+    </filter>
+    <clipPath id="tile">
+      <rect width="256" height="256" rx="58"/>
+    </clipPath>
+  </defs>
+
+  <!-- fundo -->
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+  <rect width="256" height="256" rx="58" fill="url(#glow)"/>
+
+  <!-- estrada: sai do canto inferior esquerdo e segue para o horizonte -->
+  <g clip-path="url(#tile)">
+    <path d="M-10 262 C 60 236, 96 214, 128 200 C 160 186, 204 160, 268 92"
+          fill="none" stroke="#FFFFFF" stroke-opacity="0.16" stroke-width="44" stroke-linecap="round"/>
+    <path d="M-10 262 C 60 236, 96 214, 128 200 C 160 186, 204 160, 268 92"
+          fill="none" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="4"
+          stroke-linecap="round" stroke-dasharray="14 12"/>
+  </g>
+
+  <!-- poste -->
+  <rect x="120" y="140" width="16" height="84" rx="4" fill="url(#post)"/>
+  <rect x="112" y="216" width="32" height="10" rx="4" fill="#C7CEEE"/>
+
+  <!-- placa: silhueta de cartao SD -->
+  <path d="M74 40h84q6 0 10.2 4.2l19.6 19.6Q192 68 192 74v70a14 14 0 0 1-14 14H74a14 14 0 0 1-14-14V54a14 14 0 0 1 14-14z"
+        fill="#F7F8FC" filter="url(#shadow)"/>
+
+  <!-- numero 1 -->
+  <path d="M108 86 L134 62 V138" fill="none" stroke="url(#ink)" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M112 138 H156" fill="none" stroke="url(#ink)" stroke-width="22" stroke-linecap="round"/>
 </svg>

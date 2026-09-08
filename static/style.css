@@ -1,29 +1,80 @@
-:root {
-  --ink: #14161A;
-  --ink-soft: #3A4150;
-  --ink-mute: #6B7380;
-  --paper: #F0F2F5;
-  --raised: #FFFFFF;
-  --line: #D9DEE6;
-  --brand: #1E4DD8;
-  --brand-deep: #1636A8;
-  --brand-soft: #E8EEFF;
-  --ok: #0F7B5C;
-  --warn: #A85B12;
-  --danger: #C23B3B;
-  --radius: 12px;
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+/* ==========================================================================
+   Route 1 Kit — componentes
+   Consome exclusivamente os tokens de themes.css (nunca cores literais).
+   ========================================================================== */
+
+/* ---------- base ---------- */
+
+html {
+  background: rgb(var(--c-bg));
 }
 
 body {
+  font-family: var(--font-sans);
+  background-color: rgb(var(--c-bg));
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(30, 77, 216, 0.07), transparent 55%),
-    linear-gradient(180deg, #F5F6F8 0%, var(--paper) 40%);
+    radial-gradient(ellipse 70% 45% at 50% -15%, rgb(var(--c-accent) / var(--glow-alpha)), transparent 60%);
   background-attachment: fixed;
+  transition: background-color 0.25s ease, color 0.25s ease;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
+
+code,
+kbd,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+code {
+  font-size: 0.92em;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--c-accent));
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+::selection {
+  background: rgb(var(--c-accent) / 0.3);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--c-line-strong)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--c-line-strong));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--c-fg-mute));
+  background-clip: padding-box;
+}
+
+/* ---------- marca ---------- */
 
 .brand-mark {
   animation: mark-in 0.55s var(--ease) both;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.18), 0 6px 18px rgb(var(--c-accent) / 0.25);
 }
 
 @keyframes mark-in {
@@ -31,11 +82,34 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+.brand-name {
+  letter-spacing: -0.01em;
+}
+
+.app-header {
+  background: rgb(var(--c-surface) / 0.86);
+  border-bottom: 1px solid rgb(var(--c-line));
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+}
+
+.app-footer {
+  border-top: 1px solid rgb(var(--c-line));
+  color: rgb(var(--c-fg-mute));
+}
+
+/* ---------- superfícies ---------- */
+
 .panel {
-  background: var(--raised);
-  border: 1px solid var(--line);
+  background: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-line));
   border-radius: var(--radius);
-  box-shadow: 0 1px 2px rgba(20, 22, 26, 0.04), 0 8px 24px rgba(20, 22, 26, 0.05);
+  box-shadow: var(--shadow-panel);
+}
+
+.panel-header {
+  border-bottom: 1px solid rgb(var(--c-line));
+  background: rgb(var(--c-accent) / 0.06);
 }
 
 .drive-panel {
@@ -50,7 +124,7 @@ body {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: var(--brand);
+  background: linear-gradient(180deg, rgb(var(--c-accent)), rgb(var(--c-accent-strong)));
 }
 
 .action-card {
@@ -58,9 +132,9 @@ body {
 }
 
 .action-card:hover {
-  border-color: #C5CCD8;
+  border-color: rgb(var(--c-line-strong));
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(20, 22, 26, 0.04), 0 12px 28px rgba(20, 22, 26, 0.07);
+  box-shadow: var(--shadow-hover);
 }
 
 .section-label {
@@ -68,25 +142,36 @@ body {
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-mute);
+  color: rgb(var(--c-fg-mute));
 }
+
+/* ---------- campos ---------- */
 
 .field-select {
   appearance: none;
-  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236B7380' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") right 14px center / 12px no-repeat;
-  border: 1px solid var(--line);
+  -webkit-appearance: none;
+  background-color: rgb(var(--c-surface-2));
+  background-image: var(--select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px;
+  border: 1px solid rgb(var(--c-line));
   border-radius: 10px;
   padding: 0.75rem 2.25rem 0.75rem 0.95rem;
   font-size: 13px;
   font-weight: 500;
-  color: var(--ink);
+  color: rgb(var(--c-fg));
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.field-select:hover {
+  border-color: rgb(var(--c-line-strong));
+}
+
 .field-select:focus {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(30, 77, 216, 0.15);
+  border-color: rgb(var(--c-accent));
+  box-shadow: 0 0 0 3px rgb(var(--c-accent) / 0.22);
 }
 
 .stats-row {
@@ -94,8 +179,8 @@ body {
   align-items: center;
   gap: 1.1rem;
   padding: 0.7rem 1rem;
-  background: var(--paper);
-  border: 1px solid var(--line);
+  background: rgb(var(--c-surface-2));
+  border: 1px solid rgb(var(--c-line));
   border-radius: 10px;
   font-size: 12px;
 }
@@ -104,35 +189,37 @@ body {
   display: block;
   font-size: 10px;
   font-weight: 500;
-  color: var(--ink-mute);
+  color: rgb(var(--c-fg-mute));
   margin-bottom: 2px;
 }
 
 .stat-value {
   font-weight: 600;
-  color: var(--ink);
+  color: rgb(var(--c-fg));
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-divider {
   width: 1px;
   height: 1.75rem;
-  background: var(--line);
+  background: rgb(var(--c-line));
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: #A8B0BC;
+  background: rgb(var(--c-fg-mute) / 0.6);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .status-dot--idle {
-  background: #A8B0BC;
+  background: rgb(var(--c-fg-mute) / 0.6);
 }
 
 .status-dot--live {
-  background: var(--ok);
-  box-shadow: 0 0 0 3px rgba(15, 123, 92, 0.18);
+  background: rgb(var(--c-ok));
+  box-shadow: 0 0 0 3px rgb(var(--c-ok) / 0.22);
   animation: pulse-soft 2.2s ease-in-out infinite;
 }
 
@@ -141,6 +228,8 @@ body {
   50% { opacity: 0.55; }
 }
 
+/* ---------- botões ---------- */
+
 .btn-ghost {
   display: inline-flex;
   align-items: center;
@@ -148,34 +237,57 @@ body {
   padding: 0.45rem 0.75rem;
   font-size: 12px;
   font-weight: 500;
-  color: var(--ink-soft);
+  color: rgb(var(--c-fg-soft));
   background: transparent;
-  border: 1px solid var(--line);
+  border: 1px solid rgb(var(--c-line));
   border-radius: 8px;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .btn-ghost:hover {
-  background: var(--paper);
-  color: var(--ink);
-  border-color: #C8CED8;
+  background: rgb(var(--c-surface-2));
+  color: rgb(var(--c-fg));
+  border-color: rgb(var(--c-line-strong));
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  color: rgb(var(--c-fg-soft));
+  background: transparent;
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 8px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-icon:hover,
+.btn-icon[aria-expanded="true"] {
+  background: rgb(var(--c-surface-2));
+  color: rgb(var(--c-fg));
+  border-color: rgb(var(--c-line-strong));
 }
 
 .btn-primary {
   width: 100%;
   padding: 0.7rem 1rem;
   border-radius: 10px;
-  background: var(--brand);
-  color: #fff;
+  background: rgb(var(--c-accent));
+  color: rgb(var(--c-on-accent));
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
   border: none;
-  transition: background 0.15s ease, transform 0.15s var(--ease);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 4px 14px rgb(var(--c-accent) / 0.25);
+  transition: background 0.15s ease, transform 0.15s var(--ease), box-shadow 0.15s ease;
 }
 
 .btn-primary:hover {
-  background: var(--brand-deep);
+  background: rgb(var(--c-accent-strong));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.1) inset, 0 6px 18px rgb(var(--c-accent) / 0.32);
 }
 
 .btn-primary:active {
@@ -183,29 +295,36 @@ body {
 }
 
 .btn-primary--ok {
-  background: var(--ok);
+  background: rgb(var(--c-ok));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.08) inset, 0 4px 14px rgb(var(--c-ok) / 0.25);
 }
 
 .btn-primary--ok:hover {
-  background: #0B6450;
+  background: rgb(var(--c-ok));
+  filter: brightness(1.08);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.1) inset, 0 6px 18px rgb(var(--c-ok) / 0.32);
 }
 
 .btn-secondary {
   width: 100%;
   padding: 0.7rem 1rem;
   border-radius: 10px;
-  background: var(--brand-soft);
-  color: var(--brand-deep);
+  background: rgb(var(--c-accent) / 0.12);
+  color: rgb(var(--c-accent-fg));
   font-size: 12px;
   font-weight: 600;
-  border: 1px solid transparent;
+  border: 1px solid rgb(var(--c-accent) / 0.18);
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-secondary:hover {
-  background: #DCE5FF;
-  border-color: #C5D2F5;
+  background: rgb(var(--c-accent) / 0.18);
+  border-color: rgb(var(--c-accent) / 0.35);
+  color: rgb(var(--c-accent-fg));
 }
+
+
+/* ---------- chips ---------- */
 
 .chip {
   display: inline-flex;
@@ -216,74 +335,79 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   border-radius: 6px;
-  background: var(--paper);
-  color: var(--ink-soft);
-  border: 1px solid var(--line);
+  background: rgb(var(--c-surface-2));
+  color: rgb(var(--c-fg-soft));
+  border: 1px solid rgb(var(--c-line));
 }
 
-.chip--brand {
-  background: var(--brand-soft);
-  color: var(--brand-deep);
-  border-color: #C9D6FA;
+.chip--accent {
+  background: rgb(var(--c-accent) / 0.12);
+  color: rgb(var(--c-accent-fg));
+  border-color: rgb(var(--c-accent) / 0.28);
 }
 
 .chip--ok {
-  background: #E6F5F0;
-  color: var(--ok);
-  border-color: #C5E8DB;
+  background: rgb(var(--c-ok) / 0.12);
+  color: rgb(var(--c-ok));
+  border-color: rgb(var(--c-ok) / 0.28);
 }
 
 .chip--warn {
-  background: #FBF0E4;
-  color: var(--warn);
-  border-color: #F0D9BE;
+  background: rgb(var(--c-warn) / 0.12);
+  color: rgb(var(--c-warn));
+  border-color: rgb(var(--c-warn) / 0.28);
 }
+
+
+/* ---------- escolhas (radio / checkbox) ---------- */
 
 .choice {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
   padding: 0.65rem 0.7rem;
-  border: 1px solid var(--line);
+  border: 1px solid rgb(var(--c-line));
   border-radius: 10px;
-  background: var(--paper);
+  background: rgb(var(--c-surface-2));
   cursor: pointer;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .choice:hover {
-  border-color: #C5CCD8;
+  border-color: rgb(var(--c-line-strong));
 }
 
 .choice:has(input:checked) {
-  border-color: var(--brand);
-  background: var(--brand-mist, #F3F6FF);
-  box-shadow: inset 0 0 0 1px rgba(30, 77, 216, 0.12);
+  border-color: rgb(var(--c-accent));
+  background: rgb(var(--c-accent) / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(var(--c-accent) / 0.25);
 }
 
 .choice input {
   margin-top: 2px;
-  accent-color: var(--brand);
+  accent-color: rgb(var(--c-accent));
 }
 
 .choice-title {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink);
+  color: rgb(var(--c-fg));
 }
 
 .choice-sub {
   display: block;
   font-size: 10px;
-  color: var(--ink-mute);
+  color: rgb(var(--c-fg-mute));
   margin-top: 1px;
 }
 
+/* ---------- guia ---------- */
+
 .guide-card {
-  border: 1px solid var(--line);
+  border: 1px solid rgb(var(--c-line));
   border-radius: 10px;
-  background: var(--paper);
+  background: rgb(var(--c-surface-2));
   padding: 1rem;
 }
 
@@ -291,8 +415,8 @@ body {
   width: 1.5rem;
   height: 1.5rem;
   border-radius: 7px;
-  background: var(--brand-soft);
-  color: var(--brand-deep);
+  background: rgb(var(--c-accent) / 0.14);
+  color: rgb(var(--c-accent-fg));
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
@@ -301,9 +425,10 @@ body {
   flex-shrink: 0;
 }
 
+
 .guide-list {
   font-size: 11px;
-  color: var(--ink-mute);
+  color: rgb(var(--c-fg-mute));
   line-height: 1.55;
   padding-left: 1.1rem;
 }
@@ -312,48 +437,53 @@ body {
   margin-top: 0.35rem;
 }
 
-.guide-list strong,
-.guide-list code {
-  color: var(--ink-soft);
+.guide-list strong {
+  color: rgb(var(--c-fg-soft));
   font-weight: 600;
 }
 
 .guide-list code {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--brand-deep);
+  color: rgb(var(--c-accent-fg));
 }
+
+
+/* ---------- notas ---------- */
 
 .note {
   font-size: 11px;
   line-height: 1.5;
-  color: var(--ink-mute);
-  background: var(--raised);
-  border: 1px solid var(--line);
+  color: rgb(var(--c-fg-soft));
+  background: rgb(var(--c-surface-2));
+  border: 1px solid rgb(var(--c-line));
   border-radius: 8px;
   padding: 0.55rem 0.7rem;
 }
 
+.note strong {
+  color: rgb(var(--c-fg));
+}
+
 .note--ok {
-  background: #F0F9F5;
-  border-color: #CDE8DC;
-  color: #2F5C4C;
+  background: rgb(var(--c-ok) / 0.09);
+  border-color: rgb(var(--c-ok) / 0.28);
 }
 
 .note--ok strong {
-  color: var(--ok);
+  color: rgb(var(--c-ok));
 }
 
 .note--warn {
-  background: #FBF6F0;
-  border-color: #EED9C0;
-  color: #6B4A28;
+  background: rgb(var(--c-warn) / 0.1);
+  border-color: rgb(var(--c-warn) / 0.3);
 }
 
 .note--warn strong {
-  color: var(--warn);
+  color: rgb(var(--c-warn));
 }
+
+/* ---------- utilitários ---------- */
 
 .util-btn {
   display: flex;
@@ -362,14 +492,14 @@ body {
   text-align: left;
   padding: 0.85rem 0.9rem;
   border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  border: 1px solid rgb(var(--c-line));
+  background: rgb(var(--c-surface-2));
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s var(--ease);
 }
 
 .util-btn:hover {
-  background: #E8EBF0;
-  border-color: #C5CCD8;
+  background: rgb(var(--c-accent) / 0.07);
+  border-color: rgb(var(--c-line-strong));
 }
 
 .util-btn:active {
@@ -377,34 +507,45 @@ body {
 }
 
 .util-btn--danger {
-  background: #FCF4F4;
-  border-color: #EFC8C8;
-  color: var(--danger);
+  background: rgb(var(--c-danger) / 0.08);
+  border-color: rgb(var(--c-danger) / 0.28);
+  color: rgb(var(--c-danger));
 }
 
 .util-btn--danger:hover {
-  background: #F9EAEA;
-  border-color: #E5B0B0;
+  background: rgb(var(--c-danger) / 0.14);
+  border-color: rgb(var(--c-danger) / 0.45);
 }
 
 .util-title {
   display: block;
   font-size: 12px;
   font-weight: 600;
-  color: var(--ink);
+  color: rgb(var(--c-fg));
 }
 
 .util-btn--danger .util-title {
-  color: var(--danger);
+  color: rgb(var(--c-danger));
 }
 
 .util-sub {
   display: block;
   font-size: 11px;
-  color: var(--ink-mute);
+  color: rgb(var(--c-fg-mute));
   margin-top: 2px;
   line-height: 1.4;
 }
+
+/* ---------- log ---------- */
+
+.log-view {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgb(var(--c-fg-soft));
+  background: rgb(var(--c-bg) / 0.45);
+}
+
+/* ---------- animações ---------- */
 
 .guide-enter {
   animation: slide-in 0.3s var(--ease) both;
@@ -413,23 +554,6 @@ body {
 @keyframes slide-in {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: none; }
-}
-
-#log-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-#log-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-#log-container::-webkit-scrollbar-thumb {
-  background: #C5CCD8;
-  border-radius: 4px;
-}
-
-#log-container::-webkit-scrollbar-thumb:hover {
-  background: #A8B0BC;
 }
 
 @keyframes spin {
@@ -452,15 +576,370 @@ body {
   vertical-align: -0.1em;
 }
 
-button:disabled {
-  cursor: not-allowed;
-}
-
 #id-guide-chevron.rotate-180 {
   transform: rotate(180deg);
 }
 
-code {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
-  font-size: 0.92em;
+/* ---------- alternador de modo ---------- */
+
+.mode-switch {
+  display: inline-flex;
+  padding: 2px;
+  background: rgb(var(--c-surface-2));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 9px;
+  gap: 2px;
+}
+
+.mode-tab {
+  padding: 0.35rem 0.7rem;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgb(var(--c-fg-mute));
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mode-tab:hover {
+  color: rgb(var(--c-fg));
+}
+
+.mode-tab--active {
+  background: rgb(var(--c-surface));
+  color: rgb(var(--c-accent-fg));
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
+}
+
+
+/* ---------- seletor de tema ---------- */
+
+.theme-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 240px;
+  padding: 6px;
+  background: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 12px;
+  box-shadow: var(--shadow-menu);
+  z-index: 60;
+  animation: menu-in 0.16s var(--ease) both;
+}
+
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+.theme-group {
+  padding: 8px 10px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(var(--c-fg-mute));
+}
+
+.theme-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: rgb(var(--c-fg-soft));
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.theme-item:hover {
+  background: rgb(var(--c-surface-2));
+  color: rgb(var(--c-fg));
+}
+
+.theme-item[aria-checked="true"] {
+  color: rgb(var(--c-fg));
+  background: rgb(var(--c-accent) / 0.1);
+}
+
+.theme-item .check {
+  margin-left: auto;
+  width: 14px;
+  height: 14px;
+  color: rgb(var(--c-accent-fg));
+  opacity: 0;
+}
+
+.theme-item[aria-checked="true"] .check {
+  opacity: 1;
+}
+
+.theme-swatch {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 34px;
+  height: 18px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid rgb(0 0 0 / 0.18);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06) inset;
+}
+
+.theme-swatch span {
+  flex: 1;
+}
+
+/* ---------- assistente ---------- */
+
+.wizard-goal {
+  display: block;
+  width: 100%;
+  padding: 1rem 1.05rem;
+  border: 1px solid rgb(var(--c-line));
+  border-radius: 12px;
+  background: rgb(var(--c-surface-2));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s var(--ease), background 0.15s ease;
+}
+
+.wizard-goal:hover {
+  border-color: rgb(var(--c-accent) / 0.55);
+  background: rgb(var(--c-accent) / 0.06);
+  box-shadow: 0 2px 10px rgb(var(--c-accent) / 0.12);
+  transform: translateY(-1px);
+}
+
+.wizard-progress {
+  height: 4px;
+  background: rgb(var(--c-line));
+  border-radius: 999px;
+  overflow: hidden;
+  max-width: 220px;
+}
+
+.wizard-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, rgb(var(--c-accent)), rgb(var(--c-accent-strong)));
+  border-radius: 999px;
+  transition: width 0.25s var(--ease);
+}
+
+/* ==========================================================================
+   skin: Game Boy · DS Lite
+   Único bloco com cores literais: representam a carcaça física do DS Lite
+   (plástico branco brilhante, moldura preta das telas) — não são tokens.
+   Os painéis são as "telas" (LCD do Game Boy, com grade de pixels).
+   ========================================================================== */
+
+html[data-theme="gameboy"] {
+  --shell-hi: #FAFBFD;
+  --shell: #E3E7EC;
+  --shell-lo: #CFD5DC;
+  --shell-line: #B9C0CA;
+  --shell-fg: #3B434D;
+  --shell-fg-mute: #6B7580;
+  --bezel: #1E2226;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%230F380F' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --shadow-panel:
+    0 0 0 5px var(--bezel),
+    0 0 0 6px rgb(255 255 255 / 0.5),
+    0 10px 26px rgb(20 24 30 / 0.22),
+    inset 0 0 0 1px rgb(15 56 15 / 0.35);
+  --shadow-hover:
+    0 0 0 5px var(--bezel),
+    0 0 0 6px rgb(255 255 255 / 0.55),
+    0 14px 32px rgb(20 24 30 / 0.28),
+    inset 0 0 0 1px rgb(15 56 15 / 0.35);
+  --shadow-menu: 0 1px 0 #FFFFFF inset, 0 12px 36px rgb(20 24 30 / 0.28);
+}
+
+html[data-theme="gameboy"] body {
+  background-image:
+    radial-gradient(ellipse 80% 40% at 50% 0%, rgb(255 255 255 / 0.9), transparent 70%),
+    linear-gradient(180deg, var(--shell-hi) 0%, var(--shell) 45%, var(--shell-lo) 100%);
+}
+
+/* telas: LCD com grade de pixels + moldura preta (via --shadow-panel) */
+html[data-theme="gameboy"] .panel {
+  border-color: rgb(15 56 15 / 0.35);
+  border-radius: 8px;
+  background-image:
+    repeating-linear-gradient(0deg, rgb(15 56 15 / 0.055) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(90deg, rgb(15 56 15 / 0.04) 0 1px, transparent 1px 3px);
+}
+
+/* espaçamento extra para a moldura não colar em elementos vizinhos */
+html[data-theme="gameboy"] main > .panel,
+html[data-theme="gameboy"] main .grid > .panel {
+  margin: 6px;
+}
+
+html[data-theme="gameboy"] .drive-panel::before {
+  background: var(--bezel);
+  width: 4px;
+}
+
+/* cromo (carcaça): header, footer, menu de temas */
+html[data-theme="gameboy"] .app-header {
+  background: linear-gradient(180deg, rgb(250 251 253 / 0.96), rgb(227 231 236 / 0.94));
+  border-bottom-color: var(--shell-line);
+  box-shadow: 0 1px 0 #FFFFFF inset;
+}
+
+html[data-theme="gameboy"] .app-header h1 {
+  color: var(--shell-fg);
+}
+
+html[data-theme="gameboy"] .app-header p {
+  color: var(--shell-fg-mute);
+}
+
+html[data-theme="gameboy"] .app-footer {
+  border-top-color: var(--shell-line);
+  color: var(--shell-fg-mute);
+}
+
+html[data-theme="gameboy"] .theme-menu {
+  background: linear-gradient(180deg, var(--shell-hi), var(--shell));
+  border-color: var(--shell-line);
+  border-radius: 14px;
+}
+
+html[data-theme="gameboy"] .theme-group {
+  color: var(--shell-fg-mute);
+}
+
+html[data-theme="gameboy"] .theme-item {
+  color: var(--shell-fg);
+  border-radius: 999px;
+}
+
+html[data-theme="gameboy"] .theme-item:hover {
+  background: rgb(0 0 0 / 0.06);
+}
+
+html[data-theme="gameboy"] .theme-item[aria-checked="true"] {
+  background: rgb(48 98 48 / 0.14);
+  color: #0F380F;
+}
+
+/* botões da carcaça: pílulas brancas brilhantes (como Start/Select) */
+html[data-theme="gameboy"] .btn-ghost,
+html[data-theme="gameboy"] .btn-icon {
+  border-radius: 999px;
+  border-color: var(--shell-line);
+  background: linear-gradient(180deg, #FFFFFF, #E6EAEF);
+  color: var(--shell-fg);
+  box-shadow: 0 1px 0 #FFFFFF inset, 0 1px 2px rgb(20 24 30 / 0.12);
+}
+
+html[data-theme="gameboy"] .btn-ghost:hover,
+html[data-theme="gameboy"] .btn-icon:hover,
+html[data-theme="gameboy"] .btn-icon[aria-expanded="true"] {
+  background: linear-gradient(180deg, #FFFFFF, #F1F3F6);
+  border-color: #A8B0BB;
+  color: #0F380F;
+}
+
+/* botões dentro das telas herdam o cromo quando o pai é .panel */
+html[data-theme="gameboy"] .panel .btn-ghost {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.55), rgb(255 255 255 / 0.25));
+  border-color: rgb(15 56 15 / 0.35);
+  color: #0F380F;
+  box-shadow: none;
+}
+
+html[data-theme="gameboy"] .mode-switch {
+  border-radius: 999px;
+  background: var(--shell-lo);
+  border-color: var(--shell-line);
+  box-shadow: inset 0 1px 2px rgb(20 24 30 / 0.15);
+}
+
+html[data-theme="gameboy"] .mode-tab {
+  border-radius: 999px;
+  color: var(--shell-fg-mute);
+}
+
+html[data-theme="gameboy"] .mode-tab:hover {
+  color: var(--shell-fg);
+}
+
+html[data-theme="gameboy"] .mode-tab--active {
+  background: linear-gradient(180deg, #FFFFFF, #ECEFF3);
+  color: #0F380F;
+  box-shadow: 0 1px 2px rgb(20 24 30 / 0.18);
+}
+
+/* botões de ação: pílulas com brilho de plástico (A / B) */
+html[data-theme="gameboy"] .btn-primary,
+html[data-theme="gameboy"] .btn-secondary {
+  border-radius: 999px;
+}
+
+html[data-theme="gameboy"] .btn-primary {
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.18), rgb(255 255 255 / 0) 55%);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.28), 0 1px 0 rgb(255 255 255 / 0.25) inset;
+}
+
+html[data-theme="gameboy"] .btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.28), 0 1px 0 rgb(255 255 255 / 0.25) inset;
+}
+
+html[data-theme="gameboy"] .btn-secondary {
+  background: rgb(15 56 15 / 0.1);
+  border-color: rgb(15 56 15 / 0.35);
+}
+
+html[data-theme="gameboy"] .btn-secondary:hover {
+  background: rgb(15 56 15 / 0.16);
+}
+
+/* LEDs do DS Lite */
+html[data-theme="gameboy"] .status-dot {
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.5);
+}
+
+html[data-theme="gameboy"] .status-dot--live {
+  background: #2ED15F;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.6), 0 0 10px 2px rgb(46 209 95 / 0.65);
+}
+
+/* log como "tela de texto" */
+html[data-theme="gameboy"] .log-view {
+  background: rgb(15 56 15 / 0.07);
+}
+
+html[data-theme="gameboy"] .wizard-progress {
+  background: rgb(15 56 15 / 0.18);
+}
+
+html[data-theme="gameboy"] .brand-mark {
+  box-shadow: 0 2px 6px rgb(20 24 30 / 0.25);
+}
+
+/* ---------- utilitários de texto ---------- */
+
+.text-danger { color: rgb(var(--c-danger)); }
+.text-warn { color: rgb(var(--c-warn)); }
+.text-ok { color: rgb(var(--c-ok)); }
+
+/* ---------- movimento reduzido ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Mantém os spinners (indicadores funcionais); remove só o movimento decorativo. */
+  *:not(.spinning):not(.spinning-dot):not(.status-dot--live),
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

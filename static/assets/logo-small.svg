@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Route 1 Kit">
+  <!-- Variante compacta (16 a 48 px): placa maior, sem estrada, sombra ou brilho. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F72F8"/>
+      <stop offset="1" stop-color="#6A47EC"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3350D6"/>
+      <stop offset="1" stop-color="#4433BE"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="58" fill="url(#bg)"/>
+  <!-- poste -->
+  <rect x="116" y="150" width="24" height="76" rx="6" fill="#D5DBF3"/>
+  <!-- placa: silhueta de cartao SD -->
+  <path d="M56 26h104q8 0 13.6 5.6l24.8 24.8Q204 62 204 70v80a16 16 0 0 1-16 16H56a16 16 0 0 1-16-16V42a16 16 0 0 1 16-16z" fill="#F7F8FC"/>
+  <!-- numero 1 -->
+  <path d="M96 78 L130 48 V140" fill="none" stroke="url(#ink)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M100 140 H160" fill="none" stroke="url(#ink)" stroke-width="30" stroke-linecap="round"/>
+</svg>
