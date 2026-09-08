@@ -15,6 +15,7 @@ if BASE_DIR not in sys.path:
 
 import webview
 
+from core import __version__
 from core.cleaner import backup_drive, clean_macos_metadata
 from core.disks import format_sd_card, get_mounted_drives, is_safe_mount_path
 from core.exploits import setup_nand_backup_stage, setup_unlaunch_stage
@@ -271,10 +272,10 @@ def start_app():
     api = Api()
 
     print("\n=======================================================")
-    print("  Route 1 Kit — App Desktop")
+    print(f"  Route 1 Kit {__version__} — App Desktop")
     print("  Feche a janela para encerrar.")
     print("=======================================================\n")
-    add_log("Route 1 Kit iniciado (pywebview).")
+    add_log(f"Route 1 Kit {__version__} iniciado (pywebview).")
 
     icon_path = None
     for candidate in ("app-icon-512.png", "app-icon-256.png", "app-icon.png"):

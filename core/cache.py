@@ -8,10 +8,13 @@ import shutil
 import urllib.request
 from typing import Optional
 
+from core import __version__ as _APP_VERSION
 from core.logging_util import emit_log
 
 CACHE_DIR = os.path.expanduser("~/.route_1_kit_cache")
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Route-1-Kit/1.0"
+USER_AGENT = (
+    f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Route-1-Kit/{_APP_VERSION}"
+)
 
 # Pins oficiais — atualizar com tools/update_pins.py após verificar digest no GitHub.
 # Origem documentada:
