@@ -6,3 +6,8 @@ node_modules/
 package-lock.json
 .pytest_cache/
 *.egg-info/
+build/
+dist/
+release_artifacts/
+*.dmg
+.Python

@@ -7,10 +7,26 @@ e este projeto adere a [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Unreleased]
 
-### Planejado
+## [1.0.0] — 2026-09-08
 
-- Packaging / instaladores (adiado)
-- Release pública `1.0.0`
+Primeira release pública do **Route 1 Kit**, com builds portátil e instalável.
+
+### Adicionado
+
+- Packaging PyInstaller (`packaging/Route1Kit.spec`) e scripts `tools/build_*_release.sh`
+- Instalador Windows (Inno Setup) e DMG macOS; tarballs Linux (portátil + atalho)
+- Workflow GitHub Actions `release.yml` (artefactos multiplataforma em tags `v*`)
+- Utilitários: boxarts (GameTDB), GodMode9i, cheats `usrcheat.dat`, relatório de SD
+- README orientado a iniciantes (tutorial do Assistente) + secção técnica
+
+### Alterado
+
+- Versão do produto: **1.0.0**
+- `app.py` resolve `BASE_DIR` corretamente em builds frozen (`sys._MEIPASS`)
+
+### Segurança
+
+- Mantidos pins SHA-256, preflight de montagem, rollback e redação de paths
 
 ## [0.9.0] — 2026-09-08
 

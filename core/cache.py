@@ -22,12 +22,14 @@ USER_AGENT = (
 #   dumptool:  dsi.cfw.guide dumpTool boot.nds
 #   unlaunch:  edo9300/unlaunch-installer v2.6 (digest GitHub Release)
 #   twilight:  DS-Homebrew/TWiLightMenu v27.24.1 (digest GitHub Release)
+#   godmode9i: DS-Homebrew/GodMode9i v3.9.0 GodMode9i.dsi (digest GitHub Release)
 PINNED_SHA256 = {
     "pit_facebook": "ca4c197ef81283ad0c802fdc39bcb6c880e2e182cb7ac5c456a68368e50bbe14",
     "pit_no_facebook": "9f2b97bfb9569723ed5c0c48f314ab8c94e56e855acb468db727b8ecf059342b",
     "dumptool": "313b255a754bda4d06d6f761a7490b4f1675c957c41676119330520cb09a47ea",
     "unlaunch": "14ba0b4af84e801206e20cffdf55002e3b4b5dd8be18abf3c0977011b23f1aeb",
     "twilight_7z": "c04fc66305ce8dc80e69aa4070d3ce966f04868881663f57b91f68d687a2bb90",
+    "godmode9i": "7fcf94f3b840ed240175a386c0a28c246bd40bcc791e8505c100ca78ba49b6e1",
 }
 
 PIN_META = {
@@ -40,6 +42,11 @@ PIN_META = {
         "repo": "DS-Homebrew/TWiLightMenu",
         "tag": "v27.24.1",
         "asset": "TWiLightMenu-DSi.7z",
+    },
+    "godmode9i": {
+        "repo": "DS-Homebrew/GodMode9i",
+        "tag": "v3.9.0",
+        "asset": "GodMode9i.dsi",
     },
 }
 
@@ -55,6 +62,10 @@ URLS = {
         "https://github.com/DS-Homebrew/TWiLightMenu/releases/download/v27.24.1/"
         "TWiLightMenu-DSi.7z"
     ),
+    "godmode9i": (
+        "https://github.com/DS-Homebrew/GodMode9i/releases/download/v3.9.0/"
+        "GodMode9i.dsi"
+    ),
 }
 
 FILENAMES = {
@@ -63,6 +74,7 @@ FILENAMES = {
     "dumptool": "dumptool.nds",
     "unlaunch": "unlaunch.dsi",
     "twilight_7z": "TWiLightMenu-DSi.7z",
+    "godmode9i": "GodMode9i.dsi",
 }
 
 MIN_SIZES = {
@@ -71,6 +83,7 @@ MIN_SIZES = {
     "dumptool": 1024,
     "unlaunch": 1024,
     "twilight_7z": 1024 * 100,
+    "godmode9i": 1024,
 }
 
 

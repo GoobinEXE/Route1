@@ -21,12 +21,19 @@ const ACTION_MAP = {
   "clean-sd": "clean_sd",
   "format-sd": "format_sd",
   "quarantine-dcim": "quarantine_dcim",
+  "sd-report": "sd_report",
+  "setup-godmode9i": "setup_godmode9i",
+  "install-cheats": "install_cheats",
+  "install-boxarts": "install_boxarts",
+  "copy-nand": "copy_nand_backup",
 };
 
 const MODE_STORAGE_KEY = "route_1_kit_mode";
 
+/** Só considera pronta quando a bridge tem métodos (api começa como {}). */
 function getApi() {
-  return window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+  const api = window.pywebview && window.pywebview.api ? window.pywebview.api : null;
+  return api && typeof api.get_disks === "function" ? api : null;
 }
 
 function waitForApi(timeoutMs = 10000) {
@@ -307,6 +314,12 @@ function findActionButton(endpoint) {
     backup: "runAction('backup')",
     "clean-sd": "runAction('clean-sd')",
     "format-sd": "confirmFormat()",
+    "quarantine-dcim": "runAction('quarantine-dcim')",
+    "sd-report": "runAction('sd-report')",
+    "setup-godmode9i": "runAction('setup-godmode9i')",
+    "install-cheats": "runAction('install-cheats')",
+    "install-boxarts": "runAction('install-boxarts')",
+    "copy-nand": "runAction('copy-nand')",
   };
   const needle = map[endpoint];
   if (!needle) return null;
@@ -347,11 +360,41 @@ async function runMountOp(options = {}) {
 
   if (methodName === "organize_roms" && options.confirmOrganize !== false) {
     const conf = confirm(
-      "Organizar jogos irá:\n" +
-        "• mover ROMs para /roms/<plataforma>/\n" +
+      "Organizar jogos e apps irá:\n" +
+        "• mover jogos para /roms/nds/ (lista flat, acesso rápido)\n" +
+        "• mover homebrew/apps para /roms/apps/\n" +
         "• sincronizar saves\n" +
-        "• APAGAR arquivos .txt/.jpg/.nfo/.html etc. apenas dentro de /roms/\n\n" +
+        "• APAGAR .txt/.jpg/.nfo/.html etc. apenas dentro de /roms/\n\n" +
         "Continuar?"
+    );
+    if (!conf) return { success: false, error: "cancelled" };
+  }
+
+  if (methodName === "install_cheats") {
+    const conf = confirm(
+      "Instalar cheats procura usrcheat.dat em Downloads/Desktop e copia para:\n" +
+        "/_nds/TWiLightMenu/extras/usrcheat.dat\n\n" +
+        "Continuar?"
+    );
+    if (!conf) return { success: false, error: "cancelled" };
+  }
+
+  if (methodName === "install_boxarts") {
+    const conf = confirm(
+      "Instalar boxarts irá:\n" +
+        "• descarregar capas do GameTDB (requer internet)\n" +
+        "• e/ou importar packs PNG/zip de Downloads/Desktop\n" +
+        "• gravar em /_nds/TWiLightMenu/boxart/\n\n" +
+        "No TWiLight, ative a visualização de capas nas definições.\n\n" +
+        "Continuar?"
+    );
+    if (!conf) return { success: false, error: "cancelled" };
+  }
+
+  if (methodName === "copy_nand_backup") {
+    const conf = confirm(
+      "Copiar dump(s) NAND (DT*/nand.bin) para uma pasta no Desktop?\n" +
+        "O ficheiro no cartão NÃO será apagado."
     );
     if (!conf) return { success: false, error: "cancelled" };
   }
@@ -433,7 +476,7 @@ async function confirmFormat() {
     selectedDrive.total_size_gb != null ? `${selectedDrive.total_size_gb} GB` : "?";
   const fs = selectedDrive.fs_type || "?";
   const conf = confirm(
-    `Formatar ${selectedDrive.name} em FAT32?\n\n` +
+    `Formatar ${selectedDrive.name} em FAT32 (cluster 32 KB)?\n\n` +
       `Caminho: ${selectedDrive.mount_path}\n` +
       `Capacidade: ${size}\n` +
       `Sistema: ${fs}\n` +

@@ -125,18 +125,105 @@ JUNK_EXTS = {".nfo", ".sfv", ".diz", ".jpg", ".jpeg", ".png", ".cc", ".db", ".tx
 
 
 def get_nds_header_info(file_path):
-    """Lê o cabeçalho de uma ROM .nds/.dsi para extrair título, Game Code e unitcode."""
+    """
+    Lê o cabeçalho NDS: título, Game Code, unitcode, maker code.
+    Retorna (raw_title, game_code, unitcode, maker_code) ou Nones.
+    """
     try:
         with open(file_path, "rb") as f:
             header = f.read(0x200)
             if len(header) < 0x20:
-                return None, None, None
+                return None, None, None, None
             raw_title = header[0:12].decode("latin1", errors="ignore").rstrip("\x00").strip()
-            game_code = header[12:16].decode("latin1", errors="ignore").strip()
+            game_code = header[12:16].decode("latin1", errors="ignore").rstrip("\x00")
+            maker_code = header[0x10:0x12].decode("latin1", errors="ignore").rstrip("\x00")
             unitcode = header[0x12]
-            return raw_title, game_code, unitcode
+            return raw_title, game_code, unitcode, maker_code
     except Exception:
-        return None, None, None
+        return None, None, None, None
+
+
+# Bootloaders / instaladores na raiz do SD — nunca reorganizar.
+SYSTEM_ROOT_NAMES = frozenset(
+    {
+        "boot.nds",
+        "dumptool.nds",
+        "twilightmenu.nds",
+        "unlaunch-installer.dsi",
+        "unlaunch.dsi",
+        "_ds_menu.dat",
+        "_ds_mshl.nds",
+        "godmode9i.nds",
+        "godmode9i.dsi",
+    }
+)
+
+# Nomes tipicamente homebrew/utilitário (comparação sem extensão, lower).
+KNOWN_APP_STEMS = frozenset(
+    {
+        "godmode9i",
+        "godmode9",
+        "ftpd",
+        "nds-hb-menu",
+        "hbmenu",
+        "dumptool",
+        "nitrohax",
+        "wooddumper",
+        "twlmagick",
+        "hiyacfw",
+        "nandtitlemanager",
+        "ntm",
+    }
+)
+
+
+def _is_nullish_code(code: str) -> bool:
+    if not code:
+        return True
+    cleaned = code.replace("\x00", "").strip()
+    if not cleaned:
+        return True
+    low = cleaned.lower()
+    return low in ("####", "0000", "00", "0", "null", "home")
+
+
+def classify_nds_kind(title, game_code, maker_code, filename, *, at_sd_root=False):
+    """
+    Classifica um .nds/.dsi: 'system' | 'app' | 'game'.
+    system = bootloaders na raiz; app = homebrew; game = comercial / DSiWare.
+    """
+    base = os.path.basename(filename or "")
+    low = base.lower()
+    stem = os.path.splitext(low)[0]
+
+    if at_sd_root and low in SYSTEM_ROOT_NAMES:
+        return "system"
+    if low in SYSTEM_ROOT_NAMES or stem in KNOWN_APP_STEMS:
+        # GodMode9i etc. na raiz = system; noutros sítios = app.
+        if at_sd_root and low.startswith("godmode9i"):
+            return "system"
+        if stem in KNOWN_APP_STEMS or low.startswith("godmode9i"):
+            return "app"
+
+    maker = (maker_code or "").replace("\x00", "").strip()
+    code = (game_code or "").replace("\x00", "").strip()
+
+    if _is_nullish_code(maker) or _is_nullish_code(code):
+        return "app"
+
+    # Maker / game code tipicamente comerciais: alfanuméricos ASCII.
+    if (
+        len(code) == 4
+        and code.isalnum()
+        and code.isascii()
+        and len(maker) == 2
+        and maker.isalnum()
+        and maker.isascii()
+    ):
+        return "game"
+
+    # Códigos estranhos → tratar como app para não misturar com a lista de jogos.
+    return "app"
 
 
 def clean_rom_filename(filename, game_code=None):
@@ -160,28 +247,23 @@ def clean_rom_filename(filename, game_code=None):
     return name if name else os.path.splitext(filename)[0]
 
 
-def detect_platform(file_path, filename, ext, header_info=None):
+def detect_platform(file_path, filename, ext, header_info=None, kind=None):
     """
     Detecta a pasta de plataforma TWiLight para um arquivo de jogo.
-    .nds com unitcode DSi Exclusive (2) → dsi; demais .nds → nds.
+    Jogos NDS/DSi → sempre 'nds' (lista flat, acesso rápido).
+    Apps NDS → 'apps'.
     Extensões ambíguas (.bin/.rom) usam a pasta de origem se já for uma plataforma conhecida.
 
-    header_info: tupla opcional (raw_title, game_code, unitcode) para evitar
-    releitura do cabeçalho NDS.
+    header_info: tupla (raw_title, game_code, unitcode, maker_code).
+    kind: 'game' | 'app' | None (não-NDS).
     """
     parent = os.path.basename(os.path.dirname(file_path)).lower()
 
-    if ext in (".nds", ".ids"):
-        if header_info is None:
-            header_info = get_nds_header_info(file_path)
-        unitcode = header_info[2] if header_info else None
-        # 0 = NDS, 1 = DSi Enhanced (ainda vai em nds), 2 = DSi Exclusive / DSiWare
-        if unitcode == 2:
-            return "dsi"
+    if ext in (".nds", ".ids", ".dsi", ".app"):
+        if kind == "app":
+            return "apps"
+        # Jogos (incluindo DSiWare / unitcode 2) → /roms/nds/ flat
         return "nds"
-
-    if ext in (".dsi", ".app"):
-        return "dsi"
 
     mapped = PLATFORM_BY_EXT.get(ext)
     if mapped:
@@ -189,9 +271,13 @@ def detect_platform(file_path, filename, ext, header_info=None):
 
     # Extensões ambíguas: respeitar pasta de origem se já for plataforma conhecida
     known_folders = set(PLATFORM_BY_EXT.values()) - {None}
-    known_folders |= {"dsiware", "nds", "gba", "gb", "gbc", "nes", "snes", "gen", "sms", "gg"}
+    known_folders |= {"dsiware", "nds", "gba", "gb", "gbc", "nes", "snes", "gen", "sms", "gg", "apps"}
     if parent in known_folders:
-        return "dsi" if parent == "dsiware" else parent
+        if parent == "dsiware":
+            return "nds"
+        if parent == "dsi":
+            return "nds"
+        return parent
 
     if ext == ".bin":
         return "gen"  # comum em dumps de Mega Drive
@@ -238,12 +324,12 @@ def _safe_move(src, dst):
 
 def organize_roms_directory(mount_path, log_callback=None):
     """
-    Varre o cartão SD, identifica a plataforma de cada jogo e organiza em
-    /roms/<plataforma>/ (padrão TWiLight Menu++), com saves ao lado ou em /saves/.
+    Varre o cartão SD: jogos NDS/DSi → /roms/nds/ (flat); homebrew → /roms/apps/;
+    outras plataformas → /roms/<plat>/; saves ao lado ou em /roms/saves/.
     """
     log = lambda msg: emit_log(log_callback, msg)
 
-    log(f"=== Organização por plataforma em: {mount_path} ===")
+    log(f"=== Organização (jogos flat + apps) em: {mount_path} ===")
 
     if not os.path.exists(mount_path):
         return False, f"Diretório {mount_path} não existe."
@@ -252,16 +338,20 @@ def organize_roms_directory(mount_path, log_callback=None):
     os.makedirs(roms_root, exist_ok=True)
 
     # Coletar ROMs, saves e lixo em um único walk
-    rom_candidates = []  # (name, full_path, ext, platform, game_code)
+    # (name, full_path, ext, platform, game_code, kind)
+    rom_candidates = []
     sav_candidates = []
     junk_paths = []
     empty_dir_candidates = []
+
+    mount_norm = mount_path.rstrip("/\\")
 
     for root, dirs, files in os.walk(mount_path, topdown=True):
         dirs[:] = [d for d in dirs if d not in SKIP_DIR_NAMES and not d.startswith(".")]
 
         under_roms = root.startswith(roms_root)
         skip_root = _is_under_skip(root, mount_path) and root != mount_path
+        at_sd_root = root.rstrip("/\\") == mount_norm
 
         for f in files:
             full_path = os.path.join(root, f)
@@ -277,16 +367,8 @@ def organize_roms_directory(mount_path, log_callback=None):
                 continue
 
             low_name = f.lower()
-            if root.rstrip("/\\") == mount_path.rstrip("/\\"):
-                if low_name in {
-                    "boot.nds",
-                    "dumptool.nds",
-                    "twilightmenu.nds",
-                    "unlaunch-installer.dsi",
-                    "_ds_menu.dat",
-                    "_ds_mshl.nds",
-                }:
-                    continue
+            if at_sd_root and low_name in SYSTEM_ROOT_NAMES:
+                continue
 
             if ext in SAVE_EXTS:
                 sav_candidates.append((f, full_path, ext))
@@ -303,23 +385,33 @@ def organize_roms_directory(mount_path, log_callback=None):
             if ext in PLATFORM_BY_EXT:
                 header_info = None
                 game_code = None
+                kind = None
                 if ext in (".nds", ".dsi", ".ids", ".app"):
                     header_info = get_nds_header_info(full_path)
                     game_code = header_info[1]
-                platform = detect_platform(full_path, f, ext, header_info=header_info)
+                    maker_code = header_info[3]
+                    title = header_info[0]
+                    kind = classify_nds_kind(
+                        title, game_code, maker_code, f, at_sd_root=at_sd_root
+                    )
+                    if kind == "system":
+                        continue
+                platform = detect_platform(
+                    full_path, f, ext, header_info=header_info, kind=kind
+                )
                 if platform:
-                    rom_candidates.append((f, full_path, ext, platform, game_code))
+                    rom_candidates.append((f, full_path, ext, platform, game_code, kind))
 
         # Marcar pastas potencialmente vazias para limpeza posterior
         for d in list(dirs):
             empty_dir_candidates.append(os.path.join(root, d))
 
     by_plat = {}
-    for _, _, _, plat, _ in rom_candidates:
+    for _, _, _, plat, _, _ in rom_candidates:
         by_plat[plat] = by_plat.get(plat, 0) + 1
 
     summary = ", ".join(f"{n} {p}" for p, n in sorted(by_plat.items())) or "nenhum"
-    log(f"Encontrados: {len(rom_candidates)} jogos ({summary}) e {len(sav_candidates)} saves.")
+    log(f"Encontrados: {len(rom_candidates)} ficheiros ({summary}) e {len(sav_candidates)} saves.")
 
     saves_by_stem = {}
     for sav_name, sav_path, sav_ext in sav_candidates:
@@ -332,7 +424,7 @@ def organize_roms_directory(mount_path, log_callback=None):
     move_failures = 0
     counts_moved = {}
 
-    for original_name, full_path, ext, platform, game_code in rom_candidates:
+    for original_name, full_path, ext, platform, game_code, kind in rom_candidates:
         if not os.path.exists(full_path):
             continue
 
@@ -349,8 +441,12 @@ def organize_roms_directory(mount_path, log_callback=None):
         target_rom = os.path.join(platform_dir, f"{clean_name}{out_ext}")
         try:
             new_rom_path = _safe_move(full_path, target_rom)
+            label = "app" if platform == "apps" or kind == "app" else "jogo"
             if os.path.abspath(full_path) != os.path.abspath(new_rom_path):
-                log(f"🎮 [{platform}] {original_name} ➔ /roms/{platform}/{os.path.basename(new_rom_path)}")
+                log(
+                    f"🎮 [{platform}/{label}] {original_name} ➔ "
+                    f"/roms/{platform}/{os.path.basename(new_rom_path)}"
+                )
             else:
                 log(f"🎮 [{platform}] {os.path.basename(new_rom_path)} (já no lugar)")
             organized_count += 1
@@ -417,12 +513,12 @@ def organize_roms_directory(mount_path, log_callback=None):
         except Exception:
             pass
 
-    log("✅ Organização por plataforma finalizada!")
+    log("✅ Organização finalizada!")
     if counts_moved:
         for plat, n in sorted(counts_moved.items()):
-            log(f"   - /roms/{plat}/ → {n} jogo(s)")
-    log(f"   - {organized_count} jogos organizados no total.")
-    log(f"   - {matched_saves_count} saves sincronizados com os jogos.")
+            log(f"   - /roms/{plat}/ → {n} ficheiro(s)")
+    log(f"   - {organized_count} organizados no total.")
+    log(f"   - {matched_saves_count} saves sincronizados.")
     if orphan_count > 0:
         log(f"   - {orphan_count} saves avulsos em /roms/saves/.")
     log(f"   - {deleted_junk} arquivos inúteis removidos.")
@@ -431,8 +527,9 @@ def organize_roms_directory(mount_path, log_callback=None):
 
     detail = ", ".join(f"{n} {p}" for p, n in sorted(counts_moved.items())) or "0"
     msg = (
-        f"{organized_count} jogos organizados por plataforma ({detail}); "
-        f"{matched_saves_count} saves sincronizados."
+        f"{organized_count} itens organizados ({detail}); "
+        f"{matched_saves_count} saves sincronizados. "
+        "Jogos em /roms/nds/; apps em /roms/apps/."
     )
     if move_failures and organized_count == 0 and rom_candidates:
         return False, f"Organização falhou ({move_failures} erro(s)). {msg}"

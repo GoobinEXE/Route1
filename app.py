@@ -9,19 +9,33 @@ import threading
 from collections import deque
 from functools import wraps
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def _resolve_base_dir():
+    """Raiz do app: pasta do fonte, ou _MEIPASS quando empacotado (PyInstaller)."""
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+BASE_DIR = _resolve_base_dir()
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 import webview
 
 from core import __version__
+from core.boxart import install_boxarts as do_install_boxarts
 from core.cleaner import backup_drive, clean_macos_metadata
 from core.disks import format_sd_card, get_mounted_drives, is_safe_mount_path
 from core.exploits import setup_nand_backup_stage, setup_unlaunch_stage
 from core.inspect_sd import inspect_sd_card, quarantine_dcim as do_quarantine_dcim
 from core.privacy import expand_user_path, redact_path, redact_text
 from core.rom_cleaner import organize_roms_directory
+from core.sd_utils import (
+    copy_nand_backup as do_copy_nand_backup,
+    format_sd_report as do_sd_report,
+    install_cheats as do_install_cheats,
+    setup_godmode9i as do_setup_godmode9i,
+)
 from core.sdio import preflight
 from core.twilight import install_gei_kernel, install_r4_kernel, probe_kernels
 
@@ -235,6 +249,31 @@ class Api:
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=1)
+    def sd_report(self, mount_path):
+        success, msg = do_sd_report(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=4)
+    def setup_godmode9i(self, mount_path):
+        success, msg = do_setup_godmode9i(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=64)
+    def install_cheats(self, mount_path):
+        success, msg = do_install_cheats(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=1)
+    def copy_nand_backup(self, mount_path):
+        success, msg = do_copy_nand_backup(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=32)
+    def install_boxarts(self, mount_path):
+        success, msg = do_install_boxarts(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=1)
     def backup(self, mount_path):
         success, path = backup_drive(mount_path, log_callback=add_log)
         shown = redact_path(path) if path else path
@@ -258,7 +297,7 @@ class Api:
     def format_sd(self, mount_path):
         # Formatação: não exigir FAT no preflight (o objetivo é converter para FAT32).
         # Ainda valida removível via is_safe_mount_path no decorator e format_sd_card.
-        add_log(f"Formatando unidade {mount_path} em FAT32...")
+        add_log(f"Formatando unidade {mount_path} em FAT32 (cluster 32 KB)...")
         ok, msg, _drive = preflight(mount_path, min_free_mb=1, require_fat=False)
         if not ok:
             return _reject(msg)
@@ -311,4 +350,9 @@ def start_app():
 
 
 if __name__ == "__main__":
+    # Necessário em builds Windows (PyInstaller) para evitar reentrada do bootloader.
+    if sys.platform.startswith("win"):
+        import multiprocessing
+
+        multiprocessing.freeze_support()
     start_app()

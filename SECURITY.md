@@ -4,10 +4,11 @@
 
 | Versão | Suportada |
 |--------|-----------|
-| 0.9.x  | Sim (pré-release) |
+| 1.0.x  | Sim |
+| 0.9.x  | Sim (até fim de suporte da linha 1.0) |
 | anteriores a 0.9 | Não |
 
-Correções de segurança serão aplicadas na linha suportada atual antes da `1.0.0`.
+Correções de segurança serão aplicadas na linha suportada atual (`1.0.x`).
 
 ## Como reportar uma vulnerabilidade
 

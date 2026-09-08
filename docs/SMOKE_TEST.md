@@ -41,3 +41,9 @@ Checklist manual **antes** de uma release futura. Use um **cartão MicroSD dedic
 - [ ] Anotar falhas com SO, versão do app e passo exato
 
 Não execute Unlaunch na NAND de uma consola de produção só para este checklist; o foco é o PC + cartão de teste.
+
+## Builds empacotados (opcional)
+
+- [ ] Abrir o artefacto **portátil** da plataforma e confirmar janela + versão `1.0.x`
+- [ ] Abrir o artefacto **instalável** (DMG / setup.exe / tarball com atalho) e confirmar o mesmo
+- [ ] Lista de discos e uma operação segura (ex. relatório / inspeção) no SD de teste

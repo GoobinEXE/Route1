@@ -87,6 +87,11 @@ def resolve_safe_drive(mount_path):
 _SUBPROC_INFO_TIMEOUT = 30
 _SUBPROC_FORMAT_TIMEOUT = 300
 
+# dsi.cfw.guide / Unlaunch: FAT32 com cluster 32 KiB (evita "Clusters too large").
+TARGET_CLUSTER_BYTES = 32768
+# Setores de 512 bytes × 64 = 32768.
+_FAT_SECTORS_PER_CLUSTER_32K = 64
+
 
 def _resolve_linux_source(mount_path):
     if not shutil.which("findmnt"):
@@ -583,6 +588,69 @@ def get_mounted_drives():
 
 _VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,11}$")
 _WIN_LETTER_RE = re.compile(r"^[D-Z]$")
+_MACOS_DISK_ID_RE = re.compile(r"^(disk\d+)(?:s\d+)?$")
+
+
+def _macos_whole_disk_id(identifier):
+    """Extrai o disco inteiro (diskN) de diskN ou diskNsM. Evita split('s')."""
+    if not identifier or not isinstance(identifier, str):
+        return ""
+    m = _MACOS_DISK_ID_RE.fullmatch(identifier.strip())
+    return m.group(1) if m else ""
+
+
+def get_cluster_size_bytes(mount_path: str):
+    """
+    Tenta ler o tamanho do cluster (allocation unit) do volume montado.
+    Retorna int (bytes) ou None se indisponível.
+    """
+    if not mount_path or not os.path.isdir(mount_path):
+        return None
+    try:
+        if sys.platform == "darwin":
+            out = subprocess.check_output(
+                ["diskutil", "info", "-plist", mount_path],
+                stderr=subprocess.DEVNULL,
+                timeout=_SUBPROC_INFO_TIMEOUT,
+            )
+            data = plistlib.loads(out)
+            # Preferir AllocationBlockSize; fallback VolumeAllocationBlockSize.
+            for key in ("AllocationBlockSize", "VolumeAllocationBlockSize"):
+                val = data.get(key)
+                if isinstance(val, int) and val > 0:
+                    return val
+            return None
+
+        if sys.platform == "win32":
+            import ctypes
+            from ctypes import wintypes
+
+            root = mount_path
+            if len(root) >= 2 and root[1] == ":":
+                root = root[:2] + "\\"
+            spc = wintypes.DWORD()
+            bps = wintypes.DWORD()
+            free_c = wintypes.DWORD()
+            total_c = wintypes.DWORD()
+            ok = ctypes.windll.kernel32.GetDiskFreeSpaceW(
+                ctypes.c_wchar_p(root),
+                ctypes.byref(spc),
+                ctypes.byref(bps),
+                ctypes.byref(free_c),
+                ctypes.byref(total_c),
+            )
+            if not ok:
+                return None
+            if spc.value and bps.value:
+                return int(spc.value) * int(bps.value)
+            return None
+
+        # Linux: statvfs f_frsize is often the cluster/fragment size on vfat.
+        st = os.statvfs(mount_path)
+        fr = int(getattr(st, "f_frsize", 0) or 0)
+        return fr if fr > 0 else None
+    except Exception:
+        return None
 
 
 def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
@@ -608,11 +676,11 @@ def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
         if not parent_disk:
             return False, "Identificador do disco não encontrado."
 
-        if "s" in parent_disk and parent_disk.startswith("disk"):
-            parent_disk = parent_disk.split("s")[0]
-
-        if not re.fullmatch(r"disk\d+", parent_disk):
-            return False, f"Identificador de disco inválido: {parent_disk}"
+        # disk4s1 → disk4. NÃO usar split("s"): "disk" contém "s" → "di".
+        raw_id = parent_disk
+        parent_disk = _macos_whole_disk_id(parent_disk)
+        if not parent_disk:
+            return False, f"Identificador de disco inválido: {raw_id}"
 
         cmd = [
             "diskutil",
@@ -626,9 +694,73 @@ def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
         res = subprocess.run(
             cmd, capture_output=True, text=True, timeout=_SUBPROC_FORMAT_TIMEOUT
         )
-        if res.returncode == 0:
-            return True, f"Cartão formatado com sucesso como {volume_name} (FAT32)!"
-        return False, f"Erro ao formatar: {res.stderr or res.stdout}"
+        if res.returncode != 0:
+            return False, f"Erro ao formatar: {res.stderr or res.stdout}"
+
+        # partitionDisk não garante cluster 32 KB — reforçar com newfs_msdos.
+        part_id = f"{parent_disk}s1"
+        part_dev = f"/dev/{part_id}"
+        rpart_dev = f"/dev/r{part_id}"
+        # Desmontar volume (pode ter remontado automaticamente).
+        subprocess.run(
+            ["diskutil", "unmount", "force", part_dev],
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+            check=False,
+        )
+        newfs = shutil.which("newfs_msdos") or "/sbin/newfs_msdos"
+        nf = subprocess.run(
+            [
+                newfs,
+                "-F",
+                "32",
+                "-b",
+                str(TARGET_CLUSTER_BYTES),
+                "-v",
+                volume_name,
+                rpart_dev,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_FORMAT_TIMEOUT,
+        )
+        if nf.returncode != 0:
+            # Fallback: tentar sem raw device.
+            nf2 = subprocess.run(
+                [
+                    newfs,
+                    "-F",
+                    "32",
+                    "-b",
+                    str(TARGET_CLUSTER_BYTES),
+                    "-v",
+                    volume_name,
+                    part_dev,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=_SUBPROC_FORMAT_TIMEOUT,
+            )
+            if nf2.returncode != 0:
+                return (
+                    False,
+                    "FAT32 criado, mas falhou ao forçar cluster 32 KB: "
+                    f"{(nf2.stderr or nf.stderr or nf2.stdout or nf.stdout).strip()}",
+                )
+
+        subprocess.run(
+            ["diskutil", "mount", part_dev],
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+            check=False,
+        )
+        return (
+            True,
+            f"Cartão formatado com sucesso como {volume_name} "
+            f"(FAT32, cluster {TARGET_CLUSTER_BYTES // 1024} KB)!",
+        )
     except subprocess.TimeoutExpired:
         return False, "Formatação excedeu o tempo limite."
     except Exception as e:
@@ -661,6 +793,7 @@ def _format_sd_windows(mount_path, volume_name, expected_device_id=""):
             format_bin,
             f"{letter}:",
             "/FS:FAT32",
+            f"/A:{TARGET_CLUSTER_BYTES}",
             f"/V:{volume_name}",
             "/Q",
             "/Y",
@@ -669,9 +802,17 @@ def _format_sd_windows(mount_path, volume_name, expected_device_id=""):
             cmd, capture_output=True, text=True, timeout=_SUBPROC_FORMAT_TIMEOUT
         )
         if res.returncode == 0:
-            return True, f"Cartão formatado com sucesso como {volume_name} (FAT32)!"
+            return (
+                True,
+                f"Cartão formatado com sucesso como {volume_name} "
+                f"(FAT32, cluster {TARGET_CLUSTER_BYTES // 1024} KB)!",
+            )
         err = (res.stderr or res.stdout or "").strip()
-        hint = " Execute o app como Administrador se a formatação falhar por permissão."
+        hint = (
+            " Execute o app como Administrador se a formatação falhar por permissão. "
+            "Em cartões >32 GB o Windows pode recusar FAT32 — use uma ferramenta "
+            "como GUIFormat com allocation 32768."
+        )
         return False, f"Erro ao formatar: {err or 'código ' + str(res.returncode)}.{hint}"
     except subprocess.TimeoutExpired:
         return False, "Formatação excedeu o tempo limite."
@@ -745,13 +886,26 @@ def _format_sd_linux(mount_path, volume_name, expected_device_id=""):
 
         label = (volume_name or "DSI_SD")[:11]
         res = subprocess.run(
-            ["mkfs.vfat", "-F", "32", "-n", label, device],
+            [
+                "mkfs.vfat",
+                "-F",
+                "32",
+                "-s",
+                str(_FAT_SECTORS_PER_CLUSTER_32K),
+                "-n",
+                label,
+                device,
+            ],
             capture_output=True,
             text=True,
             timeout=_SUBPROC_FORMAT_TIMEOUT,
         )
         if res.returncode == 0:
-            return True, f"Cartão formatado com sucesso como {label} (FAT32)!"
+            return (
+                True,
+                f"Cartão formatado com sucesso como {label} "
+                f"(FAT32, cluster {TARGET_CLUSTER_BYTES // 1024} KB)!",
+            )
         err = (res.stderr or res.stdout or "").strip()
         return False, f"Erro ao formatar (pode precisar de sudo): {err or res.returncode}"
     except subprocess.TimeoutExpired:
@@ -761,7 +915,7 @@ def _format_sd_linux(mount_path, volume_name, expected_device_id=""):
 
 
 def format_sd_card(mount_path, volume_name="DSi_SD"):
-    """Formata o cartão selecionado para FAT32 (comportamento por SO)."""
+    """Formata o cartão selecionado para FAT32 com cluster 32 KB (comportamento por SO)."""
     if not _VOLUME_NAME_RE.match(volume_name or ""):
         return False, "Nome de volume inválido (use 1–11 caracteres A-Z, 0-9 ou _)."
 

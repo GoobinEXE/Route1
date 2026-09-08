@@ -6,7 +6,13 @@ import os
 import re
 from typing import Any, Optional
 
-from core.disks import _normalize_mount, get_mounted_drives, is_safe_mount_path
+from core.disks import (
+    TARGET_CLUSTER_BYTES,
+    _normalize_mount,
+    get_cluster_size_bytes,
+    get_mounted_drives,
+    is_safe_mount_path,
+)
 from core.exploits import _twilight_present
 
 # dumpTool grava pastas DT<hex>/nand.bin (~240 MiB). Aceitar nomes próximos.
@@ -131,12 +137,19 @@ def inspect_sd_card(mount_path: str) -> dict[str, Any]:
         except (TypeError, ValueError):
             over_32 = False
 
+    cluster = get_cluster_size_bytes(mount_path)
+    cluster_ok = None
+    if cluster is not None:
+        cluster_ok = cluster == TARGET_CLUSTER_BYTES
+
     return {
         "success": True,
         "mount_path": mount_path,
         "name": name,
         "fs_type": fs_type,
         "is_fat32": _is_fat32(fs_type),
+        "cluster_bytes": cluster,
+        "cluster_ok": cluster_ok,
         "total_size_gb": total_gb,
         "free_size_gb": free_gb,
         "over_32gb": over_32,

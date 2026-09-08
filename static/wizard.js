@@ -779,7 +779,8 @@ const Wizard = (() => {
   function renderRomsOptional(el) {
     el.innerHTML = `
       <p class="text-[12px] text-fg-mute leading-relaxed">
-        Se já copiou jogos para o cartão, pode organizá-los agora nas pastas do TWiLight (<code>/roms/…</code>).
+        Se já copiou jogos para o cartão, pode organizá-los agora: jogos em
+        <code>/roms/nds/</code> (lista flat) e apps em <code>/roms/apps/</code>.
         Caso contrário, salte e copie os jogos depois.
       </p>
       ${drivePanelHtml()}

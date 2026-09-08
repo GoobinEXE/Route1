@@ -23,13 +23,23 @@ def fake_sd(tmp_path):
     return sd
 
 
-def make_nds(path, title=b"HOMEBREW", code=b"####", rom_size=None, payload=b"\x00" * 2048):
+def make_nds(
+    path,
+    title=b"HOMEBREW",
+    code=b"####",
+    maker=b"00",
+    unitcode=0,
+    rom_size=None,
+    payload=b"\x00" * 2048,
+):
     """Cria um arquivo .nds mínimo com CRC de cabeçalho válido."""
     from core.validate import crc16_nds
 
     header = bytearray(0x200)
     header[0:12] = title.ljust(12, b"\x00")[:12]
     header[12:16] = code.ljust(4, b"\x00")[:4]
+    header[0x10:0x12] = maker.ljust(2, b"\x00")[:2]
+    header[0x12] = unitcode & 0xFF
     body = payload
     size = 0x200 + len(body)
     if rom_size is None:

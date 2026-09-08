@@ -16,6 +16,7 @@ def test_inspect_finds_dt_nand(tmp_path, monkeypatch):
     (dt / "nand.bin.sha1").write_text("abc")
 
     monkeypatch.setattr(inspect_sd, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(inspect_sd, "get_cluster_size_bytes", lambda p: 32768)
     monkeypatch.setattr(
         inspect_sd,
         "get_mounted_drives",

@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a publicar (ex. v1.0.0); vazio = só build de artefactos"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: macos
+          - os: windows-latest
+            artifact: windows
+          - os: ubuntu-latest
+            artifact: linux
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade "pip>=26.2"
+
+      - name: Install runtime (hashed lock)
+        run: python -m pip install --require-hashes -r requirements.lock.txt
+
+      - name: Install PyInstaller
+        run: python -m pip install "pyinstaller>=6.11,<7"
+
+      - name: Install Inno Setup (Windows)
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y
+
+      - name: Build macOS (portable zip + DMG)
+        if: runner.os == 'macOS'
+        run: |
+          chmod +x tools/build_macos_release.sh
+          ./tools/build_macos_release.sh
+
+      - name: Build Windows (portable zip + setup)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          chmod +x tools/build_windows_release.sh
+          ./tools/build_windows_release.sh
+
+      - name: Build Linux (portable + installer tarball)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x tools/build_linux_release.sh
+          # pywebview em headless: build do binário não precisa de display
+          ./tools/build_linux_release.sh
+
+      - name: Upload artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: route1kit-${{ matrix.artifact }}
+          path: release_artifacts/*
+          if-no-files-found: error
+
+  publish:
+    name: GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artefacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_download
+          merge-multiple: true
+
+      - name: List artefacts
+        run: find release_download -type f -print
+
+      - name: Create / update release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          generate_release_notes: true
+          body: |
+            ## Route 1 Kit ${{ github.ref_name }}
+
+            Primeira release pública com builds **portátil** e **instalável**.
+
+            ### Downloads
+
+            | Plataforma | Portátil | Instalável |
+            |------------|----------|------------|
+            | **macOS** | `*-portable.zip` (arraste o `.app`) | `*-installer.dmg` (arraste para Aplicações) |
+            | **Windows** | `*-portable.zip` | `*-setup.exe` |
+            | **Linux** | `*-portable.tar.gz` | `*-installer.tar.gz` (+ script de atalho) |
+
+            ### Notas
+
+            - Use um **cartão SD de teste** na primeira utilização.
+            - macOS pode pedir confirmação em *Privacidade e Segurança* (binário não notarizado pela Apple nesta release).
+            - Windows SmartScreen pode avisar em executáveis novos — escolha “Mais informações” → Executar mesmo assim se confiar na origem.
+            - Licença: GPL-3.0. Aviso legal e risco de brick: ver README.
+
+            Changelog: ver `CHANGELOG.md` no repositório.
+          files: release_download/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
