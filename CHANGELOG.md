@@ -7,9 +7,18 @@ e este projeto adere a [Versionamento Semântico](https://semver.org/lang/pt-BR/
 
 ## [Unreleased]
 
+## [1.0.1] — 2026-09-08
+
+### Corrigido
+
+- `requirements.lock.txt` regenerado com `backports-zstd` (necessário em Python abaixo de 3.14) para `pip install --require-hashes` no CI
+- Links do README / Inno apontam para o repositório renomeado [GoobinEXE/Route1](https://github.com/GoobinEXE/Route1)
+
 ## [1.0.0] — 2026-09-08
 
 Primeira release pública do **Route 1 Kit**, com builds portátil e instalável.
+
+> Nota: a tag `v1.0.0` falhou no CI por lock incompleto; use **`v1.0.1`** para os artefactos oficiais.
 
 ### Adicionado
 

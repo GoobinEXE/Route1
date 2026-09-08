@@ -3,13 +3,13 @@
 ; Pré-requisito: dist\Route1Kit\ gerado pelo PyInstaller.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.0.1"
 #endif
 
 #define MyAppName "Route 1 Kit"
 #define MyAppExeName "Route1Kit.exe"
 #define MyAppPublisher "Route 1 Kit"
-#define MyAppURL "https://github.com/GoobinEXE/DSi-SD-Studio"
+#define MyAppURL "https://github.com/GoobinEXE/Route1"
 
 [Setup]
 AppId={{8F3C2A1B-9D4E-4F6A-B7C8-1E2D3A4B5C6D}

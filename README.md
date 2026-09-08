@@ -10,9 +10,9 @@ A interface abre numa **janela nativa** (via [pywebview](https://pywebview.flowr
 
 ---
 
-## Descarregar (release 1.0.0)
+## Descarregar (release 1.0.1)
 
-Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/DSi-SD-Studio/releases).
+Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releases).
 
 | Plataforma | Portátil | Instalável |
 |------------|----------|------------|
@@ -303,8 +303,8 @@ python tools/update_pins.py --check
 ### Instalação a partir do código-fonte
 
 ```bash
-git clone https://github.com/GoobinEXE/DSi-SD-Studio.git
-cd DSi-SD-Studio
+git clone https://github.com/GoobinEXE/Route1.git
+cd Route1
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 python -m pip install --upgrade "pip>=26.2"
