@@ -114,7 +114,7 @@ pip install --require-hashes -r requirements.lock.txt
 pip install -r requirements-dev.txt
 ```
 
-Os scripts `start.command` / `start.bat` criam o `.venv`, atualizam o pip e instalam com hashes automaticamente.
+Os scripts `start.command` / `start.bat` / `start.sh` criam o `.venv`, atualizam o pip e instalam com hashes automaticamente.
 
 ---
 
@@ -126,10 +126,18 @@ Abra a pasta no Finder e dê dois cliques em `start.command`.
 ### Windows — dois cliques
 Execute `start.bat`.
 
-### Terminal
+### Linux
+No terminal, a partir da pasta do projeto:
 
 ```bash
-source .venv/bin/activate
+chmod +x start.sh   # só na primeira vez
+./start.sh
+```
+
+### Terminal (qualquer SO)
+
+```bash
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 python app.py
 ```
 
@@ -138,6 +146,8 @@ python app.py
 ```bash
 pytest -q
 ```
+
+Antes de uma release futura, siga o checklist em [`docs/SMOKE_TEST.md`](docs/SMOKE_TEST.md).
 
 A janela do app abre automaticamente. Feche a janela para encerrar.
 
