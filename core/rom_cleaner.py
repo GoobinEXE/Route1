@@ -267,11 +267,9 @@ def organize_roms_directory(mount_path, log_callback=None):
             full_path = os.path.join(root, f)
             ext = os.path.splitext(f)[1].lower()
 
-            # Lixo: coletar agora (evita segundo walk)
+            # Lixo: apenas dentro de /roms/ (nunca apagar .txt/.jpg fora dali)
             if f.startswith("._") or f == ".DS_Store" or ext in JUNK_EXTS:
-                if under_roms or (
-                    root != mount_path and not skip_root and not _is_under_skip(full_path, mount_path)
-                ):
+                if under_roms:
                     junk_paths.append(full_path)
                 continue
 
@@ -331,6 +329,7 @@ def organize_roms_directory(mount_path, log_callback=None):
     handled_saves = set()
     organized_count = 0
     matched_saves_count = 0
+    move_failures = 0
     counts_moved = {}
 
     for original_name, full_path, ext, platform, game_code in rom_candidates:
@@ -357,6 +356,7 @@ def organize_roms_directory(mount_path, log_callback=None):
             organized_count += 1
             counts_moved[platform] = counts_moved.get(platform, 0) + 1
         except Exception as e:
+            move_failures += 1
             log(f"⚠️ Falha ao mover {original_name}: {e}")
             continue
 
@@ -373,6 +373,7 @@ def organize_roms_directory(mount_path, log_callback=None):
                     matched_saves_count += 1
                     log(f"💾 Save ➔ /roms/{platform}/{final_stem}{sav_ext}")
                 except Exception as e:
+                    move_failures += 1
                     log(f"⚠️ Falha ao mover save {sav_name}: {e}")
 
     orphan_dir = os.path.join(roms_root, "saves")
@@ -392,7 +393,7 @@ def organize_roms_directory(mount_path, log_callback=None):
             _safe_move(sav_path, os.path.join(orphan_dir, sav_name))
             orphan_count += 1
         except Exception:
-            pass
+            move_failures += 1
 
     deleted_junk = 0
     for p in junk_paths:
@@ -425,6 +426,16 @@ def organize_roms_directory(mount_path, log_callback=None):
     if orphan_count > 0:
         log(f"   - {orphan_count} saves avulsos em /roms/saves/.")
     log(f"   - {deleted_junk} arquivos inúteis removidos.")
+    if move_failures:
+        log(f"   - ⚠️ {move_failures} falha(s) ao mover (cartão pode estar parcialmente organizado).")
 
     detail = ", ".join(f"{n} {p}" for p, n in sorted(counts_moved.items())) or "0"
-    return True, f"{organized_count} jogos organizados por plataforma ({detail}); {matched_saves_count} saves sincronizados."
+    msg = (
+        f"{organized_count} jogos organizados por plataforma ({detail}); "
+        f"{matched_saves_count} saves sincronizados."
+    )
+    if move_failures and organized_count == 0 and rom_candidates:
+        return False, f"Organização falhou ({move_failures} erro(s)). {msg}"
+    if move_failures:
+        return True, f"{msg} ({move_failures} item(ns) falharam — verifique o log.)"
+    return True, msg

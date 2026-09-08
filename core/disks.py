@@ -1,6 +1,7 @@
 import json
 import os
 import plistlib
+import re
 import shutil
 import subprocess
 import sys
@@ -45,9 +46,13 @@ def _within_size_limit(total_bytes):
 
 
 def _normalize_mount(path):
+    """Normaliza mount para comparação (realpath; abspath se realpath falhar)."""
     if not path:
         return ""
-    path = os.path.abspath(path)
+    try:
+        path = os.path.realpath(path)
+    except OSError:
+        path = os.path.abspath(path)
     if sys.platform == "win32":
         return path.rstrip("\\/") + "\\"
     return path.rstrip("/")
@@ -55,13 +60,62 @@ def _normalize_mount(path):
 
 def is_safe_mount_path(mount_path):
     """True se o caminho ainda aparece na lista segura de unidades externas."""
+    return resolve_safe_drive(mount_path) is not None
+
+
+def resolve_safe_drive(mount_path):
+    """
+    Retorna a entrada de drive segura correspondente a mount_path, ou None.
+    Exige is_removable=True e caminho normalizado igual.
+    """
+    if not mount_path or not isinstance(mount_path, str):
+        return None
+    if "\x00" in mount_path:
+        return None
+    if not os.path.exists(mount_path):
+        return None
     target = _normalize_mount(mount_path)
-    if not target or not os.path.exists(mount_path):
-        return False
+    if not target:
+        return None
     for d in get_mounted_drives():
         if _normalize_mount(d.get("mount_path", "")) == target and d.get("is_removable"):
-            return True
-    return False
+            return d
+    return None
+
+
+# Timeouts: listagem/info curtos; formatação/desmontagem mais longos.
+_SUBPROC_INFO_TIMEOUT = 30
+_SUBPROC_FORMAT_TIMEOUT = 300
+
+
+def _resolve_linux_source(mount_path):
+    if not shutil.which("findmnt"):
+        return None
+    try:
+        return subprocess.check_output(
+            ["findmnt", "-n", "-o", "SOURCE", mount_path],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        ).strip() or None
+    except Exception:
+        return None
+
+
+def _linux_still_mounted(device_or_mount):
+    """True se findmnt ainda encontra o device/mount."""
+    if not shutil.which("findmnt"):
+        return os.path.ismount(device_or_mount) if os.path.isdir(device_or_mount) else False
+    try:
+        out = subprocess.check_output(
+            ["findmnt", "-n", device_or_mount],
+            text=True,
+            stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        ).strip()
+        return bool(out)
+    except Exception:
+        return False
 
 
 # --- macOS -----------------------------------------------------------------
@@ -112,6 +166,7 @@ def _get_mounted_drives_macos():
             out = subprocess.check_output(
                 ["diskutil", "info", "-plist", mount_path],
                 stderr=subprocess.DEVNULL,
+                timeout=_SUBPROC_INFO_TIMEOUT,
             )
             data = plistlib.loads(out)
             if not _macos_volume_allowed(data):
@@ -252,8 +307,10 @@ def _get_mounted_drives_windows():
         GetDriveTypeW.argtypes = [wintypes.LPCWSTR]
         GetDriveTypeW.restype = wintypes.UINT
 
-        buf = ctypes.create_unicode_buffer(254)
-        length = GetLogicalDriveStringsW(ctypes.sizeof(buf), buf)
+        # nBufferLength é em TCHARs (caracteres), NÃO em bytes — sizeof()
+        # aqui provocaria escrita past-the-end do buffer.
+        n_chars = len(buf)
+        length = GetLogicalDriveStringsW(n_chars, buf)
         if not length:
             return drives
 
@@ -300,15 +357,16 @@ def _get_mounted_drives_windows():
 
             vol_name_buf = ctypes.create_unicode_buffer(261)
             fs_name_buf = ctypes.create_unicode_buffer(261)
+            # nVolumeNameSize / nFileSystemNameSize também são em TCHARs.
             GetVolumeInformationW(
                 ctypes.c_wchar_p(root),
                 vol_name_buf,
-                ctypes.sizeof(vol_name_buf),
+                len(vol_name_buf),
                 None,
                 None,
                 None,
                 fs_name_buf,
-                ctypes.sizeof(fs_name_buf),
+                len(fs_name_buf),
             )
 
             label = vol_name_buf.value or root.rstrip("\\")
@@ -349,6 +407,7 @@ def _linux_fs_type(mount_path):
                 ["findmnt", "-n", "-o", "FSTYPE", mount_path],
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=_SUBPROC_INFO_TIMEOUT,
             ).strip()
             if out:
                 return out
@@ -368,6 +427,7 @@ def _linux_is_removable_mount(mount_path):
                 ["findmnt", "-n", "-o", "SOURCE", mount_path],
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=_SUBPROC_INFO_TIMEOUT,
             ).strip()
         if not source:
             return None
@@ -376,6 +436,7 @@ def _linux_is_removable_mount(mount_path):
             ["lsblk", "-n", "-o", "RM", "-p", source],
             text=True,
             stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
         ).strip()
         # Pode retornar várias linhas (part + disk); qualquer 1 basta
         for line in out.splitlines():
@@ -408,11 +469,17 @@ def _collect_lsblk_removable(block, drives, seen):
         return
 
     seen.add(mount)
+    name = block.get("name", "") or ""
+    # Normalizar para caminho de dispositivo absoluto (ex.: /dev/sdb1)
+    if name and not name.startswith("/"):
+        device_id = f"/dev/{name}"
+    else:
+        device_id = name
     drives.append(
         _drive_entry(
             name=os.path.basename(mount) or block.get("name", "SD"),
             mount_path=mount,
-            device_id=block.get("name", ""),
+            device_id=device_id,
             fs_type=block.get("fstype") or "vfat",
             total_bytes=total,
             free_bytes=free,
@@ -433,6 +500,7 @@ def _get_mounted_drives_linux():
                 ["lsblk", "-J", "-o", "NAME,SIZE,FSTYPE,MOUNTPOINT,RM,TYPE"],
                 text=True,
                 stderr=subprocess.DEVNULL,
+                timeout=_SUBPROC_INFO_TIMEOUT,
             )
             data = json.loads(out)
             for block in data.get("blockdevices", []):
@@ -478,21 +546,24 @@ def _get_mounted_drives_linux():
                     continue
                 if not _within_size_limit(total):
                     continue
-                # Se RM desconhecido, só aceitar se estiver sob /media|/run/media do usuário
+                # Se RM desconhecido, listar sob /media|/run/media mas NÃO marcar removível
+                # (format_sd / is_safe_mount_path recusam is_removable=False).
                 if rm is None and not (
                     path.startswith("/media/") or path.startswith("/run/media/")
                 ):
                     continue
+                removable = True if rm is True else False
                 seen.add(path)
                 drives.append(
                     _drive_entry(
                         name=label,
                         mount_path=path,
+                        device_id=_resolve_linux_source(path) or "",
                         fs_type=_linux_fs_type(path),
                         total_bytes=total,
                         free_bytes=free,
                         bus_protocol="USB/SD",
-                        is_removable=True,
+                        is_removable=removable,
                     )
                 )
 
@@ -510,23 +581,38 @@ def get_mounted_drives():
 
 # --- Formatação ------------------------------------------------------------
 
+_VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,11}$")
+_WIN_LETTER_RE = re.compile(r"^[D-Z]$")
 
-def _format_sd_macos(mount_path, volume_name):
+
+def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
     try:
         out = subprocess.check_output(
             ["diskutil", "info", "-plist", mount_path],
             stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
         )
         data = plistlib.loads(out)
         if not _macos_volume_allowed(data):
             return False, "Volume não parece removível/USB/SD — formatação recusada."
 
-        parent_disk = data.get("ParentWholeDisk") or data.get("DeviceIdentifier")
+        device_id = data.get("DeviceIdentifier") or ""
+        if expected_device_id and device_id and expected_device_id != device_id:
+            return (
+                False,
+                f"Dispositivo mudou desde a seleção ({expected_device_id} → {device_id}). "
+                "Atualize a lista e tente de novo.",
+            )
+
+        parent_disk = data.get("ParentWholeDisk") or device_id
         if not parent_disk:
             return False, "Identificador do disco não encontrado."
 
         if "s" in parent_disk and parent_disk.startswith("disk"):
             parent_disk = parent_disk.split("s")[0]
+
+        if not re.fullmatch(r"disk\d+", parent_disk):
+            return False, f"Identificador de disco inválido: {parent_disk}"
 
         cmd = [
             "diskutil",
@@ -537,85 +623,177 @@ def _format_sd_macos(mount_path, volume_name):
             volume_name,
             "0b",
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+        res = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=_SUBPROC_FORMAT_TIMEOUT
+        )
         if res.returncode == 0:
             return True, f"Cartão formatado com sucesso como {volume_name} (FAT32)!"
         return False, f"Erro ao formatar: {res.stderr or res.stdout}"
+    except subprocess.TimeoutExpired:
+        return False, "Formatação excedeu o tempo limite."
     except Exception as e:
         return False, str(e)
 
 
-def _format_sd_windows(mount_path, volume_name):
+def _format_sd_windows(mount_path, volume_name, expected_device_id=""):
     letter = mount_path.rstrip("\\/")
     if len(letter) >= 2 and letter[1] == ":":
-        letter = letter[0]
+        letter = letter[0].upper()
     else:
         return False, "Letra da unidade inválida."
 
+    if not _WIN_LETTER_RE.match(letter):
+        return False, f"Letra de unidade recusada: {letter} (use D–Z, nunca C:)."
+
+    if expected_device_id:
+        exp = expected_device_id.rstrip("\\/").upper()
+        if exp and exp != f"{letter}:" and exp != letter:
+            return (
+                False,
+                f"Dispositivo mudou desde a seleção ({expected_device_id} → {letter}:). "
+                "Atualize a lista e tente de novo.",
+            )
+
     try:
+        # Lista de args — sem shell string interpolation
+        format_bin = shutil.which("format.com") or shutil.which("format") or "format.com"
         cmd = [
-            "cmd",
-            "/c",
-            f"format {letter}: /FS:FAT32 /V:{volume_name} /Q /Y",
+            format_bin,
+            f"{letter}:",
+            "/FS:FAT32",
+            f"/V:{volume_name}",
+            "/Q",
+            "/Y",
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True)
+        res = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=_SUBPROC_FORMAT_TIMEOUT
+        )
         if res.returncode == 0:
             return True, f"Cartão formatado com sucesso como {volume_name} (FAT32)!"
         err = (res.stderr or res.stdout or "").strip()
         hint = " Execute o app como Administrador se a formatação falhar por permissão."
         return False, f"Erro ao formatar: {err or 'código ' + str(res.returncode)}.{hint}"
+    except subprocess.TimeoutExpired:
+        return False, "Formatação excedeu o tempo limite."
     except Exception as e:
         return False, str(e)
 
 
-def _format_sd_linux(mount_path, volume_name):
-    device = None
-    if shutil.which("findmnt"):
-        try:
-            device = subprocess.check_output(
-                ["findmnt", "-n", "-o", "SOURCE", mount_path],
-                text=True,
-                stderr=subprocess.DEVNULL,
-            ).strip()
-        except Exception:
-            device = None
+def _unmount_linux(mount_path, device):
+    """Tenta umount; se falhar, tenta udisksctl. Retorna (ok, mensagem)."""
+    um = subprocess.run(
+        ["umount", mount_path],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=_SUBPROC_INFO_TIMEOUT,
+    )
+    if um.returncode == 0 or not _linux_still_mounted(mount_path):
+        if not _linux_still_mounted(device) and not _linux_still_mounted(mount_path):
+            return True, "ok"
+        if um.returncode == 0:
+            return True, "ok"
 
+    if shutil.which("udisksctl") and device:
+        ud = subprocess.run(
+            ["udisksctl", "unmount", "-b", device],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        if ud.returncode == 0 or (
+            not _linux_still_mounted(mount_path) and not _linux_still_mounted(device)
+        ):
+            return True, "ok"
+        return False, (ud.stderr or ud.stdout or um.stderr or "falha ao desmontar").strip()
+
+    return False, (um.stderr or um.stdout or "falha ao desmontar").strip()
+
+
+def _format_sd_linux(mount_path, volume_name, expected_device_id=""):
+    device = _resolve_linux_source(mount_path)
     if not device:
         return (
             False,
             "Não foi possível determinar o dispositivo do volume. Use um gerenciador de discos.",
         )
 
+    if expected_device_id:
+        def _dev_key(d):
+            d = (d or "").strip()
+            if d.startswith("/dev/"):
+                d = d[5:]
+            return d
+
+        if _dev_key(expected_device_id) != _dev_key(device):
+            return (
+                False,
+                f"Dispositivo mudou desde a seleção ({expected_device_id} → {device}). "
+                "Atualize a lista e tente de novo.",
+            )
+
     if not shutil.which("mkfs.vfat"):
         return False, "mkfs.vfat não encontrado. Instale dosfstools."
 
     try:
-        subprocess.run(
-            ["umount", mount_path], capture_output=True, text=True, check=False
-        )
+        ok, umsg = _unmount_linux(mount_path, device)
+        if not ok:
+            return False, f"Não foi possível desmontar o volume antes de formatar: {umsg}"
+        if _linux_still_mounted(mount_path) or _linux_still_mounted(device):
+            return False, "Volume ainda montado após umount — formatação abortada."
+
         label = (volume_name or "DSI_SD")[:11]
         res = subprocess.run(
             ["mkfs.vfat", "-F", "32", "-n", label, device],
             capture_output=True,
             text=True,
+            timeout=_SUBPROC_FORMAT_TIMEOUT,
         )
         if res.returncode == 0:
             return True, f"Cartão formatado com sucesso como {label} (FAT32)!"
         err = (res.stderr or res.stdout or "").strip()
         return False, f"Erro ao formatar (pode precisar de sudo): {err or res.returncode}"
+    except subprocess.TimeoutExpired:
+        return False, "Formatação excedeu o tempo limite."
     except Exception as e:
         return False, str(e)
 
 
 def format_sd_card(mount_path, volume_name="DSi_SD"):
     """Formata o cartão selecionado para FAT32 (comportamento por SO)."""
-    if not is_safe_mount_path(mount_path):
+    if not _VOLUME_NAME_RE.match(volume_name or ""):
+        return False, "Nome de volume inválido (use 1–11 caracteres A-Z, 0-9 ou _)."
+
+    drive = resolve_safe_drive(mount_path)
+    if not drive:
         return (
             False,
             "Formatação recusada: o caminho não é um volume removível/USB/SD reconhecido.",
         )
+
+    device_id = drive.get("device_id") or ""
+    # Revalidar imediatamente antes da operação destrutiva
+    drive2 = resolve_safe_drive(mount_path)
+    if not drive2:
+        return False, "Volume desapareceu antes da formatação."
+    device_id2 = drive2.get("device_id") or device_id
+    if device_id and device_id2 and device_id != device_id2:
+        return False, "Dispositivo mudou entre validação e formatação — abortado."
+
     if sys.platform == "darwin":
-        return _format_sd_macos(mount_path, volume_name)
+        return _format_sd_macos(mount_path, volume_name, expected_device_id=device_id2)
     if sys.platform == "win32":
-        return _format_sd_windows(mount_path, volume_name)
-    return _format_sd_linux(mount_path, volume_name)
+        return _format_sd_windows(mount_path, volume_name, expected_device_id=device_id2)
+
+    # Linux: exigir device_id resolvido e revalidar RM=1
+    if not device_id2:
+        device_id2 = _resolve_linux_source(mount_path) or ""
+    if not device_id2:
+        return False, "Não foi possível pinjar o dispositivo Linux (findmnt SOURCE vazio)."
+    rm = _linux_is_removable_mount(mount_path)
+    if rm is False:
+        return False, "Dispositivo não é removível (lsblk RM=0) — formatação abortada."
+    if not device_id2.startswith("/dev/"):
+        return False, f"Caminho de dispositivo inválido: {device_id2}"
+    return _format_sd_linux(mount_path, volume_name, expected_device_id=device_id2)

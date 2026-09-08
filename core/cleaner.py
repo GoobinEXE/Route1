@@ -25,8 +25,15 @@ def clean_macos_metadata(mount_path, log_callback=None):
 
     if sys.platform == "darwin":
         try:
-            subprocess.run(["dot_clean", mount_path], stderr=subprocess.DEVNULL, check=False)
+            subprocess.run(
+                ["dot_clean", mount_path],
+                stderr=subprocess.DEVNULL,
+                check=False,
+                timeout=120,
+            )
             log("✅ dot_clean executado com sucesso.")
+        except subprocess.TimeoutExpired:
+            log("⚠️ Aviso: dot_clean excedeu o tempo limite.")
         except Exception as e:
             log(f"⚠️ Aviso ao rodar dot_clean: {e}")
 
@@ -54,9 +61,9 @@ def clean_macos_metadata(mount_path, log_callback=None):
 
     if sys.platform != "win32":
         try:
-            subprocess.run(["sync"], check=False)
+            subprocess.run(["sync"], check=False, timeout=60)
         except Exception:
-            pass
+            pass  # best-effort: sync pode falhar/timeout sem invalidar a limpeza
 
     log(f"✅ Limpeza finalizada! {deleted_count} itens temporários removidos.")
     return True, f"{deleted_count} itens limpos com sucesso."
@@ -93,6 +100,7 @@ def backup_drive(mount_path, log_callback=None):
 
     copied = 0
     file_count = 0
+    errors = 0
     for item in os.listdir(mount_path):
         if item.startswith("."):
             continue
@@ -102,17 +110,23 @@ def backup_drive(mount_path, log_callback=None):
         try:
             if os.path.isdir(src):
                 n_files = _count_files(src)
-                shutil.copytree(src, dst, ignore=_backup_ignore)
+                # symlinks=True: não seguir links (evita escapar do cartão)
+                shutil.copytree(src, dst, ignore=_backup_ignore, symlinks=True)
                 file_count += n_files
                 log(f"   ↳ {item}/ ({n_files} arquivos)")
             else:
                 if item in _BACKUP_IGNORE_NAMES or item.startswith("._"):
                     continue
-                shutil.copy2(src, dst)
+                shutil.copy2(src, dst, follow_symlinks=False)
                 file_count += 1
             copied += 1
         except Exception as e:
+            errors += 1
             log(f"⚠️ Erro ao copiar {item}: {e}")
+
+    if errors or copied == 0:
+        log(f"❌ Backup incompleto em: {backup_dir} ({copied} itens, {errors} erros)")
+        return False, backup_dir
 
     log(f"✅ Backup concluído em: {backup_dir} ({copied} itens, ~{file_count} arquivos)")
     return True, backup_dir

@@ -10,16 +10,34 @@ from typing import Optional
 
 from core.logging_util import emit_log
 
-CACHE_DIR = os.path.expanduser("~/.dsi_sd_studio_cache")
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) DSi-SD-Studio/1.0"
+CACHE_DIR = os.path.expanduser("~/.route_1_kit_cache")
+USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Route-1-Kit/1.0"
 
-# Hashes conhecidos para artefatos com URL estável (dsi.cfw.guide).
-# Se o upstream mudar o arquivo, o cache será invalidado e o download falhará
-# até o pin ser atualizado — preferível a usar um binário corrompido.
+# Pins oficiais — atualizar com tools/update_pins.py após verificar digest no GitHub.
+# Origem documentada:
+#   pit_*:     dsi.cfw.guide Memory Pit (estável)
+#   dumptool:  dsi.cfw.guide dumpTool boot.nds
+#   unlaunch:  edo9300/unlaunch-installer v2.6 (digest GitHub Release)
+#   twilight:  DS-Homebrew/TWiLightMenu v27.24.1 (digest GitHub Release)
 PINNED_SHA256 = {
     "pit_facebook": "ca4c197ef81283ad0c802fdc39bcb6c880e2e182cb7ac5c456a68368e50bbe14",
     "pit_no_facebook": "9f2b97bfb9569723ed5c0c48f314ab8c94e56e855acb468db727b8ecf059342b",
     "dumptool": "313b255a754bda4d06d6f761a7490b4f1675c957c41676119330520cb09a47ea",
+    "unlaunch": "14ba0b4af84e801206e20cffdf55002e3b4b5dd8be18abf3c0977011b23f1aeb",
+    "twilight_7z": "c04fc66305ce8dc80e69aa4070d3ce966f04868881663f57b91f68d687a2bb90",
+}
+
+PIN_META = {
+    "unlaunch": {
+        "repo": "edo9300/unlaunch-installer",
+        "tag": "v2.6",
+        "asset": "unlaunch-installer.dsi",
+    },
+    "twilight_7z": {
+        "repo": "DS-Homebrew/TWiLightMenu",
+        "tag": "v27.24.1",
+        "asset": "TWiLightMenu-DSi.7z",
+    },
 }
 
 URLS = {
@@ -27,11 +45,11 @@ URLS = {
     "pit_no_facebook": "https://dsi.cfw.guide/assets/files/memory_pit/256/pit.bin",
     "dumptool": "https://dsi.cfw.guide/assets/files/dumptool/boot.nds",
     "unlaunch": (
-        "https://github.com/edo9300/unlaunch-installer/releases/latest/download/"
+        "https://github.com/edo9300/unlaunch-installer/releases/download/v2.6/"
         "unlaunch-installer.dsi"
     ),
     "twilight_7z": (
-        "https://github.com/DS-Homebrew/TWiLightMenu/releases/latest/download/"
+        "https://github.com/DS-Homebrew/TWiLightMenu/releases/download/v27.24.1/"
         "TWiLightMenu-DSi.7z"
     ),
 }
@@ -45,12 +63,22 @@ FILENAMES = {
 }
 
 MIN_SIZES = {
-    "pit_facebook": 100,
-    "pit_no_facebook": 100,
+    "pit_facebook": 48032,
+    "pit_no_facebook": 48032,
     "dumptool": 1024,
     "unlaunch": 1024,
     "twilight_7z": 1024 * 100,
 }
+
+
+def ensure_cache_dir() -> str:
+    """Cria o diretório de cache com permissões restritas (0o700)."""
+    os.makedirs(CACHE_DIR, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(CACHE_DIR, 0o700)  # nosemgrep: insecure-file-permissions — 0o700 é mais restritivo (só o dono)
+    except OSError:
+        pass
+    return CACHE_DIR
 
 
 def _sha256_file(path: str) -> str:
@@ -71,7 +99,10 @@ def _read_sidecar(target_path: str) -> Optional[str]:
         return None
     try:
         with open(side, "r", encoding="utf-8") as f:
-            return f.read().strip().split()[0].lower()
+            parts = f.read().strip().split()
+        if not parts:
+            return None
+        return parts[0].lower()
     except OSError:
         return None
 
@@ -94,34 +125,44 @@ def _is_valid_cached(key: str, path: str) -> bool:
     if not os.path.isfile(path):
         return False
     size = os.path.getsize(path)
-    if size < MIN_SIZES.get(key, 1):
+    min_size = MIN_SIZES.get(key, 1)
+    # Para pits, exigir tamanho exato
+    if key in ("pit_facebook", "pit_no_facebook") and size != min_size:
+        return False
+    if size < min_size:
         return False
     if _looks_like_html(path):
         return False
 
     digest = _sha256_file(path)
     pinned = PINNED_SHA256.get(key)
-    if pinned:
-        return digest == pinned.lower()
+    if not pinned:
+        # Todos os artefatos oficiais devem ter pin; recusar aceitar sem pin.
+        return False
+    if digest != pinned.lower():
+        return False
 
+    # Sidecar é apenas detecção de corrupção local (opcional)
     side = _read_sidecar(path)
-    if side:
-        return digest == side
-    # Sem pin nem sidecar: aceita se tamanho ok e não for HTML;
-    # grava sidecar para as próximas leituras.
-    _write_sidecar(path, digest)
+    if side and side != digest:
+        return False
     return True
 
 
 def download_url(url: str, target_path: str, log_callback=None) -> None:
-    """Baixa URL para target_path com User-Agent consistente."""
+    """Baixa URL HTTPS para target_path com User-Agent consistente."""
+    if not url.startswith("https://"):
+        raise ValueError(f"Apenas HTTPS é permitido: {url}")
     emit_log(log_callback, f"Baixando de {url}...")
     headers = {"User-Agent": USER_AGENT}
     req = urllib.request.Request(url, headers=headers)
     tmp_path = f"{target_path}.partial"
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_path, "wb") as out:
+        # URLs vêm exclusivamente de URLS (constantes); não há input do usuário.
+        with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_path, "wb") as out:  # nosec B310  # nosemgrep: dynamic-urllib-use-detected
             shutil.copyfileobj(resp, out)
+            out.flush()
+            os.fsync(out.fileno())
         os.replace(tmp_path, target_path)
     except Exception:
         if os.path.exists(tmp_path):
@@ -134,14 +175,20 @@ def download_url(url: str, target_path: str, log_callback=None) -> None:
 
 def ensure_cached(key: str, log_callback=None) -> str:
     """
-    Garante que o artefato `key` esteja no cache local e íntegro.
-    Invalida e rebaixa se o arquivo estiver vazio, for HTML ou falhar no SHA-256.
+    Garante que o artefato `key` esteja no cache local e íntegro (SHA-256 pinado).
+    Invalida e rebaixa se o arquivo estiver vazio, for HTML ou falhar no pin.
     """
-    os.makedirs(CACHE_DIR, exist_ok=True)
+    ensure_cache_dir()
     filename = FILENAMES.get(key)
     if not filename:
         raise ValueError(f"Arquivo de cache desconhecido para a chave: {key}")
     target_path = os.path.join(CACHE_DIR, filename)
+
+    pinned = PINNED_SHA256.get(key)
+    if not pinned:
+        raise ValueError(
+            f"Sem pin SHA-256 para '{key}'. Atualize PINNED_SHA256 via tools/update_pins.py."
+        )
 
     if _is_valid_cached(key, target_path):
         return target_path
@@ -171,15 +218,14 @@ def ensure_cached(key: str, log_callback=None) -> str:
         raise RuntimeError(f"Download de {key} retornou HTML (possível erro 404/rate-limit).")
 
     digest = _sha256_file(target_path)
-    pinned = PINNED_SHA256.get(key)
-    if pinned and digest != pinned.lower():
+    if digest != pinned.lower():
         try:
             os.remove(target_path)
         except OSError:
             pass
         raise RuntimeError(
             f"Integridade de {key} falhou (SHA-256 diferente do esperado). "
-            "O arquivo upstream pode ter mudado."
+            "O arquivo upstream pode ter mudado — rode tools/update_pins.py."
         )
 
     _write_sidecar(target_path, digest)
