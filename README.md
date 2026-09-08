@@ -1,8 +1,12 @@
 # Route 1 Kit
 
+Licensed under the GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
+
 **Route 1 Kit** é um app desktop multiplataforma (macOS, Windows e Linux) para automatizar e gerenciar a preparação de cartões SD para o **Nintendo DSi** e flashcards (como o **GEi / AceKard / R4**).
 
 A interface abre em uma **janela nativa** via [pywebview](https://pywebview.flowrl.com/) — sem navegador e sem servidor HTTP.
+
+> O diretório local ou o repositório podem ainda chamar-se `DSi-SD-Studio`; o nome do produto é **Route 1 Kit**.
 
 ---
 
