@@ -1,0 +1,34 @@
+---
+description: Não expor home/username, segredos ou paths absolutos sensíveis em logs e API
+globs: app.py,core/**/*.py,static/**/*.{js,html}
+alwaysApply: false
+---
+
+# Privacidade em logs e respostas
+
+Este app é desktop local — ainda assim **não** registar nem devolver o home absoluto do utilizador (`/Users/…`, `C:\Users\…`).
+
+## Obrigatório
+
+- Logs: `emit_log` / `add_log` (já redigem via `core.privacy.redact_text`). Não contornar com `print` de paths crus em código de produto.
+- Erros da `Api`: `_reject` / `_api_result` — nunca `str(e)` cru se puder conter home.
+- Mensagens com paths de Desktop/Downloads/cache: `redact_path` → `~/…`.
+- Payloads JS (`probe_kernels`, dumps NAND): paths com `~` ou relativos (`rel_path`); a bridge reexpande com `expand_user_path` quando for I/O.
+- **Não** logar nem devolver: passwords, tokens, API keys, chaves privadas, conteúdo de `nand.bin`. Digests de integridade públicos (PINNED_SHA256) OK; em erros preferir prefixo curto.
+
+```python
+# ❌ BAD
+add_log(f"Backup em {backup_dir}")
+return {"success": True, "message": f"Salvo em: {backup_dir}"}
+return {"path": "/Users/alice/Downloads/R4"}
+
+# ✅ GOOD
+add_log(f"Backup em {redact_path(backup_dir)}")  # ou só emit_log
+return {"success": True, "message": f"Salvo em: {redact_path(backup_dir)}"}
+return {"path": redact_path(real)}  # ~/Downloads/R4
+```
+
+## Exceções necessárias
+
+- `get_disks().mount_path` do cartão (`/Volumes/…`, letra de drive) permanece absoluto — é o identificador operacional, tipicamente fora do home.
+- Não inventar telemetria remota de logs.

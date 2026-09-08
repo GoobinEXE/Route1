@@ -1,0 +1,43 @@
+---
+description: Fronteira JS↔Python — tipagem estrita, allowlists e sem injeção
+globs: app.py,core/**/*.py,static/**/*.js
+alwaysApply: false
+---
+
+# Fronteira API segura (anti-injeção)
+
+Ao criar ou alterar métodos em `Api` (`app.py`) ou sinks em `core/` que recebem dados da UI:
+
+## Tipagem na entrada
+
+- Paths: `_as_path_str` (str, sem NUL, não vazio). Montagens: `is_safe_mount_path` / `resolve_safe_drive`.
+- Flags: `_as_bool` — nunca `bool(x)` (em Python `bool("false")` é True).
+- Paths redigidos da UI (`~/…`): `expand_user_path` só se começar com `~`.
+- Origens de ficheiros (R4): allowlist Downloads/cache (`_safe_under`); tipar em `app.py` e revalidar no callee.
+
+```python
+# ❌ BAD
+def setup(self, mount_path, has_facebook=True):
+    setup_stage(mount_path, has_facebook=bool(has_facebook))
+
+# ✅ GOOD
+def setup(self, mount_path, has_facebook=True):
+    mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+    if err:
+        return _reject(err)
+    if not is_safe_mount_path(mount_path):
+        return _reject("…")
+    flag, err = _as_bool(has_facebook, default=True)
+    if err:
+        return _reject(err)
+```
+
+## Command / path injection
+
+- `subprocess`: sempre lista de args; nunca `shell=True` com input externo.
+- Não confiar em `os.path.join(user, …)` sem allowlist ou `commonpath`/`realpath` sob raiz permitida.
+- Operações de escrita/format: decorator `_run_mount_op` ou equivalente + revalidação imediata.
+
+## XSS (front)
+
+- Dados da API/logs em HTML: `escapeHtml` / `textContent` — nunca concatenar paths ou erros crus em `innerHTML`.

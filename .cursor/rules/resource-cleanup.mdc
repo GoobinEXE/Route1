@@ -1,0 +1,46 @@
+---
+description: Cleanup de ficheiros, handles Win32, backups temporários e ficheiros de probe no SD
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Cleanup de recursos (Python)
+
+## Ficheiros e rede
+
+- `open`, `urlopen`, `SevenZipFile`, `TemporaryDirectory`: sempre `with`.
+- Downloads: ficheiro `.partial` + `os.replace`; em falha, remover o parcial no `except`.
+- Handles Win32 (`CreateFileW`): `CloseHandle` em `finally` (ver `sdio.sync_volume`, `disks._windows_bus_type`).
+
+## Probe / pré-voo no cartão
+
+- Ficheiro de teste de escrita (ex. `.route_1_kit_write_test`): criar no `try`, **remover no `finally`** mesmo se `fsync` falhar.
+
+```python
+# ❌ BAD
+with open(test_path, "wb") as f:
+    f.write(b"ok")
+    os.fsync(f.fileno())
+os.remove(test_path)  # nunca corre se fsync levantar
+
+# ✅ GOOD
+try:
+    with open(test_path, "wb") as f:
+        ...
+finally:
+    try:
+        if os.path.exists(test_path):
+            os.remove(test_path)
+    except OSError:
+        pass  # best-effort cleanup do probe
+```
+
+## Backups temporários de etapa
+
+- `.bak_stage1`, `.bak_stage2`, `*.bak` criados para rollback: **apagar no caminho de sucesso** após sync; no erro, o `UndoStack` restaura.
+- Não deixar resíduos de etapa “só se alguém limpar o cartão”.
+
+## Extracção de arquivos
+
+- Extrair para `TemporaryDirectory`; só promover para o destino final após validação.
+- Preferir falha explícita a `rmtree(..., ignore_errors=True)` + `copytree` que deixa árvore a meio.

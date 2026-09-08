@@ -1,0 +1,56 @@
+---
+description: Postura defensiva ao analisar ou refatorar código (recursos, inputs, erros)
+alwaysApply: true
+---
+
+# Programação defensiva
+
+Ao analisar ou refatorar código neste projeto, aplicar sempre. Detalhe de locks/timeouts: `concurrency-safety`; cleanup: `resource-cleanup`; tipagem/anti-injeção: `secure-api-boundary`; PII em logs: `privacy-logging`; falha a meio no SD: `resilient-sd-ops`; null/overflow/tipos: `null-safety-buffers`.
+
+## 1. Recursos sem vazamento
+
+- Liberar ficheiros, sockets, locks e handles em `finally` / context managers (`with`).
+- Em Python: preferir `with open(...)`, `try/finally` para locks já adquiridos.
+- Em JS: listeners/timers — limpar no fim do fluxo; nós destruídos por `innerHTML` não precisam de `removeEventListener` se não houver referência global.
+- Globais com crescimento (logs DOM, deques): **limite máximo** explícito (`maxlen` / `LOG_DOM_MAX`).
+- Não engolir falhas de cleanup sem necessidade; se ignorar `OSError` no cleanup, documentar o porquê numa linha.
+
+```python
+# ❌ BAD
+f = open(path, "rb")
+data = f.read()
+
+# ✅ GOOD
+with open(path, "rb") as f:
+    data = f.read()
+```
+
+## 2. Validação estrita de inputs
+
+- Tratar caminhos, montagens e strings da UI como não confiáveis.
+- Rejeitar path traversal, dispositivos não-removíveis e valores fora do contrato da API.
+- Preferir allowlists / parsers tipados a sanitização ad hoc.
+- Nunca interpolar input do utilizador em shell sem lista fixa de argumentos (`subprocess` com lista, nunca `shell=True` com dados externos).
+- Operações destrutivas (format, write no SD): revalidar `is_safe_mount_path` / `resolve_safe_drive` imediatamente antes.
+
+## 3. Erros sem crash
+
+- Fronteiras JS↔Python (`Api`) e I/O de disco: capturar exceções, devolver `{success: False, error: ...}` ou logar — não deixar exceção não tratada derrubar a janela.
+- Falhas esperadas (SD ausente, espaço insuficiente, hash inválido, timeout) → mensagem clara; não crash.
+- Evitar `except Exception: pass` sem log ou retorno estruturado, salvo cleanup genuinamente best-effort.
+
+```python
+# ❌ BAD
+def setup(self, mount_path):
+    do_risky_io(mount_path)  # pode crashar a UI
+
+# ✅ GOOD
+def setup(self, mount_path):
+    try:
+        do_risky_io(mount_path)
+        return {"success": True}
+    except Exception as e:
+        return {"success": False, "error": redact_text(e)}  # ver privacy-logging
+```
+
+Ao rever diffs: assinalar vazamentos, inputs não validados, timeouts em falta e caminhos que podem crashar **antes** de sugerir refactors cosméticos.

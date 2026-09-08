@@ -1,0 +1,34 @@
+---
+description: Concorrência JS↔Python — OP_LOCK, fecho da janela, subprocess timeout, polling
+alwaysApply: true
+---
+
+# Concorrência e operações no cartão
+
+Este app usa pywebview: cada chamada `js_api` corre numa **thread não-daemon**. Manter estes invariantes:
+
+## Python (`app.py`, `core/`)
+
+- Operações de escrita no SD passam por `_run_mount_op` / `OP_LOCK` (`blocking=False`).
+- **`preflight` corre dentro do lock**, depois de `acquire` — nunca I/O de escrita no cartão em paralelo com outra op.
+- Libertação do lock **sempre** em `finally`.
+- **`window.events.closing`**: se `OP_LOCK.locked()`, devolver `False` e logar — não fechar a meio de uma op.
+- Todo `subprocess.run` / `check_output` / `Popen` com I/O de disco ou listagem **deve ter `timeout=`** (info ~30s, format ~300s, sync/dot_clean ~60–120s). Tratar `TimeoutExpired` com retorno estruturado; o lock tem de libertar-se.
+- Locks: ordem fixa `OP_LOCK` → `LOG_LOCK`. Nunca adquirir `OP_LOCK` com `LOG_LOCK` já preso. `add_log` não reentra em ops que peguem `OP_LOCK`.
+
+```python
+# ❌ BAD — subprocess sem timeout sob OP_LOCK
+subprocess.run(["diskutil", "partitionDisk", ...])
+
+# ✅ GOOD
+subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+```
+
+## JS (`static/app.js`, `static/wizard.js`)
+
+- `busy` / `setBusy`: `runMountOp` e CTAs longos; `finally { setBusy(false) }` obrigatório.
+- Poll de logs: **um pedido in-flight** de cada vez; actualizar `lastLogIndex` com `Math.max`.
+- Contentores de log: limitar filhos DOM (espelhar `LOG_MAX` / `LOG_DOM_MAX` ≈ 500).
+- Wizard: `renderGen` — após `await`, se `gen !== renderGen` (ou nó `!isConnected`), **não** mutar `state`/DOM.
+
+Ao rever diffs: assinalar subprocess sem timeout, preflight fora do lock, fecho sem guarda, ou Promise sem `finally` de `setBusy`.

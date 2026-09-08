@@ -1,0 +1,45 @@
+---
+description: Escrita no SD resiliente — falha a meio, rollback, verify-before-replace
+globs: app.py,core/**/*.py,static/**/*.{js,html}
+alwaysApply: false
+---
+
+# Operações no SD resilientes (falha a meio)
+
+Escrita no cartão **não é transacional** no SO — o código tem de deixar o estado íntegro ou revertível. Locks/timeouts: `concurrency-safety`. Cleanup de probes/partials: `resource-cleanup`.
+
+## Cópia verificada
+
+- `copy_verified`: calcular SHA do `.partial` **antes** de `os.replace`. Nunca `replace` → verificar → `os.remove(dst)` (destrói ficheiro bom).
+- Em falha, limpar só o `.partial`; destino antigo permanece.
+
+```python
+# ❌ BAD — mismatch apaga o destino já promovido
+os.replace(partial, dst)
+if _sha256_file(dst) != expected:
+    os.remove(dst)
+
+# ✅ GOOD
+if _sha256_file(partial) != expected:
+    os.remove(partial)
+    raise RuntimeError("integridade")
+os.replace(partial, dst)
+```
+
+## Rollback
+
+- Multi-ficheiro (etapas softmod, kernels GEi/R4, TWiLight): `UndoStack` (ou equivalente) com ações LIFO; closures com **default args** (`lambda p=path`).
+- Ficheiro que sobrescreve: backup `.bak_*` + `push_restore_file`; ficheiro novo: `push_remove`.
+- Após `rollback`, chamar `sync_volume(mount_path)`.
+- Promoção de árvores no cache (ex. extract 7z): staging + `rename`; se falhar, restaurar o anterior (`rename` ou `copytree` fallback). **Proibido** `rmtree(dest)` + `copytree` sem staging.
+
+## Concorrência de leitura
+
+- `inspect_sd` (e leituras que guiam o wizard) sob `OP_LOCK` non-blocking — se ocupado, devolver erro “em andamento”, não snapshot a meio de escrita.
+
+## Best-effort vs atómico
+
+- Ops por-item (`organize_roms`, limpeza): podem ficar parciais, mas **não** mentir `success: True` se zero itens moveram e houve erros.
+- Ops de softmod/kernel: falha → rollback → `{success: False}` / re-raise capturado pela `Api`.
+
+Ao rever diffs: assinalar verify-after-replace, escrita multi-ficheiro sem undo, promote sem staging, inspect sem lock.

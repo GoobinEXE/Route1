@@ -1,0 +1,11 @@
+{
+  "cSpell.language": "en,pt,pt_BR",
+  "cSpell.enabledFileTypes": {
+    "markdown": true,
+    "python": true,
+    "javascript": true,
+    "html": true,
+    "css": true,
+    "svg": false
+  }
+}

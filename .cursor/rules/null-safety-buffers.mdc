@@ -1,0 +1,58 @@
+---
+description: Sem NPE/undefined, overflow Win32 (TCHAR) nem conversões de tipo frágeis
+globs: "**/*.{py,js}"
+alwaysApply: false
+---
+
+# Null-safety, buffers e conversões de tipo
+
+Python não tem NPE; o equivalente é `AttributeError`/`TypeError`/`IndexError` em `None`/lista vazia. JS: `undefined`/`null`. Overflow clássico só via **ctypes/Win32**.
+
+## Win32 / ctypes (overflow)
+
+- APIs com tamanho em **TCHARs** (`GetLogicalDriveStringsW`, `GetVolumeInformationW`, …): passar `len(buf)`, **nunca** `ctypes.sizeof(buf)` (bytes ≈ 2× chars → escrita past-the-end).
+- Handles: validar `INVALID_HANDLE_VALUE` / `None`; `CloseHandle` em `finally`.
+- `from_buffer_copy`: buffer de saída ≥ `sizeof` da struct; IOCTL com `buf_size` explícito.
+
+```python
+# ❌ BAD
+GetLogicalDriveStringsW(ctypes.sizeof(buf), buf)
+
+# ✅ GOOD
+GetLogicalDriveStringsW(len(buf), buf)
+```
+
+## Index / None / undefined
+
+- `split()[0]`, `list[0]`, `.get("x")[…]`: guardar se a sequência pode estar vazia (`parts[0] if parts else …`).
+- Binário (`struct.unpack_from`, índices de header): checar `len(buf)` **antes** do offset.
+- JS: nunca `result.success` / `k.files.length` sem guarda — `result && result.success`, `(k.files || []).length`.
+- Helpers de path (`expand_user_path`): devolver `""` tipado, nunca `None` para input inválido.
+
+## Conversões de tipo
+
+- Flags da UI: `_as_bool` — **nunca** `bool(x)` (`bool("false")` é True).
+- Paths: `_as_path_str` (str, sem NUL).
+- `int()` / `float()` em dados de drive/API/JSON: `try/except (TypeError, ValueError)` com default seguro.
+- Fronteira `Api`: exceção → `_reject` / `{success: False}`; não crashar a janela.
+
+```python
+# ❌ BAD
+free = float(drive.get("free_size_gb") or 0)
+
+# ✅ GOOD
+try:
+    free = float(drive.get("free_size_gb") or 0)
+except (TypeError, ValueError):
+    free = 0.0
+```
+
+```javascript
+// ❌ BAD
+if (result.success) { … }
+
+// ✅ GOOD
+if (result && result.success) { … }
+```
+
+Ao rever diffs: assinalar `sizeof` em APIs TCHAR, `…[0]` sem guarda, `float`/`int` sem try, acesso JS a propriedades de respostas API sem null-check.

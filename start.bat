@@ -1,20 +1,20 @@
 @echo off
 cd /d "%~dp0"
 echo ================================================
-echo   Iniciando DSi SD Studio (desktop)...
+echo   Iniciando Route 1 Kit (desktop)...
 echo ================================================
 
-set PYTHON=python
-if exist ".venv\Scripts\python.exe" (
-  set PYTHON=.venv\Scripts\python.exe
+if not exist ".venv\Scripts\python.exe" (
+  echo Criando ambiente virtual e instalando dependencias...
+  python -m venv .venv
+)
+
+set PYTHON=.venv\Scripts\python.exe
+"%PYTHON%" -m pip install --upgrade "pip>=26.2"
+if exist "requirements.lock.txt" (
+  "%PYTHON%" -m pip install --require-hashes -r requirements.lock.txt
 ) else (
-  python -c "import webview" 2>nul
-  if errorlevel 1 (
-    echo Criando ambiente virtual e instalando pywebview...
-    python -m venv .venv
-    .venv\Scripts\pip install -r requirements.txt
-    set PYTHON=.venv\Scripts\python.exe
-  )
+  "%PYTHON%" -m pip install -r requirements.txt
 )
 
 "%PYTHON%" app.py

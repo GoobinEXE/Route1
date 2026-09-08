@@ -3,17 +3,20 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
 echo "================================================"
-echo "  Iniciando DSi SD Studio (desktop)..."
+echo "  Iniciando Route 1 Kit (desktop)..."
 echo "================================================"
 
-PYTHON="python3"
-if [ -x "$DIR/.venv/bin/python" ]; then
-  PYTHON="$DIR/.venv/bin/python"
-elif ! python3 -c "import webview" 2>/dev/null; then
-  echo "Criando ambiente virtual e instalando pywebview..."
+if [ ! -x "$DIR/.venv/bin/python" ]; then
+  echo "Criando ambiente virtual e instalando dependências..."
   python3 -m venv "$DIR/.venv"
-  "$DIR/.venv/bin/pip" install -r "$DIR/requirements.txt"
-  PYTHON="$DIR/.venv/bin/python"
+fi
+
+PYTHON="$DIR/.venv/bin/python"
+"$PYTHON" -m pip install --upgrade "pip>=26.2"
+if [ -f "$DIR/requirements.lock.txt" ]; then
+  "$PYTHON" -m pip install --require-hashes -r "$DIR/requirements.lock.txt"
+else
+  "$PYTHON" -m pip install -r "$DIR/requirements.txt"
 fi
 
 "$PYTHON" app.py
