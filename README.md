@@ -20,7 +20,7 @@ Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releas
 | **Windows** | ZIP com a pasta do app | `setup.exe` (Inno Setup) |
 | **Linux** | `.tar.gz` onedir | `.tar.gz` com script de atalho `.desktop` |
 
-Na primeira abertura no macOS/Windows, o sistema pode pedir confirmação de segurança (binário ainda não notarizado pela Apple / SmartScreen). Prefira sempre descarregar da página de Releases deste repositório.
+Na primeira abertura no macOS/Windows, o sistema pode pedir confirmação de segurança (binário ainda não notarizado pela Apple / SmartScreen sem Authenticode). Prefira sempre descarregar da página de Releases deste repositório. Builds Windows oficiais passam a ser assinados como **Dark Room** quando o Azure Artifact Signing estiver configurado ([guia](docs/WINDOWS_SIGNING.md)).
 
 Se preferir correr a partir do código-fonte, use a secção [Como abrir o aplicativo](#como-abrir-o-aplicativo) abaixo.
 
@@ -336,9 +336,10 @@ Requer PyInstaller (`pip install "pyinstaller>=6.11,<7"`) fora do lock com hashe
 
 # Windows (Git Bash / CI) → ZIP + setup.exe (Inno Setup 6)
 ./tools/build_windows_release.sh
+# Fases no CI: ROUTE1KIT_WIN_PHASE=build|package — ver docs/WINDOWS_SIGNING.md
 ```
 
-Tags `v*` disparam o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml), que publica os artefactos na Release do GitHub.
+Tags `v*` disparam o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml), que publica os artefactos na Release do GitHub. Assinatura Authenticode Windows (publisher **Dark Room**) activa-se quando os secrets/vars Azure estiverem configurados — guia em [`docs/WINDOWS_SIGNING.md`](docs/WINDOWS_SIGNING.md).
 
 ### Assets e identidade visual (manutenção)
 

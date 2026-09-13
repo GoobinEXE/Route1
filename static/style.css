@@ -612,6 +612,102 @@ button:disabled {
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.12);
 }
 
+/* ---------- tela Sobre ---------- */
+
+.about-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.about-hero img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.about-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+
+.about-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .about-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.about-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.about-list li {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgb(var(--c-fg-soft));
+}
+
+.about-list strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--c-fg));
+  margin-bottom: 0.1rem;
+}
+
+.about-bullets {
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+  list-style: disc;
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgb(var(--c-fg-soft));
+}
+
+.about-bullets li + li {
+  margin-top: 0.25rem;
+}
+
+.about-patch {
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgb(var(--c-fg-soft));
+}
+
+.about-patch h4 {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(var(--c-fg-mute));
+  margin: 0.7rem 0 0.25rem;
+}
+
+.about-patch h4:first-child {
+  margin-top: 0;
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
 
 /* ---------- seletor de tema ---------- */
 

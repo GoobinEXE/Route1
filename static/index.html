@@ -32,8 +32,9 @@
 
       <div class="flex items-center gap-2 shrink-0">
         <div class="mode-switch" role="tablist" aria-label="Modo da aplicação">
-          <button type="button" id="mode-wizard" class="mode-tab mode-tab--active" role="tab" onclick="setAppMode('wizard')">Assistente</button>
-          <button type="button" id="mode-advanced" class="mode-tab" role="tab" onclick="setAppMode('advanced')">Avançado</button>
+          <button type="button" id="mode-wizard" class="mode-tab mode-tab--active" role="tab" aria-selected="true" onclick="setAppMode('wizard')">Assistente</button>
+          <button type="button" id="mode-advanced" class="mode-tab" role="tab" aria-selected="false" onclick="setAppMode('advanced')">Avançado</button>
+          <button type="button" id="mode-about" class="mode-tab" role="tab" aria-selected="false" onclick="setAppMode('about')">Sobre</button>
         </div>
         <button type="button" id="btn-id-guide" onclick="toggleIdGuide()" class="btn-ghost hidden">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -365,8 +366,15 @@
 
   </main>
 
+  <!-- Sobre: avisos, legal, projeto, versão -->
+  <main id="view-about" class="hidden max-w-5xl mx-auto px-5 py-7 flex-1 w-full">
+    <div id="about-root" class="space-y-5">
+      <p class="text-[12px] text-fg-mute">A carregar…</p>
+    </div>
+  </main>
+
   <footer class="app-footer py-4 text-center text-[11px]">
-    Route 1 Kit · Assistente para iniciantes · Modo avançado para atalhos
+    Route 1 Kit · Assistente · Avançado · Sobre
   </footer>
 
   <script src="app.js"></script>

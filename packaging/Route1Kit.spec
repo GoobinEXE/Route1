@@ -13,7 +13,10 @@ STATIC = os.path.join(ROOT, "static")
 ICON_ICNS = os.path.join(STATIC, "assets", "app-icon.icns")
 ICON_ICO = os.path.join(STATIC, "assets", "app-icon.ico")
 
-datas = [(STATIC, "static")]
+datas = [
+    (STATIC, "static"),
+    (os.path.join(ROOT, "CHANGELOG.md"), "."),
+]
 binaries = []
 hiddenimports = list(collect_submodules("core"))
 

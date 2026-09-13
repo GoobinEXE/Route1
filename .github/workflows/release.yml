@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build:
@@ -57,12 +58,75 @@ jobs:
           chmod +x tools/build_macos_release.sh
           ./tools/build_macos_release.sh
 
-      - name: Build Windows (portable zip + setup)
+      - name: Build Windows (PyInstaller)
         if: runner.os == 'Windows'
         shell: bash
         run: |
           chmod +x tools/build_windows_release.sh
-          ./tools/build_windows_release.sh
+          ROUTE1KIT_WIN_PHASE=build ./tools/build_windows_release.sh
+
+      - name: Detect Windows code signing config
+        if: runner.os == 'Windows'
+        id: win_sign
+        shell: bash
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_TRUSTED_SIGNING_ENDPOINT: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          AZURE_TRUSTED_SIGNING_ACCOUNT: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          AZURE_TRUSTED_SIGNING_PROFILE: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
+        run: |
+          if [[ -n "${AZURE_CLIENT_ID}" && -n "${AZURE_TENANT_ID}" && -n "${AZURE_SUBSCRIPTION_ID}" \
+            && -n "${AZURE_TRUSTED_SIGNING_ENDPOINT}" && -n "${AZURE_TRUSTED_SIGNING_ACCOUNT}" \
+            && -n "${AZURE_TRUSTED_SIGNING_PROFILE}" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+            echo "Assinatura Windows (Dark Room / Artifact Signing) activa."
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Assinatura Windows omitida — secrets/vars Azure em falta (ver docs/WINDOWS_SIGNING.md)."
+          fi
+
+      - name: Azure login (OIDC)
+        if: runner.os == 'Windows' && steps.win_sign.outputs.enabled == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign Windows onedir (Dark Room)
+        if: runner.os == 'Windows' && steps.win_sign.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
+          # Só o .exe principal — evita esgotar a quota do Artifact Signing com dezenas de DLLs do PyInstaller.
+          files: ${{ github.workspace }}\dist\Route1Kit\Route1Kit.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Package Windows (ZIP + Inno Setup)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          ROUTE1KIT_WIN_PHASE=package ./tools/build_windows_release.sh
+
+      - name: Sign Windows setup.exe (Dark Room)
+        if: runner.os == 'Windows' && steps.win_sign.outputs.enabled == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
+          files-folder: ${{ github.workspace }}\release_artifacts
+          files-folder-filter: exe
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
 
       - name: Build Linux (portable + installer tarball)
         if: runner.os == 'Linux'
@@ -110,7 +174,7 @@ jobs:
           body: |
             ## Route 1 Kit ${{ github.ref_name }}
 
-            Builds **portátil** e **instalável**.
+            Builds **portátil** e **instalável** · publisher Windows: **Dark Room**.
 
             ### Downloads
 
@@ -124,7 +188,7 @@ jobs:
 
             - Use um **cartão SD de teste** na primeira utilização.
             - macOS pode pedir confirmação em *Privacidade e Segurança* (binário não notarizado pela Apple nesta release).
-            - Windows SmartScreen pode avisar em executáveis novos — escolha “Mais informações” → Executar mesmo assim se confiar na origem.
+            - Windows: builds assinados com Authenticode (Dark Room) quando o Azure Artifact Signing estiver configurado; caso contrário o SmartScreen pode avisar — “Mais informações” → Executar mesmo assim se confiar na origem.
             - Licença: GPL-3.0. Aviso legal e risco de brick: ver README.
 
             Changelog: ver `CHANGELOG.md` no repositório.

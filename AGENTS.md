@@ -34,6 +34,8 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `tests/` | pytest |
 | `tools/update_pins.py` | Verificar / atualizar pins SHA-256 |
 | `tools/build_icons.py` | Regenerar ícones a partir dos SVGs |
+| `packaging/` | Spec PyInstaller + Inno Setup (Windows; publisher **Dark Room**) |
+| `docs/WINDOWS_SIGNING.md` | Authenticode / Azure Artifact Signing no CI |
 | `.cursor/rules/*.mdc` | Regras detalhadas e sempre/parcialmente aplicadas |
 
 ## Como correr

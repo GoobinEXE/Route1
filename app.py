@@ -6,6 +6,7 @@ Route 1 Kit — App desktop multiplataforma (pywebview).
 import os
 import sys
 import threading
+import webbrowser
 from collections import deque
 from functools import wraps
 
@@ -23,6 +24,7 @@ if BASE_DIR not in sys.path:
 import webview
 
 from core import __version__
+from core.about import EXTERNAL_URL_ALLOWLIST, build_about_payload
 from core.boxart import install_boxarts as do_install_boxarts
 from core.cleaner import backup_drive, clean_macos_metadata
 from core.disks import format_sd_card, get_mounted_drives, is_safe_mount_path
@@ -154,6 +156,26 @@ class Api:
             sliced = [e["msg"] for e in SYSTEM_LOGS if e["id"] > since_id]
             next_id = _LOG_SEQ
         return {"logs": sliced, "next_index": next_id}
+
+    def get_about(self):
+        """Metadados da tela Sobre + última entrada do CHANGELOG.md."""
+        try:
+            return build_about_payload(BASE_DIR)
+        except Exception as e:
+            return _reject(e)
+
+    def open_external_url(self, url):
+        """Abre URL allowlisted no browser do sistema (links da tela Sobre)."""
+        if not isinstance(url, str):
+            return _reject("URL inválida.")
+        cleaned = url.strip()
+        if cleaned not in EXTERNAL_URL_ALLOWLIST:
+            return _reject("URL não permitida.")
+        try:
+            webbrowser.open(cleaned)
+            return {"success": True}
+        except Exception as e:
+            return _reject(e)
 
     def clear_logs(self):
         with LOG_LOCK:

@@ -8,7 +8,7 @@
 
 #define MyAppName "Route 1 Kit"
 #define MyAppExeName "Route1Kit.exe"
-#define MyAppPublisher "Route 1 Kit"
+#define MyAppPublisher "Dark Room"
 #define MyAppURL "https://github.com/GoobinEXE/Route1"
 
 [Setup]
@@ -32,6 +32,12 @@ PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 UninstallDisplayIcon={app}\{#MyAppExeName}
+; Assinatura Authenticode (opcional): passar /Sroute1sign="…" ao ISCC.
+; Ver docs/WINDOWS_SIGNING.md. Sem SignTool definido, o instalador sai sem assinar.
+#ifdef ROUTE1_SIGN
+SignTool=route1sign
+SignedUninstaller=yes
+#endif
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
