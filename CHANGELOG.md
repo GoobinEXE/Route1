@@ -14,12 +14,16 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 - Aba **Sobre**
 - Estúdio **Dark Room** na aba Sobre e no instalador Windows
+- Catálogo **Apps** no modo Avançado: instalação autónoma (download + SHA-256) de homebrew em `/roms/apps/` (GodMode9i, ftpd, NTM, Rocket Video Player, pkmn-chest, etc.)
+- Sub-navegação do modo Avançado: **Preparar** · **Cartão** · **Apps**
+- Guias GameBrew/README aplicadas na instalação (pastas, `databases.txt` do Kekatsu, cópia nitroFS do pkmn-chest, pastas de vídeos/backups)
 
 ### Desenvolvimento
 
 - `core/about.py`, `Api.get_about` / `open_external_url`, e `CHANGELOG.md` incluído no build PyInstaller
 - Pipeline Windows preparado para Authenticode (Azure Artifact Signing); ver `docs/WINDOWS_SIGNING.md`
 - Script Windows com fases `build` / `package` / `all`
+- `core/homebrew_catalog.py`, `core/homebrew_install.py`, `install_homebrew`, pins GitHub adicionais em `core/cache.py`
 ## [1.0.2] — 2026-09-08
 
 ### Corrigido

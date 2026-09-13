@@ -173,6 +173,19 @@ KNOWN_APP_STEMS = frozenset(
         "hiyacfw",
         "nandtitlemanager",
         "ntm",
+        "cart_flasher",
+        "cart-flasher",
+        "dsfetch",
+        "rocketvideoplayer",
+        "fastvideods",
+        "kekatsu",
+        "dsidl",
+        "ds-micpassthrough",
+        "dsmicpassthrough",
+        "savedumper",
+        "ndsi-savedumper",
+        "pkmn-chest",
+        "pkmnchest",
     }
 )
 

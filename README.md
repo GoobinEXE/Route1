@@ -138,18 +138,13 @@ Faz backup preventivo (quando aplicável) e atualiza o kernel GEi ou R4.
 
 ## Modo avançado (visão geral)
 
-No cabeçalho, **Modo avançado** abre o painel clássico, com ações avulsas:
+No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Preparar**, **Cartão** e **Apps**:
 
 | Área | O que faz |
 |------|-----------|
-| **Passo 1** | Memory Pit + dumpTool (`boot.nds`) |
-| **Passo 2** | TWiLight Menu++ e instalador Unlaunch |
-| **Flashcard** | Kernel GEi ou R4 (incl. ficheiros em Downloads, quando detetados) |
-| **ROMs** | Limpa nomes, sincroniza `.sav`, organiza em `/roms/<plataforma>/` |
-| **Boxarts** | Capas para o TWiLight (GameTDB), em `/_nds/TWiLightMenu/boxart/` |
-| **GodMode9i** | Instalação em `/roms/apps/GodMode9i.dsi` |
-| **Cheats** | Copia `usrcheat.dat` (ex.: de Downloads) para `extras/` do TWiLight |
-| **Utilitários** | Relatório do SD, backup, formatação FAT32 (32 KB), limpeza de metadados macOS (`._*`) |
+| **Preparar** | Passo 1 (Memory Pit + dumpTool), Passo 2 (TWiLight + Unlaunch), kernel GEi |
+| **Cartão** | Organizar ROMs, cheats, boxarts, relatório, backup, limpeza, formatação, DCIM, cópia NAND |
+| **Apps** | Catálogo homebrew: download + SHA-256, pastas/configs das guias GameBrew, instalação em `/roms/apps/` |
 
 Use o Assistente se ainda não tiver o hábito do fluxo completo; o modo avançado não “segura a mão” nas etapas críticas da mesma forma.
 
@@ -207,7 +202,7 @@ O **código-fonte do Route 1 Kit** (Python, HTML/CSS/JS da UI embutida, scripts 
 
 ### Componentes descarregados (terceiros)
 
-Durante o uso, o app pode **descarregar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++, GodMode9i). Esses componentes:
+Durante o uso, o app pode **descarregar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++, e apps do catálogo Homebrew com releases no GitHub). Esses componentes:
 
 - mantêm as **licenças, autores e termos dos projetos originais**;
 - **não** são “relicenciados” sob a GPL-3.0 do Route 1 Kit só por serem descarregados ou copiados para o SD;
@@ -257,9 +252,10 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 | `core/twilight.py` | TWiLight Menu++, kernels GEi / R4 |
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
 | `core/boxart.py` | Capas GameTDB por Game Code / região |
-| `core/sd_utils.py` | GodMode9i, cheats, relatório de cluster, cópia de `nand.bin` |
+| `core/sd_utils.py` | Homebrew do catálogo, cheats, relatório de cluster, cópia de `nand.bin` |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |
 | `core/cache.py` | Downloads oficiais + **SHA-256 pinados** |
+| `core/homebrew_catalog.py` | Catálogo de apps instaláveis (releases GitHub) |
 | `core/validate.py` | Validação NDS / integridade |
 | `core/inspect_sd.py` | Inspeção do cartão (wizard), sob `OP_LOCK` |
 | `core/privacy.py` | Redação de paths / PII em logs e respostas |
@@ -274,7 +270,7 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 
 ### Segurança e integridade (implementação)
 
-- Downloads oficiais com **SHA-256 pinado** (Memory Pit, dumpTool, Unlaunch v2.6, TWiLight Menu++ v27.24.1, GodMode9i v3.9.0).
+- Downloads oficiais com **SHA-256 pinado** (Memory Pit, dumpTool, Unlaunch, TWiLight Menu++, e apps do catálogo Homebrew).
 - Cópia para o cartão com verificação (`fsync` + rehash); promote atómico via `.partial` + `os.replace`.
 - Validação de cabeçalho NDS (CRC) antes de gravar bootloaders.
 - Etapas 1/2 (e kernels) transacionais com `UndoStack` + sync após rollback.

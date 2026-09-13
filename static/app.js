@@ -9,6 +9,10 @@ let activeActionBtn = null;
 let activeActionLabel = null;
 let appMode = "wizard"; // wizard | advanced | about
 let aboutLoadInFlight = false;
+let advancedSection = "prepare"; // prepare | card | apps
+let homebrewCatalog = null;
+let homebrewCatalogLoadInFlight = false;
+let homebrewCategory = "all";
 
 const LOG_DOM_MAX = 500;
 
@@ -30,6 +34,7 @@ const ACTION_MAP = {
 };
 
 const MODE_STORAGE_KEY = "route_1_kit_mode";
+const ADV_SECTION_KEY = "route_1_kit_adv_section";
 
 /** Só considera pronta quando a bridge tem métodos (api começa como {}). */
 function getApi() {
@@ -78,7 +83,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (saved === "advanced" || saved === "wizard" || saved === "about") {
     appMode = saved;
   }
+  const savedAdv = sessionStorage.getItem(ADV_SECTION_KEY);
+  if (savedAdv === "prepare" || savedAdv === "card" || savedAdv === "apps") {
+    advancedSection = savedAdv;
+  }
   applyAppMode(appMode, { silent: true });
+  applyAdvancedSection(advancedSection);
 
   try {
     await waitForApi();
@@ -89,6 +99,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     if (appMode === "about") {
       loadAboutPage();
+    }
+    if (appMode === "advanced" && advancedSection === "apps") {
+      loadHomebrewCatalog();
     }
   } catch (err) {
     appendLog(`Falha ao iniciar bridge: ${err.message}`, "error");
@@ -162,7 +175,7 @@ function setDriveStatus(hasDrive) {
 function actionButtons() {
   return Array.from(
     document.querySelectorAll(
-      "button.btn-primary, button.btn-secondary, button.util-btn, #btn-refresh, .wizard-cta, .mode-tab"
+      "button.btn-primary, button.btn-secondary, button.util-btn, #btn-refresh, .wizard-cta, .mode-tab, .adv-tab, .hb-install-btn"
     )
   );
 }
@@ -170,7 +183,10 @@ function actionButtons() {
 function setBusy(isBusy, sourceBtn) {
   busy = !!isBusy;
   actionButtons().forEach((btn) => {
-    if (btn.classList.contains("mode-tab") && !busy) {
+    if (
+      (btn.classList.contains("mode-tab") || btn.classList.contains("adv-tab")) &&
+      !busy
+    ) {
       btn.disabled = false;
       btn.classList.remove("opacity-50", "pointer-events-none");
       return;
@@ -416,6 +432,8 @@ async function runMountOp(options = {}) {
       result = await api.setup_nand_dump(mount, hasFacebook);
     } else if (methodName === "setup_r4") {
       result = await api.setup_r4(mount, options.sourceDir || "");
+    } else if (methodName === "install_homebrew") {
+      result = await api.install_homebrew(mount, options.appId || "");
     } else {
       result = await api[methodName](mount);
     }
@@ -541,10 +559,221 @@ function applyAppMode(mode, { silent } = {}) {
   if (appMode === "about") {
     loadAboutPage();
   }
+  if (appMode === "advanced") {
+    applyAdvancedSection(advancedSection);
+    if (advancedSection === "apps") {
+      loadHomebrewCatalog();
+    }
+  }
 }
 
 function setAppMode(mode) {
   applyAppMode(mode);
+}
+
+function applyAdvancedSection(section) {
+  if (section === "card" || section === "apps") advancedSection = section;
+  else advancedSection = "prepare";
+  sessionStorage.setItem(ADV_SECTION_KEY, advancedSection);
+
+  const sections = {
+    prepare: document.getElementById("adv-section-prepare"),
+    card: document.getElementById("adv-section-card"),
+    apps: document.getElementById("adv-section-apps"),
+  };
+  const tabs = {
+    prepare: document.getElementById("adv-tab-prepare"),
+    card: document.getElementById("adv-tab-card"),
+    apps: document.getElementById("adv-tab-apps"),
+  };
+  for (const key of Object.keys(sections)) {
+    const el = sections[key];
+    if (el) el.classList.toggle("hidden", advancedSection !== key);
+    const tab = tabs[key];
+    if (tab) {
+      const on = advancedSection === key;
+      tab.classList.toggle("adv-tab--active", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+    }
+  }
+}
+
+function setAdvancedSection(section) {
+  if (busy) {
+    alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
+    return;
+  }
+  applyAdvancedSection(section);
+  if (advancedSection === "apps") {
+    loadHomebrewCatalog();
+  }
+}
+
+async function loadHomebrewCatalog() {
+  if (homebrewCatalog) {
+    renderHomebrewCatalog();
+    return;
+  }
+  if (homebrewCatalogLoadInFlight) return;
+  homebrewCatalogLoadInFlight = true;
+  const root = document.getElementById("hb-catalog");
+  try {
+    const api = getApi() || (await waitForApi());
+    if (!api || typeof api.get_homebrew_catalog !== "function") {
+      if (root) {
+        root.innerHTML =
+          '<p class="text-[12px] text-danger sm:col-span-2">Catálogo indisponível.</p>';
+      }
+      return;
+    }
+    const data = await api.get_homebrew_catalog();
+    if (!data || !data.success) {
+      if (root) {
+        root.innerHTML = `<p class="text-[12px] text-danger sm:col-span-2">${escapeHtml(
+          (data && data.error) || "Falha ao carregar catálogo."
+        )}</p>`;
+      }
+      return;
+    }
+    homebrewCatalog = data;
+    const attr = document.getElementById("hb-attribution");
+    if (attr && data.attribution) {
+      attr.textContent = data.attribution;
+      attr.classList.remove("hidden");
+    }
+    renderHomebrewCategoryChips();
+    renderHomebrewCatalog();
+  } catch (err) {
+    if (root) {
+      root.innerHTML = `<p class="text-[12px] text-danger sm:col-span-2">${escapeHtml(
+        err.message || "Erro"
+      )}</p>`;
+    }
+  } finally {
+    homebrewCatalogLoadInFlight = false;
+  }
+}
+
+function renderHomebrewCategoryChips() {
+  const wrap = document.getElementById("hb-category-chips");
+  if (!wrap || !homebrewCatalog) return;
+  const cats = Array.isArray(homebrewCatalog.categories)
+    ? homebrewCatalog.categories
+    : [];
+  const items = [{ id: "all", label: "Todos" }].concat(cats);
+  wrap.innerHTML = items
+    .map((c) => {
+      const on = homebrewCategory === c.id;
+      return (
+        `<button type="button" class="hb-chip${on ? " hb-chip--active" : ""}" ` +
+        `data-cat="${escapeHtml(c.id)}" onclick="setHomebrewCategory('${escapeHtml(
+          c.id
+        )}')">${escapeHtml(c.label)}</button>`
+      );
+    })
+    .join("");
+}
+
+function setHomebrewCategory(catId) {
+  homebrewCategory = catId || "all";
+  renderHomebrewCategoryChips();
+  renderHomebrewCatalog();
+}
+
+function renderHomebrewCatalog() {
+  const root = document.getElementById("hb-catalog");
+  if (!root || !homebrewCatalog) return;
+  const apps = Array.isArray(homebrewCatalog.apps) ? homebrewCatalog.apps : [];
+  const qEl = document.getElementById("hb-search");
+  const q = (qEl && qEl.value ? qEl.value : "").trim().toLowerCase();
+
+  const filtered = apps.filter((a) => {
+    if (homebrewCategory !== "all" && a.category !== homebrewCategory) {
+      return false;
+    }
+    if (!q) return true;
+    const hay = [a.title, a.author, a.description, a.version]
+      .map((x) => String(x || "").toLowerCase())
+      .join(" ");
+    return hay.includes(q);
+  });
+
+  if (!filtered.length) {
+    root.innerHTML =
+      '<p class="text-[12px] text-fg-mute sm:col-span-2">Nenhum app corresponde à pesquisa.</p>';
+    return;
+  }
+
+  root.innerHTML = filtered
+    .map((a) => {
+      const warn = a.warn_nand
+        ? `<span class="chip chip--warn">NAND</span>`
+        : "";
+      const ver = a.version
+        ? `<span class="text-[11px] text-fg-mute">v${escapeHtml(a.version)}</span>`
+        : "";
+      const gbUrl = escapeHtml(a.gamebrew_url || "");
+      const appId = escapeHtml(a.id || "");
+      const notes = Array.isArray(a.setup_notes) ? a.setup_notes : [];
+      const notesHtml = notes.length
+        ? `<ul class="hb-notes">${notes
+            .map((n) => `<li>${escapeHtml(n)}</li>`)
+            .join("")}</ul>`
+        : "";
+      return (
+        `<article class="hb-card">` +
+        `<div class="hb-card-body">` +
+        `<div class="flex items-start justify-between gap-2">` +
+        `<h4 class="text-[13px] font-semibold text-fg leading-snug">${escapeHtml(
+          a.title || ""
+        )}</h4>` +
+        `<div class="flex items-center gap-1.5 shrink-0">${warn}${ver}</div>` +
+        `</div>` +
+        `<p class="text-[12px] text-fg-mute leading-relaxed mt-1">${escapeHtml(
+          a.description || ""
+        )}</p>` +
+        `<p class="text-[11px] text-fg-soft mt-2">${escapeHtml(
+          a.author || ""
+        )} · ${escapeHtml(a.category_label || a.category || "")}</p>` +
+        notesHtml +
+        `</div>` +
+        `<div class="hb-card-actions">` +
+        `<button type="button" class="btn-primary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
+        `data-app-id="${appId}" data-warn-nand="${a.warn_nand ? "1" : "0"}" ` +
+        `data-title="${escapeHtml(a.title || "")}" ` +
+        `onclick="installHomebrewApp(this)">Instalar no SD</button>` +
+        (gbUrl
+          ? `<button type="button" class="btn-ghost !py-1.5 !px-2.5 text-[11px]" onclick="openExternal('${gbUrl}')">GameBrew</button>`
+          : "") +
+        `</div>` +
+        `</article>`
+      );
+    })
+    .join("");
+}
+
+async function installHomebrewApp(btn) {
+  if (!btn || busy) return;
+  const appId = btn.getAttribute("data-app-id") || "";
+  const title = btn.getAttribute("data-title") || appId;
+  const warnNand = btn.getAttribute("data-warn-nand") === "1";
+  if (!appId) return;
+
+  let msg =
+    `Instalar ${title} no cartão?\n` +
+    "Será descarregado (SHA-256), copiado para /roms/apps/ e aplicada a configuração da guia GameBrew (pastas/ficheiros).";
+  if (warnNand) {
+    msg +=
+      "\n\nAVISO: esta ferramenta pode alterar a NAND do DSi. " +
+      "Tenha backup da NAND e Unlaunch instalado antes de a usar no console.";
+  }
+  if (!confirm(msg)) return;
+
+  await runMountOp({
+    method: "install_homebrew",
+    appId,
+    sourceBtn: btn,
+  });
 }
 
 async function openExternal(url) {

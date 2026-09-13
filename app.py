@@ -24,11 +24,12 @@ if BASE_DIR not in sys.path:
 import webview
 
 from core import __version__
-from core.about import EXTERNAL_URL_ALLOWLIST, build_about_payload
+from core.about import build_about_payload, is_allowed_external_url
 from core.boxart import install_boxarts as do_install_boxarts
 from core.cleaner import backup_drive, clean_macos_metadata
 from core.disks import format_sd_card, get_mounted_drives, is_safe_mount_path
 from core.exploits import setup_nand_backup_stage, setup_unlaunch_stage
+from core.homebrew_catalog import build_catalog_payload
 from core.inspect_sd import inspect_sd_card, quarantine_dcim as do_quarantine_dcim
 from core.privacy import expand_user_path, redact_path, redact_text
 from core.rom_cleaner import organize_roms_directory
@@ -36,6 +37,7 @@ from core.sd_utils import (
     copy_nand_backup as do_copy_nand_backup,
     format_sd_report as do_sd_report,
     install_cheats as do_install_cheats,
+    install_homebrew as do_install_homebrew,
     setup_godmode9i as do_setup_godmode9i,
 )
 from core.sdio import preflight
@@ -165,15 +167,22 @@ class Api:
             return _reject(e)
 
     def open_external_url(self, url):
-        """Abre URL allowlisted no browser do sistema (links da tela Sobre)."""
+        """Abre URL allowlisted no browser do sistema (Sobre / GameBrew)."""
         if not isinstance(url, str):
             return _reject("URL inválida.")
         cleaned = url.strip()
-        if cleaned not in EXTERNAL_URL_ALLOWLIST:
+        if not is_allowed_external_url(cleaned):
             return _reject("URL não permitida.")
         try:
             webbrowser.open(cleaned)
             return {"success": True}
+        except Exception as e:
+            return _reject(e)
+
+    def get_homebrew_catalog(self):
+        """Catálogo de apps instaláveis (só leitura)."""
+        try:
+            return build_catalog_payload()
         except Exception as e:
             return _reject(e)
 
@@ -278,6 +287,16 @@ class Api:
     @_run_mount_op(min_free_mb=4)
     def setup_godmode9i(self, mount_path):
         success, msg = do_setup_godmode9i(mount_path, log_callback=add_log)
+        return _api_result(success, msg)
+
+    @_run_mount_op(min_free_mb=16)
+    def install_homebrew(self, mount_path, app_id):
+        app_id, err = _as_path_str(app_id, label="aplicação")
+        if err:
+            return _reject(err)
+        success, msg = do_install_homebrew(
+            mount_path, app_id, log_callback=add_log
+        )
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=64)

@@ -12,8 +12,10 @@ REPO_URL = "https://github.com/GoobinEXE/Route1"
 RELEASES_URL = f"{REPO_URL}/releases"
 GUIDE_URL = "https://dsi.cfw.guide/"
 LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
+GAMEBREW_WIKI_PREFIX = "https://www.gamebrew.org/wiki/"
+_GAMEBREW_SLUG_RE = re.compile(r"^[A-Za-z0-9_()%.\-]+$")
 
-# URLs que a UI pode abrir no browser do sistema (allowlist).
+# URLs exactas que a UI pode abrir no browser do sistema (allowlist).
 EXTERNAL_URL_ALLOWLIST = frozenset(
     {
         REPO_URL,
@@ -22,8 +24,24 @@ EXTERNAL_URL_ALLOWLIST = frozenset(
         LICENSE_URL,
         f"{REPO_URL}/blob/main/CHANGELOG.md",
         f"{REPO_URL}/blob/main/LICENSE",
+        "https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications",
     }
 )
+
+
+def is_allowed_external_url(url: str) -> bool:
+    """Allowlist exacta + páginas wiki GameBrew com slug seguro."""
+    if not isinstance(url, str):
+        return False
+    cleaned = url.strip()
+    if cleaned in EXTERNAL_URL_ALLOWLIST:
+        return True
+    if not cleaned.startswith(GAMEBREW_WIKI_PREFIX):
+        return False
+    slug = cleaned[len(GAMEBREW_WIKI_PREFIX) :]
+    if not slug or "/" in slug or "\\" in slug or ".." in slug:
+        return False
+    return bool(_GAMEBREW_SLUG_RE.fullmatch(slug))
 
 _HEADING_RE = re.compile(
     r"^##\s+\[([^\]]+)\](?:\s*[—–-]\s*(\d{4}-\d{2}-\d{2}))?\s*$"

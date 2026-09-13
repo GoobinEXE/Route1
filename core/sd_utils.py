@@ -28,34 +28,58 @@ def _safe_under(root: str, path: str) -> bool:
         return False
 
 
-def setup_godmode9i(mount_path: str, log_callback=None) -> tuple[bool, str]:
-    """Instala GodMode9i.dsi em /roms/apps/ (cache pinado)."""
+def install_homebrew(
+    mount_path: str, app_id: str, log_callback=None
+) -> tuple[bool, str]:
+    """Instala um app do catálogo com receita GameBrew/README (cache pinado)."""
+    from core.homebrew_catalog import get_app
+    from core.homebrew_install import apply_install_recipe
+
     log = lambda msg: emit_log(log_callback, msg)
     if not is_safe_mount_path(mount_path):
         return False, "Unidade não reconhecida como volume removível/USB/SD."
+    if not isinstance(app_id, str) or not app_id.strip():
+        return False, "Aplicação inválida."
 
-    log("=== Instalar GodMode9i ===")
+    app = get_app(app_id.strip())
+    if not app:
+        return False, "Aplicação não encontrada no catálogo."
+    if not app.get("installable"):
+        return False, f"{app['title']} não tem download pinado neste app."
+
+    key = app["install_key"]
+    if not PINNED_SHA256.get(key):
+        return False, f"Sem pin SHA-256 para {app['title']}."
+
+    log(f"=== Instalar {app['title']} (guia GameBrew) ===")
     try:
-        src = ensure_cached("godmode9i", log_callback=log_callback)
+        src = ensure_cached(key, log_callback=log_callback)
     except Exception as e:
-        return False, f"Falha ao obter GodMode9i: {e}"
+        return False, f"Falha ao obter {app['title']}: {e}"
 
-    apps = os.path.join(mount_path, "roms", "apps")
-    os.makedirs(apps, exist_ok=True)
-    dst = os.path.join(apps, "GodMode9i.dsi")
+    ok, msg, notes = apply_install_recipe(
+        mount_path, app, src, log_callback=log_callback
+    )
+    if not ok:
+        return False, msg
+
     try:
-        copy_verified(
-            src,
-            dst,
-            expected_sha256=PINNED_SHA256["godmode9i"],
-            log_callback=log_callback,
-        )
         sync_volume(mount_path)
     except Exception as e:
-        return False, f"Falha ao copiar GodMode9i: {e}"
+        return False, f"{msg} (sync falhou: {e})"
 
-    log("✅ GodMode9i instalado em /roms/apps/GodMode9i.dsi")
-    return True, "GodMode9i instalado em /roms/apps/GodMode9i.dsi"
+    for note in notes:
+        log(f"ℹ️ {note}")
+    log(f"✅ {msg}")
+    if notes:
+        extra = " ".join(notes[:2])
+        return True, f"{msg}. {extra}"
+    return True, msg
+
+
+def setup_godmode9i(mount_path: str, log_callback=None) -> tuple[bool, str]:
+    """Compat: instala GodMode9i via catálogo."""
+    return install_homebrew(mount_path, "godmode9i", log_callback=log_callback)
 
 
 def _find_usrcheat_candidates() -> list[str]:

@@ -128,3 +128,20 @@ def test_api_open_external_allowlist(monkeypatch):
     ok = api.open_external_url(url)
     assert ok["success"] is True
     assert opened == [url]
+
+    gb = "https://www.gamebrew.org/wiki/GodMode9i"
+    ok2 = api.open_external_url(gb)
+    assert ok2["success"] is True
+    assert opened[-1] == gb
+
+    nested = api.open_external_url("https://www.gamebrew.org/wiki/foo/bar")
+    assert nested["success"] is False
+
+
+def test_api_homebrew_catalog():
+    api = app_mod.Api()
+    res = api.get_homebrew_catalog()
+    assert res["success"] is True
+    assert res["apps"]
+    assert all(a.get("installable") for a in res["apps"])
+

@@ -22,7 +22,7 @@ USER_AGENT = (
 #   dumptool:  dsi.cfw.guide dumpTool boot.nds
 #   unlaunch:  edo9300/unlaunch-installer v2.6 (digest GitHub Release)
 #   twilight:  DS-Homebrew/TWiLightMenu v27.24.1 (digest GitHub Release)
-#   godmode9i: DS-Homebrew/GodMode9i v3.9.0 GodMode9i.dsi (digest GitHub Release)
+#   godmode9i + apps do catálogo: releases GitHub (digest verificado no download)
 PINNED_SHA256 = {
     "pit_facebook": "ca4c197ef81283ad0c802fdc39bcb6c880e2e182cb7ac5c456a68368e50bbe14",
     "pit_no_facebook": "9f2b97bfb9569723ed5c0c48f314ab8c94e56e855acb468db727b8ecf059342b",
@@ -30,6 +30,17 @@ PINNED_SHA256 = {
     "unlaunch": "14ba0b4af84e801206e20cffdf55002e3b4b5dd8be18abf3c0977011b23f1aeb",
     "twilight_7z": "c04fc66305ce8dc80e69aa4070d3ce966f04868881663f57b91f68d687a2bb90",
     "godmode9i": "7fcf94f3b840ed240175a386c0a28c246bd40bcc791e8505c100ca78ba49b6e1",
+    "ftpd": "63cf06c4e13772544630f60c91921c9fd616ad507b55174cb057fc3125fa8423",
+    "pkmn_chest": "7e06166b565e89492a8489bfbf4d4c30e7e537de1517faa1ab2da5ec5f6ebf13",
+    "ndsi_savedumper": "528df32883ca0380c37d81368eed8c40bb1346cae24e441c2fc28c2c9a9e9690",
+    "ntm": "2563f8c0481c92ad361eccf7849f4bfeb1d6e6af3c88337f08d14ba2353b8797",
+    "rocket_video": "f085152c1dde9d2b372fb0137b224c73d516cae4ba833f2f9fdda994e4bdf6e8",
+    "ds_micpassthrough": "fba5e4725d73ee96117fddca4d67d029659b6a76b15db25eddb3d6dd936c6d3e",
+    "dsfetch": "13b2022c0603ac7b60e8903526bb8487d22a37a72a61f7c8d56e62227c5fbac4",
+    "cart_flasher": "03145f84957afdee5c27ba1cada7fcd1e9b887fd39da8c5967ae60d6b787b59a",
+    "fastvideo_ds": "09e480591acd63073319e9dd191d32d8a3d85543c82037f7d1c966941b039f61",
+    "dsidl": "23f56f0c6b9d0780f6b8306b25879c0ae2c1cc87fbb020d0fa4a1cd1897db30b",
+    "kekatsu": "7e298996478fe22ffd1209a82aa153b859d104c0afae12aef77e716b0992aa87",
 }
 
 PIN_META = {
@@ -47,6 +58,49 @@ PIN_META = {
         "repo": "DS-Homebrew/GodMode9i",
         "tag": "v3.9.0",
         "asset": "GodMode9i.dsi",
+    },
+    "ftpd": {"repo": "mtheall/ftpd", "tag": "v3.2.1", "asset": "ftpd.nds"},
+    "pkmn_chest": {
+        "repo": "Universal-Team/pkmn-chest",
+        "tag": "v2.2",
+        "asset": "pkmn-chest.nds",
+    },
+    "ndsi_savedumper": {
+        "repo": "edo9300/ndsi-savedumper",
+        "tag": "1.2",
+        "asset": "savedumper.nds",
+    },
+    "ntm": {"repo": "Epicpkmn11/NTM", "tag": "v0.5.1", "asset": "NTM.dsi"},
+    "rocket_video": {
+        "repo": "RocketRobz/RocketVideoPlayer",
+        "tag": "v2.3.0",
+        "asset": "RocketVideoPlayer.dsi",
+    },
+    "ds_micpassthrough": {
+        "repo": "korbosoft/ds-micpassthrough",
+        "tag": "v3.0.0",
+        "asset": "ds-micpassthrough.nds",
+    },
+    "dsfetch": {
+        "repo": "xPsycho999/DSFetch",
+        "tag": "v1.0.0",
+        "asset": "DSFetch.nds",
+    },
+    "cart_flasher": {
+        "repo": "tasken/cart-flasher",
+        "tag": "v0.8-tinkatuff",
+        "asset": "cart_flasher.nds",
+    },
+    "fastvideo_ds": {
+        "repo": "Mathos42/FastVideoDSPlayer-2",
+        "tag": "v1.7",
+        "asset": "FastVideoDS.nds",
+    },
+    "dsidl": {"repo": "Epicpkmn11/dsidl", "tag": "v0.1.1", "asset": "dsidl.dsi"},
+    "kekatsu": {
+        "repo": "cavv-dev/Kekatsu-DS",
+        "tag": "v1.2.0",
+        "asset": "Kekatsu.nds",
     },
 }
 
@@ -66,6 +120,41 @@ URLS = {
         "https://github.com/DS-Homebrew/GodMode9i/releases/download/v3.9.0/"
         "GodMode9i.dsi"
     ),
+    "ftpd": "https://github.com/mtheall/ftpd/releases/download/v3.2.1/ftpd.nds",
+    "pkmn_chest": (
+        "https://github.com/Universal-Team/pkmn-chest/releases/download/v2.2/"
+        "pkmn-chest.nds"
+    ),
+    "ndsi_savedumper": (
+        "https://github.com/edo9300/ndsi-savedumper/releases/download/1.2/"
+        "savedumper.nds"
+    ),
+    "ntm": "https://github.com/Epicpkmn11/NTM/releases/download/v0.5.1/NTM.dsi",
+    "rocket_video": (
+        "https://github.com/RocketRobz/RocketVideoPlayer/releases/download/v2.3.0/"
+        "RocketVideoPlayer.dsi"
+    ),
+    "ds_micpassthrough": (
+        "https://github.com/korbosoft/ds-micpassthrough/releases/download/v3.0.0/"
+        "ds-micpassthrough.nds"
+    ),
+    "dsfetch": (
+        "https://github.com/xPsycho999/DSFetch/releases/download/v1.0.0/DSFetch.nds"
+    ),
+    "cart_flasher": (
+        "https://github.com/tasken/cart-flasher/releases/download/v0.8-tinkatuff/"
+        "cart_flasher.nds"
+    ),
+    "fastvideo_ds": (
+        "https://github.com/Mathos42/FastVideoDSPlayer-2/releases/download/v1.7/"
+        "FastVideoDS.nds"
+    ),
+    "dsidl": (
+        "https://github.com/Epicpkmn11/dsidl/releases/download/v0.1.1/dsidl.dsi"
+    ),
+    "kekatsu": (
+        "https://github.com/cavv-dev/Kekatsu-DS/releases/download/v1.2.0/Kekatsu.nds"
+    ),
 }
 
 FILENAMES = {
@@ -75,6 +164,17 @@ FILENAMES = {
     "unlaunch": "unlaunch.dsi",
     "twilight_7z": "TWiLightMenu-DSi.7z",
     "godmode9i": "GodMode9i.dsi",
+    "ftpd": "ftpd.nds",
+    "pkmn_chest": "pkmn-chest.nds",
+    "ndsi_savedumper": "savedumper.nds",
+    "ntm": "NTM.dsi",
+    "rocket_video": "RocketVideoPlayer.dsi",
+    "ds_micpassthrough": "ds-micpassthrough.nds",
+    "dsfetch": "DSFetch.nds",
+    "cart_flasher": "cart_flasher.nds",
+    "fastvideo_ds": "FastVideoDS.nds",
+    "dsidl": "dsidl.dsi",
+    "kekatsu": "Kekatsu.nds",
 }
 
 MIN_SIZES = {
@@ -84,6 +184,17 @@ MIN_SIZES = {
     "unlaunch": 1024,
     "twilight_7z": 1024 * 100,
     "godmode9i": 1024,
+    "ftpd": 1024,
+    "pkmn_chest": 1024 * 100,
+    "ndsi_savedumper": 1024,
+    "ntm": 1024,
+    "rocket_video": 1024,
+    "ds_micpassthrough": 1024,
+    "dsfetch": 1024,
+    "cart_flasher": 1024,
+    "fastvideo_ds": 1024,
+    "dsidl": 1024,
+    "kekatsu": 1024,
 }
 
 

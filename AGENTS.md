@@ -25,6 +25,8 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |
 | `core/cache.py` | Downloads oficiais + **SHA-256 pinados** |
+| `core/homebrew_catalog.py` | Catálogo de apps instaláveis (releases GitHub) |
+| `core/homebrew_install.py` | Receitas GameBrew/README (pastas, configs) |
 | `core/validate.py` | Validação NDS / integridade |
 | `core/inspect_sd.py` | Inspeção do cartão (wizard) |
 | `core/privacy.py` | Redação de paths / PII em logs e respostas |

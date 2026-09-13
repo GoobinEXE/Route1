@@ -189,6 +189,15 @@
       </p>
     </section>
 
+    <!-- Sub-navegação do modo Avançado -->
+    <div class="adv-subnav" role="tablist" aria-label="Secções do modo avançado">
+      <button type="button" id="adv-tab-prepare" class="adv-tab adv-tab--active" role="tab" aria-selected="true" data-adv="prepare" onclick="setAdvancedSection('prepare')">Preparar</button>
+      <button type="button" id="adv-tab-card" class="adv-tab" role="tab" aria-selected="false" data-adv="card" onclick="setAdvancedSection('card')">Cartão</button>
+      <button type="button" id="adv-tab-apps" class="adv-tab" role="tab" aria-selected="false" data-adv="apps" onclick="setAdvancedSection('apps')">Apps</button>
+    </div>
+
+    <!-- Preparar: softmod / flashcard -->
+    <div id="adv-section-prepare" class="space-y-6">
     <!-- Workflow -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -266,92 +275,123 @@
       </section>
 
     </div>
+    </div>
 
-    <!-- Utilities -->
-    <section class="panel p-5 space-y-3">
-      <h3 class="section-label">Utilitários</h3>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <button type="button" onclick="runAction('organize-roms')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
-          <span>
-            <span class="util-title">Organizar jogos e apps</span>
-            <span class="util-sub">Jogos em /roms/nds/ · apps em /roms/apps/</span>
-          </span>
-        </button>
+    <!-- Cartão: acções do kit -->
+    <div id="adv-section-card" class="hidden space-y-4">
+      <section class="panel p-5 space-y-3">
+        <h3 class="section-label">Conteúdo</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <button type="button" onclick="runAction('organize-roms')" class="util-btn">
+            <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>
+            <span>
+              <span class="util-title">Organizar jogos e apps</span>
+              <span class="util-sub">Jogos em /roms/nds/ · apps em /roms/apps/</span>
+            </span>
+          </button>
+          <button type="button" onclick="runAction('install-cheats')" class="util-btn">
+            <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>
+              <span class="util-title">Instalar cheats</span>
+              <span class="util-sub">usrcheat.dat de Downloads → extras/</span>
+            </span>
+          </button>
+          <button type="button" onclick="runAction('install-boxarts')" class="util-btn">
+            <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <span>
+              <span class="util-title">Instalar boxarts</span>
+              <span class="util-sub">Capas GameTDB (requer rede)</span>
+            </span>
+          </button>
+        </div>
+      </section>
 
-        <button type="button" onclick="runAction('quarantine-dcim')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          <span>
-            <span class="util-title">Quarentena DCIM</span>
-            <span class="util-sub">Renomeia fotos da câmara (Memory Pit)</span>
-          </span>
-        </button>
+      <section class="panel p-5 space-y-3">
+        <h3 class="section-label">Manutenção</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <button type="button" onclick="runAction('sd-report')" class="util-btn">
+            <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>
+              <span class="util-title">Relatório do cartão</span>
+              <span class="util-sub">FAT32, cluster, TWiLight, NAND, ROMs</span>
+            </span>
+          </button>
+          <button type="button" onclick="runAction('backup')" class="util-btn">
+            <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            <span>
+              <span class="util-title">Backup do cartão</span>
+              <span class="util-sub">Copia o conteúdo do SD para o Desktop</span>
+            </span>
+          </button>
+          <button type="button" onclick="runAction('clean-sd')" class="util-btn">
+            <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>
+              <span class="util-title">Limpar metadados</span>
+              <span class="util-sub">Remove ._* , .DS_Store e residual do sistema</span>
+            </span>
+          </button>
+          <button type="button" onclick="confirmFormat()" class="util-btn util-btn--danger">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <span>
+              <span class="util-title">Formatar FAT32</span>
+              <span class="util-sub">MBR · cluster 32 KB · apaga o cartão</span>
+            </span>
+          </button>
+        </div>
+      </section>
 
-        <button type="button" onclick="runAction('sd-report')" class="util-btn">
-          <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span>
-            <span class="util-title">Relatório do cartão</span>
-            <span class="util-sub">FAT32, cluster, TWiLight, NAND, ROMs</span>
-          </span>
-        </button>
+      <section class="panel p-5 space-y-3">
+        <h3 class="section-label">Softmod extra</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <button type="button" onclick="runAction('quarantine-dcim')" class="util-btn">
+            <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span>
+              <span class="util-title">Quarentena DCIM</span>
+              <span class="util-sub">Renomeia fotos da câmara (Memory Pit)</span>
+            </span>
+          </button>
+          <button type="button" onclick="runAction('copy-nand')" class="util-btn">
+            <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+            <span>
+              <span class="util-title">Copiar NAND para o Desktop</span>
+              <span class="util-sub">Cópia de segurança de DT*/nand.bin</span>
+            </span>
+          </button>
+        </div>
+      </section>
+    </div>
 
-        <button type="button" onclick="runAction('setup-godmode9i')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
-          <span>
-            <span class="util-title">Instalar GodMode9i</span>
-            <span class="util-sub">Explorador / dump de cartuchos → /roms/apps/</span>
-          </span>
-        </button>
+    <!-- Apps: catálogo homebrew instalável -->
+    <div id="adv-section-apps" class="hidden space-y-4">
+      <section class="panel p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+          <div>
+            <h3 class="section-label">Apps homebrew</h3>
+            <p class="text-[12px] text-fg-mute mt-1 leading-relaxed max-w-2xl">
+              Downloads oficiais com SHA-256. Ao instalar, aplica-se a guia GameBrew/README
+              (pastas e configs). Abre em <code class="text-accent-fg">/roms/apps/</code> no TWiLight.
+            </p>
+          </div>
+          <button type="button" class="btn-ghost !px-2.5 !py-1.5 text-[11px] shrink-0"
+                  onclick="openExternal('https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications')">
+            Lista completa GameBrew
+          </button>
+        </div>
 
-        <button type="button" onclick="runAction('install-cheats')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-          <span>
-            <span class="util-title">Instalar cheats</span>
-            <span class="util-sub">usrcheat.dat de Downloads → extras/</span>
-          </span>
-        </button>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <label class="flex-1">
+            <input type="search" id="hb-search" class="field-select w-full" placeholder="Pesquisar por nome, autor…"
+                   autocomplete="off" aria-label="Pesquisar apps" oninput="renderHomebrewCatalog()">
+          </label>
+        </div>
 
-        <button type="button" onclick="runAction('install-boxarts')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>
-            <span class="util-title">Instalar boxarts</span>
-            <span class="util-sub">Capas GameTDB (requer rede)</span>
-          </span>
-        </button>
-
-        <button type="button" onclick="runAction('copy-nand')" class="util-btn">
-          <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-          <span>
-            <span class="util-title">Copiar NAND para o Desktop</span>
-            <span class="util-sub">Cópia de segurança de DT*/nand.bin</span>
-          </span>
-        </button>
-
-        <button type="button" onclick="runAction('backup')" class="util-btn">
-          <svg class="w-4 h-4 text-accent-fg" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-          <span>
-            <span class="util-title">Backup do cartão</span>
-            <span class="util-sub">Copia o conteúdo do SD para o Desktop</span>
-          </span>
-        </button>
-
-        <button type="button" onclick="runAction('clean-sd')" class="util-btn">
-          <svg class="w-4 h-4 text-ok" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-          <span>
-            <span class="util-title">Limpar metadados</span>
-            <span class="util-sub">Remove ._* , .DS_Store e residual do sistema</span>
-          </span>
-        </button>
-
-        <button type="button" onclick="confirmFormat()" class="util-btn util-btn--danger">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          <span>
-            <span class="util-title">Formatar FAT32</span>
-            <span class="util-sub">MBR · cluster 32 KB · apaga o cartão</span>
-          </span>
-        </button>
-      </div>
-    </section>
+        <div id="hb-category-chips" class="flex flex-wrap gap-2" role="group" aria-label="Categorias"></div>
+        <p id="hb-attribution" class="text-[11px] text-fg-mute hidden"></p>
+        <div id="hb-catalog" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <p class="text-[12px] text-fg-mute sm:col-span-2">A carregar catálogo…</p>
+        </div>
+      </section>
+    </div>
 
     <!-- Activity log -->
     <section class="panel overflow-hidden">
