@@ -14,6 +14,9 @@ GUIDE_URL = "https://dsi.cfw.guide/"
 LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 GAMEBREW_WIKI_PREFIX = "https://www.gamebrew.org/wiki/"
 _GAMEBREW_SLUG_RE = re.compile(r"^[A-Za-z0-9_()%.\-]+$")
+UNIVERSAL_DB_DS_PREFIX = "https://db.universal-team.net/ds/"
+UNIVERSAL_DB_DS_LIST = "https://db.universal-team.net/ds/"
+_UNIVERSAL_DB_SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9\-]*$")
 
 # URLs exactas que a UI pode abrir no browser do sistema (allowlist).
 EXTERNAL_URL_ALLOWLIST = frozenset(
@@ -25,23 +28,29 @@ EXTERNAL_URL_ALLOWLIST = frozenset(
         f"{REPO_URL}/blob/main/CHANGELOG.md",
         f"{REPO_URL}/blob/main/LICENSE",
         "https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications",
+        UNIVERSAL_DB_DS_LIST,
     }
 )
 
 
 def is_allowed_external_url(url: str) -> bool:
-    """Allowlist exacta + páginas wiki GameBrew com slug seguro."""
+    """Allowlist exacta + páginas GameBrew / Universal-DB (DS) com slug seguro."""
     if not isinstance(url, str):
         return False
     cleaned = url.strip()
     if cleaned in EXTERNAL_URL_ALLOWLIST:
         return True
-    if not cleaned.startswith(GAMEBREW_WIKI_PREFIX):
-        return False
-    slug = cleaned[len(GAMEBREW_WIKI_PREFIX) :]
-    if not slug or "/" in slug or "\\" in slug or ".." in slug:
-        return False
-    return bool(_GAMEBREW_SLUG_RE.fullmatch(slug))
+    if cleaned.startswith(GAMEBREW_WIKI_PREFIX):
+        slug = cleaned[len(GAMEBREW_WIKI_PREFIX) :]
+        if not slug or "/" in slug or "\\" in slug or ".." in slug:
+            return False
+        return bool(_GAMEBREW_SLUG_RE.fullmatch(slug))
+    if cleaned.startswith(UNIVERSAL_DB_DS_PREFIX):
+        slug = cleaned[len(UNIVERSAL_DB_DS_PREFIX) :]
+        if not slug or "/" in slug or "\\" in slug or ".." in slug:
+            return False
+        return bool(_UNIVERSAL_DB_SLUG_RE.fullmatch(slug))
+    return False
 
 _HEADING_RE = re.compile(
     r"^##\s+\[([^\]]+)\](?:\s*[—–-]\s*(\d{4}-\d{2}-\d{2}))?\s*$"

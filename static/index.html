@@ -61,6 +61,27 @@
     </div>
   </header>
 
+  <div id="op-progress" class="op-progress" hidden aria-hidden="true" role="status" aria-live="polite">
+    <div class="op-progress-inner max-w-5xl mx-auto px-5">
+      <div class="op-progress-meta">
+        <span class="op-progress-label">
+          <span class="spinning-dot" aria-hidden="true"></span>
+          <span id="op-progress-text">Operação em andamento…</span>
+        </span>
+        <span class="op-progress-times">
+          <span id="op-progress-pct" class="op-progress-pct">0%</span>
+          <span class="op-progress-sep" aria-hidden="true">·</span>
+          <span id="op-progress-eta" class="op-progress-eta">A estimar…</span>
+          <span class="op-progress-sep" aria-hidden="true">·</span>
+          <span id="op-progress-elapsed" class="op-progress-elapsed">Decorrido 0s</span>
+        </span>
+      </div>
+      <div class="op-progress-track" aria-hidden="true">
+        <div id="op-progress-bar" class="op-progress-bar" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- Assistente (entrada padrão) -->
   <main id="view-wizard" class="max-w-5xl mx-auto px-5 py-7 flex-1 w-full">
     <div id="wizard-root" class="panel p-5 sm:p-6"></div>
@@ -330,7 +351,7 @@
               <span class="util-sub">Remove ._* , .DS_Store e residual do sistema</span>
             </span>
           </button>
-          <button type="button" onclick="confirmFormat()" class="util-btn util-btn--danger">
+          <button type="button" onclick="confirmFormat(this)" class="util-btn util-btn--danger">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             <span>
               <span class="util-title">Formatar FAT32</span>
@@ -372,10 +393,16 @@
               (pastas e configs). Abre em <code class="text-accent-fg">/roms/apps/</code> no TWiLight.
             </p>
           </div>
-          <button type="button" class="btn-ghost !px-2.5 !py-1.5 text-[11px] shrink-0"
-                  onclick="openExternal('https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications')">
-            Lista completa GameBrew
-          </button>
+          <div class="flex flex-wrap gap-2 shrink-0">
+            <button type="button" class="btn-ghost !px-2.5 !py-1.5 text-[11px]"
+                    onclick="openExternal('https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications')">
+              Lista GameBrew
+            </button>
+            <button type="button" class="btn-ghost !px-2.5 !py-1.5 text-[11px]"
+                    onclick="openExternal('https://db.universal-team.net/ds/')">
+              Lista Universal-DB
+            </button>
+          </div>
         </div>
 
         <div class="flex flex-col sm:flex-row gap-3">

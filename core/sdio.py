@@ -127,20 +127,33 @@ def copy_verified(
         raise
 
 
-def copytree_verified(src_dir: str, dst_dir: str, log_callback=None) -> int:
+def copytree_verified(src_dir: str, dst_dir: str, log_callback=None, progress_span=None) -> int:
     """Copia árvore de arquivos com verificação SHA-256 por arquivo. Retorna contagem."""
-    count = 0
+    from core.progress import emit_progress
+
+    files_to_copy = []
     for root, _dirs, files in os.walk(src_dir):
-        rel = os.path.relpath(root, src_dir)
-        target_root = dst_dir if rel == "." else os.path.join(dst_dir, rel)
-        os.makedirs(target_root, exist_ok=True)
         for name in files:
             if name.startswith("._") or name == ".DS_Store":
                 continue
             s = os.path.join(root, name)
-            d = os.path.join(target_root, name)
-            copy_verified(s, d, log_callback=log_callback)
-            count += 1
+            rel = os.path.relpath(root, src_dir)
+            target_root = dst_dir if rel == "." else os.path.join(dst_dir, rel)
+            files_to_copy.append((s, os.path.join(target_root, name)))
+
+    total = len(files_to_copy)
+    count = 0
+    for s, d in files_to_copy:
+        os.makedirs(os.path.dirname(d) or ".", exist_ok=True)
+        copy_verified(s, d, log_callback=log_callback)
+        count += 1
+        if total > 0 and progress_span:
+            emit_progress(
+                log_callback,
+                count / total,
+                f"A copiar… {count}/{total}",
+                span=progress_span,
+            )
     return count
 
 

@@ -1,10 +1,15 @@
+import array
+import fcntl
 import json
 import os
 import plistlib
 import re
 import shutil
+import socket
+import struct
 import subprocess
 import sys
+import tempfile
 
 # Capacidade acima disso quase certamente não é cartão SD / pendrive típico de DSi.
 MAX_SAFE_VOLUME_GB = 256
@@ -589,6 +594,14 @@ def get_mounted_drives():
 _VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,11}$")
 _WIN_LETTER_RE = re.compile(r"^[D-Z]$")
 _MACOS_DISK_ID_RE = re.compile(r"^(disk\d+)(?:s\d+)?$")
+_MACOS_SLICE_RE = re.compile(r"^disk\d+s\d+$")
+_NEWFS_MSDOS_BINS = ("/sbin/newfs_msdos", "/usr/sbin/newfs_msdos")
+_DISKUTIL_BIN = "/usr/sbin/diskutil"
+_AUTHOPEN_BIN = "/usr/libexec/authopen"
+_HDIUTIL_BIN = "/usr/bin/hdiutil"
+# Só nós de fatia FAT: /dev/diskNsM ou /dev/rdiskNsM (nunca disco inteiro).
+_MACOS_DEV_NODE_RE = re.compile(r"^/dev/r?disk\d+s\d+$")
+_MACOS_ATTACHED_DISK_RE = re.compile(r"^/dev/disk\d+$")
 
 
 def _macos_whole_disk_id(identifier):
@@ -653,6 +666,542 @@ def get_cluster_size_bytes(mount_path: str):
         return None
 
 
+def _macos_newfs_bin():
+    found = shutil.which("newfs_msdos") or "/sbin/newfs_msdos"
+    if found in _NEWFS_MSDOS_BINS:
+        return found
+    return "/sbin/newfs_msdos"
+
+
+def _macos_newfs_argv(newfs_bin, volume_name, dev):
+    return [
+        newfs_bin,
+        "-F",
+        "32",
+        "-b",
+        str(TARGET_CLUSTER_BYTES),
+        "-v",
+        volume_name,
+        dev,
+    ]
+
+
+def _macos_newfs_needs_privilege(returncode, stderr, stdout):
+    """True se newfs falhou por permissão ou volume ainda montado (não por geometria)."""
+    if returncode == 0:
+        return False
+    text = f"{stderr or ''} {stdout or ''}".lower()
+    hints = (
+        "permission denied",
+        "operation not permitted",
+        "not permitted",
+        "resource busy",
+        "device busy",
+    )
+    return any(h in text for h in hints)
+
+
+def _macos_admin_cancelled(text):
+    t = (text or "").lower()
+    return (
+        "user canceled" in t
+        or "user cancelled" in t
+        or "cancelou" in t
+        or "(-128)" in t
+        or "authorization canceled" in t
+        or "authorization cancelled" in t
+    )
+
+
+def _macos_admin_newfs_shell(newfs_bin, volume_name, parent_disk, part_id):
+    """
+    Shell elevado (legado): desmontar + newfs na mesma invocação.
+    Preferir authopen — osascript+root ainda leva EPERM em /dev/rdisk no macOS moderno.
+    Só chamar com parent_disk/part_id/volume_name já validados (allowlist).
+    """
+    return (
+        f"{_DISKUTIL_BIN} unmountDisk force /dev/{parent_disk} && "
+        f"{newfs_bin} -F 32 -b {int(TARGET_CLUSTER_BYTES)} "
+        f"-v {volume_name} /dev/r{part_id}"
+    )
+
+
+def _macos_run_admin_shell(shell_cmd):
+    """Corre um comando allowlisted com o diálogo de administrador do macOS."""
+    timeout_s = int(_SUBPROC_FORMAT_TIMEOUT)
+    script = (
+        f"with timeout of {timeout_s} seconds\n"
+        f"do shell script {json.dumps(shell_cmd)} with administrator privileges\n"
+        "end timeout"
+    )
+    osa = shutil.which("osascript") or "/usr/bin/osascript"
+    return subprocess.run(
+        [osa, "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=timeout_s + 90,
+    )
+
+
+def _macos_recv_scm_rights(sock, max_fds=16):
+    """Recebe FDs via SCM_RIGHTS; devolve o primeiro e fecha extras."""
+    itemsize = array.array("i").itemsize
+    bufsize = socket.CMSG_SPACE(max_fds * itemsize)
+    try:
+        _msg, ancdata, _flags, _addr = sock.recvmsg(4096, bufsize)
+    except OSError as e:
+        return None, f"authopen (recvmsg): {e}"
+    received = []
+    for level, typ, data in ancdata:
+        if level != socket.SOL_SOCKET or typ != socket.SCM_RIGHTS:
+            continue
+        nbytes = len(data) - (len(data) % itemsize)
+        if nbytes <= 0:
+            continue
+        arr = array.array("i")
+        arr.frombytes(data[:nbytes])
+        received.extend(int(x) for x in arr)
+    if not received:
+        return None, "authopen não devolveu descritor do dispositivo"
+    first = received[0]
+    for extra in received[1:]:
+        try:
+            os.close(extra)
+        except OSError:
+            pass
+    return first, ""
+
+
+def _macos_authopen_rdwr(dev_path, timeout_s=None):
+    """
+    Abre /dev/rdiskNsM (ou disk) via authopen -stdoutpipe.
+    Diálogo nativo de autorização de disco; evita EPERM do osascript+root.
+    Retorna (fd|None, erro).
+    """
+    if not _MACOS_DEV_NODE_RE.fullmatch(dev_path or ""):
+        return None, "dispositivo fora da allowlist"
+    if not os.path.exists(_AUTHOPEN_BIN):
+        return None, "authopen indisponível neste macOS"
+    timeout_s = int(timeout_s if timeout_s is not None else _SUBPROC_FORMAT_TIMEOUT)
+    parent, child = socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
+    proc = None
+    try:
+        parent.settimeout(float(timeout_s))
+        # stdout=socket: authopen envia o FD autorizado via SCM_RIGHTS.
+        proc = subprocess.Popen(
+            [_AUTHOPEN_BIN, "-stdoutpipe", "-o", str(int(os.O_RDWR)), dev_path],
+            stdin=subprocess.DEVNULL,
+            stdout=child,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        child.close()
+        child = None
+        fd, err = _macos_recv_scm_rights(parent)
+        try:
+            stderr = proc.communicate(timeout=min(60, timeout_s))[1] or ""
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate(timeout=5)
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            return None, "autorização de disco excedeu o tempo limite"
+        if fd is None:
+            detail = (stderr or err or "").strip()
+            if proc.returncode and not detail:
+                detail = f"authopen saiu com código {proc.returncode}"
+            return None, detail or err or "falha na autorização do disco"
+        return fd, ""
+    except Exception as e:
+        return None, f"authopen: {type(e).__name__}"
+    finally:
+        try:
+            parent.close()
+        except OSError:
+            pass
+        if child is not None:
+            try:
+                child.close()
+            except OSError:
+                pass
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+
+
+def _macos_partition_total_size(part_id):
+    """TotalSize (bytes) da fatia via diskutil; None se indisponível."""
+    if not _MACOS_SLICE_RE.fullmatch(part_id or ""):
+        return None
+    try:
+        out = subprocess.check_output(
+            ["diskutil", "info", "-plist", f"/dev/{part_id}"],
+            stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        data = plistlib.loads(out)
+        size = data.get("TotalSize")
+        if isinstance(size, int) and size >= 1024 * 1024:
+            return size
+    except Exception:
+        return None
+    return None
+
+
+def _macos_fat32_prefix_from_bpb(path):
+    """Bytes do prefixo FS (reservado + FATs + 1 cluster raiz) a partir do BPB."""
+    try:
+        with open(path, "rb") as f:
+            bpb = f.read(512)
+    except OSError:
+        return None
+    if len(bpb) < 512 or bpb[510:512] != b"\x55\xaa":
+        return None
+    bps = struct.unpack_from("<H", bpb, 11)[0]
+    reserved = struct.unpack_from("<H", bpb, 14)[0]
+    nfats = int(bpb[16])
+    sec_per_clust = int(bpb[13])
+    fatsz16 = struct.unpack_from("<H", bpb, 22)[0]
+    fatsz = fatsz16 or struct.unpack_from("<I", bpb, 36)[0]
+    if bps <= 0 or reserved <= 0 or nfats <= 0 or fatsz <= 0 or sec_per_clust <= 0:
+        return None
+    # Inclui 1 cluster de dados (raiz FAT32) além das FATs.
+    sectors = reserved + (nfats * fatsz) + sec_per_clust
+    return int(sectors) * int(bps)
+
+
+def _macos_image_payload_bytes(path, size_cap):
+    """
+    Quanto copiar da imagem sparse para o dispositivo.
+    Preferir SEEK_HOLE; fallback BPB; teto size_cap.
+    """
+    end = None
+    try:
+        with open(path, "rb") as f:
+            hole = os.lseek(f.fileno(), 0, os.SEEK_HOLE)
+            if isinstance(hole, int) and hole >= 512:
+                end = hole
+    except OSError:
+        end = None
+    if end is None:
+        end = _macos_fat32_prefix_from_bpb(path)
+    if end is None or end < 512:
+        end = min(int(size_cap), 128 * 1024 * 1024)
+    return min(int(end), int(size_cap))
+
+
+def _macos_copy_to_fd(src_path, dest_fd, nbytes):
+    """Copia nbytes do ficheiro para o FD (já posicionado). Retorna (ok, erro|bytes)."""
+    copied = 0
+    try:
+        os.lseek(dest_fd, 0, os.SEEK_SET)
+        with open(src_path, "rb") as src:
+            while copied < nbytes:
+                chunk = src.read(min(1024 * 1024, nbytes - copied))
+                if not chunk:
+                    break
+                offset = 0
+                while offset < len(chunk):
+                    n = os.write(dest_fd, chunk[offset:])
+                    if n <= 0:
+                        return False, "escrita no dispositivo devolveu 0"
+                    offset += n
+                    copied += n
+        try:
+            fcntl.fcntl(dest_fd, fcntl.F_FULLFSYNC)
+        except OSError:
+            os.fsync(dest_fd)
+        return True, copied
+    except OSError as e:
+        return False, f"escrita no dispositivo: {e}"
+
+
+def _macos_parse_hdiutil_attach_dev(stdout):
+    """Extrai /dev/diskN do stdout do hdiutil attach."""
+    for line in (stdout or "").splitlines():
+        token = (line.strip().split() or [""])[0]
+        if _MACOS_ATTACHED_DISK_RE.fullmatch(token):
+            return token
+    return ""
+
+
+def _macos_build_fat32_sparse_image(newfs_bin, volume_name, size_bytes):
+    """
+    Cria imagem sparse, anexa com hdiutil (CRawDiskImage) e corre newfs_msdos.
+    No macOS moderno newfs recusa ficheiros comuns (Cannot get partition offset).
+    Retorna (path|None, erro). Caller apaga o path em sucesso.
+    """
+    if newfs_bin not in _NEWFS_MSDOS_BINS:
+        return None, "binário newfs_msdos inválido"
+    if not _VOLUME_NAME_RE.fullmatch(volume_name or ""):
+        return None, "nome de volume inválido"
+    try:
+        size_bytes = int(size_bytes)
+    except (TypeError, ValueError):
+        return None, "tamanho da partição inválido"
+    # FAT32 com cluster 32 KB exige >= ~65525 clusters (~2.1 GiB).
+    min_fat32 = 65525 * int(TARGET_CLUSTER_BYTES)
+    if size_bytes < min_fat32:
+        return None, (
+            f"partição demasiado pequena para FAT32/32 KB "
+            f"({size_bytes} bytes; mínimo ~{min_fat32})"
+        )
+
+    hdiutil = shutil.which("hdiutil") or _HDIUTIL_BIN
+    if not os.path.exists(hdiutil):
+        return None, "hdiutil indisponível"
+
+    img_path = None
+    attached = ""
+    success = False
+    try:
+        tmp = tempfile.NamedTemporaryFile(
+            prefix="r1k_fat32_", suffix=".img", delete=False
+        )
+        img_path = tmp.name
+        tmp.close()
+        with open(img_path, "wb") as img:
+            img.truncate(size_bytes)
+
+        att = subprocess.run(
+            [
+                hdiutil,
+                "attach",
+                "-imagekey",
+                "diskimage-class=CRawDiskImage",
+                "-nomount",
+                img_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        if att.returncode != 0:
+            return None, (att.stderr or att.stdout or "hdiutil attach falhou").strip()
+        attached = _macos_parse_hdiutil_attach_dev(att.stdout)
+        if not attached:
+            return None, "hdiutil attach não devolveu /dev/diskN"
+
+        nf = subprocess.run(
+            _macos_newfs_argv(newfs_bin, volume_name, attached),
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_FORMAT_TIMEOUT,
+        )
+        if nf.returncode != 0:
+            return None, (nf.stderr or nf.stdout or "newfs_msdos (imagem) falhou").strip()
+        success = True
+        return img_path, ""
+    except subprocess.TimeoutExpired:
+        return None, "criação da imagem FAT32 excedeu o tempo limite"
+    except Exception as e:
+        return None, f"imagem FAT32: {type(e).__name__}"
+    finally:
+        if attached:
+            subprocess.run(
+                [hdiutil, "detach", attached, "-force"],
+                capture_output=True,
+                text=True,
+                timeout=_SUBPROC_INFO_TIMEOUT,
+                check=False,
+            )
+        if img_path and not success:
+            try:
+                os.remove(img_path)
+            except OSError:
+                pass
+
+
+def _macos_newfs_with_authopen(newfs_bin, volume_name, dev_path):
+    """
+    Formata FAT32 32 KB sem newfs direto no /dev (EPERM mesmo com root/osascript).
+
+    1) imagem sparse + hdiutil attach + newfs (newfs recusa ficheiros crus)
+    2) authopen abre o dispositivo com FD autorizado
+    3) copia o prefixo FS para o FD (/dev/fd/N reabre e perde a auth)
+    """
+    if not _MACOS_DEV_NODE_RE.fullmatch(dev_path or ""):
+        return False, "dispositivo fora da allowlist"
+    if not _VOLUME_NAME_RE.fullmatch(volume_name or ""):
+        return False, "nome de volume inválido"
+    if newfs_bin not in _NEWFS_MSDOS_BINS:
+        return False, "binário newfs_msdos inválido"
+
+    m = re.fullmatch(r"/dev/r?(disk\d+s\d+)", dev_path)
+    if not m:
+        return False, "dispositivo fora da allowlist"
+    part_id = m.group(1)
+    size = _macos_partition_total_size(part_id)
+    if not size:
+        return False, "tamanho da partição indisponível"
+
+    img_path = None
+    fd = None
+    try:
+        img_path, err = _macos_build_fat32_sparse_image(newfs_bin, volume_name, size)
+        if not img_path:
+            return False, err or "falha ao criar imagem FAT32"
+
+        payload = _macos_image_payload_bytes(img_path, size)
+
+        fd, err = _macos_authopen_rdwr(dev_path)
+        if fd is None:
+            return False, err or "falha na autorização do disco"
+
+        ok, detail = _macos_copy_to_fd(img_path, fd, payload)
+        if not ok:
+            return False, str(detail)
+        return True, ""
+    except subprocess.TimeoutExpired:
+        return False, "newfs_msdos (imagem) excedeu o tempo limite"
+    except Exception as e:
+        return False, f"newfs via authopen: {type(e).__name__}"
+    finally:
+        if fd is not None:
+            try:
+                os.close(fd)
+            except OSError:
+                pass
+        if img_path:
+            try:
+                os.remove(img_path)
+            except OSError:
+                pass
+
+
+def _macos_first_fat_slice(parent_disk):
+    """Identificador diskNsM da partição FAT após partitionDisk; fallback s1."""
+    fallback = f"{parent_disk}s1"
+    try:
+        out = subprocess.check_output(
+            ["diskutil", "list", "-plist", f"/dev/{parent_disk}"],
+            stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        data = plistlib.loads(out)
+        candidates = []
+        for item in data.get("AllDisksAndPartitions") or []:
+            for part in item.get("Partitions") or []:
+                ident = part.get("DeviceIdentifier") or ""
+                if not _MACOS_SLICE_RE.fullmatch(ident):
+                    continue
+                content = (part.get("Content") or "").upper()
+                if "FAT" in content or "DOS_FAT" in content:
+                    return ident
+                candidates.append(ident)
+        if candidates:
+            return candidates[0]
+        for ident in data.get("AllDisks") or []:
+            if isinstance(ident, str) and _MACOS_SLICE_RE.fullmatch(ident):
+                return ident
+    except Exception:
+        pass
+    return fallback
+
+
+def _macos_force_cluster32(parent_disk, part_id, volume_name):
+    """
+    Força FAT32 com cluster 32 KB via newfs_msdos.
+    Sem privilégios o newfs falha (diskutil já criou o FAT32); nesse caso usa
+    hdiutil+newfs numa imagem e grava o prefixo via authopen.
+    Retorna (ok, mensagem_de_erro).
+    """
+    if _macos_whole_disk_id(parent_disk) != parent_disk:
+        return False, "identificador de disco inválido"
+    if not _MACOS_SLICE_RE.fullmatch(part_id or ""):
+        return False, "identificador de partição inválido"
+    if not _VOLUME_NAME_RE.fullmatch(volume_name or ""):
+        return False, "nome de volume inválido"
+    if not part_id.startswith(parent_disk + "s"):
+        return False, "partição não pertence ao disco selecionado"
+
+    newfs = _macos_newfs_bin()
+    rpart = f"/dev/r{part_id}"
+    part = f"/dev/{part_id}"
+    whole = f"/dev/{parent_disk}"
+
+    subprocess.run(
+        ["diskutil", "unmountDisk", "force", whole],
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROC_INFO_TIMEOUT,
+        check=False,
+    )
+
+    nf = subprocess.run(
+        _macos_newfs_argv(newfs, volume_name, rpart),
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROC_FORMAT_TIMEOUT,
+    )
+    if nf.returncode == 0:
+        return True, ""
+
+    nf2 = subprocess.run(
+        _macos_newfs_argv(newfs, volume_name, part),
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROC_FORMAT_TIMEOUT,
+    )
+    if nf2.returncode == 0:
+        return True, ""
+
+    last_err = (nf2.stderr or nf.stderr or nf2.stdout or nf.stdout or "").strip()
+    need_priv = _macos_newfs_needs_privilege(
+        nf.returncode, nf.stderr, nf.stdout
+    ) or _macos_newfs_needs_privilege(nf2.returncode, nf2.stderr, nf2.stdout)
+    if not need_priv:
+        return False, last_err
+
+    # macOS moderno: osascript+root → EPERM; /dev/fd/N perde authopen;
+    # newfs em ficheiro → "Cannot get partition offset". Fluxo:
+    # hdiutil+newfs (1×) → authopen FD → copiar prefixo FAT.
+    size = _macos_partition_total_size(part_id)
+    if not size:
+        return False, "tamanho da partição indisponível"
+
+    img_path, img_err = _macos_build_fat32_sparse_image(newfs, volume_name, size)
+    if not img_path:
+        return False, img_err or "falha ao criar imagem FAT32"
+
+    try:
+        payload = _macos_image_payload_bytes(img_path, size)
+        auth_err = ""
+        for dev in (rpart, part):
+            fd, aerr = _macos_authopen_rdwr(dev)
+            if fd is None:
+                auth_err = aerr or auth_err
+                if _macos_admin_cancelled(aerr or ""):
+                    return (
+                        False,
+                        "autorização de acesso ao disco cancelada — "
+                        "no macOS o cluster 32 KB exige autorização.",
+                    )
+                continue
+            try:
+                ok, detail = _macos_copy_to_fd(img_path, fd, payload)
+            finally:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+            if ok:
+                return True, ""
+            auth_err = str(detail) if detail else auth_err
+
+        return False, auth_err or last_err
+    finally:
+        try:
+            os.remove(img_path)
+        except OSError:
+            pass
+
+
 def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
     try:
         out = subprocess.check_output(
@@ -698,64 +1247,33 @@ def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
             return False, f"Erro ao formatar: {res.stderr or res.stdout}"
 
         # partitionDisk não garante cluster 32 KB — reforçar com newfs_msdos.
-        part_id = f"{parent_disk}s1"
+        part_id = _macos_first_fat_slice(parent_disk)
         part_dev = f"/dev/{part_id}"
-        rpart_dev = f"/dev/r{part_id}"
-        # Desmontar volume (pode ter remontado automaticamente).
-        subprocess.run(
-            ["diskutil", "unmount", "force", part_dev],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_INFO_TIMEOUT,
-            check=False,
-        )
-        newfs = shutil.which("newfs_msdos") or "/sbin/newfs_msdos"
-        nf = subprocess.run(
-            [
-                newfs,
-                "-F",
-                "32",
-                "-b",
-                str(TARGET_CLUSTER_BYTES),
-                "-v",
-                volume_name,
-                rpart_dev,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_FORMAT_TIMEOUT,
-        )
-        if nf.returncode != 0:
-            # Fallback: tentar sem raw device.
-            nf2 = subprocess.run(
-                [
-                    newfs,
-                    "-F",
-                    "32",
-                    "-b",
-                    str(TARGET_CLUSTER_BYTES),
-                    "-v",
-                    volume_name,
-                    part_dev,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=_SUBPROC_FORMAT_TIMEOUT,
+        cluster_ok = False
+        cluster_err = "falha ao forçar cluster 32 KB"
+        try:
+            cluster_ok, cluster_err = _macos_force_cluster32(
+                parent_disk, part_id, volume_name
             )
-            if nf2.returncode != 0:
-                return (
-                    False,
-                    "FAT32 criado, mas falhou ao forçar cluster 32 KB: "
-                    f"{(nf2.stderr or nf.stderr or nf2.stdout or nf.stdout).strip()}",
+        finally:
+            # Remontar mesmo em falha — senão o cartão fica invisível no Finder.
+            # Não deixar TimeoutExpired do mount mascarar o erro do cluster.
+            try:
+                subprocess.run(
+                    ["diskutil", "mount", part_dev],
+                    capture_output=True,
+                    text=True,
+                    timeout=_SUBPROC_INFO_TIMEOUT,
+                    check=False,
                 )
-
-        subprocess.run(
-            ["diskutil", "mount", part_dev],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_INFO_TIMEOUT,
-            check=False,
-        )
+            except subprocess.TimeoutExpired:
+                pass
+        if not cluster_ok:
+            return (
+                False,
+                "FAT32 criado, mas falhou ao forçar cluster 32 KB: "
+                f"{cluster_err or 'newfs_msdos recusou o dispositivo'}",
+            )
         return (
             True,
             f"Cartão formatado com sucesso como {volume_name} "

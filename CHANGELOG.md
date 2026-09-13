@@ -12,14 +12,21 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ### Adicionado
 
+- Barra de progresso nas operações longas com percentagem, tempo restante estimado e tempo decorrido
 - Aba **Sobre**
 - Estúdio **Dark Room** na aba Sobre e no instalador Windows
 - Catálogo **Apps** no modo Avançado: instalação autónoma (download + SHA-256) de homebrew em `/roms/apps/` (GodMode9i, ftpd, NTM, Rocket Video Player, pkmn-chest, etc.)
 - Sub-navegação do modo Avançado: **Preparar** · **Cartão** · **Apps**
 - Guias GameBrew/README aplicadas na instalação (pastas, `databases.txt` do Kekatsu, cópia nitroFS do pkmn-chest, pastas de vídeos/backups)
+- Links para o [Universal-DB](https://db.universal-team.net/ds/) no catálogo Apps (lista e páginas por app)
+
+### Corrigido
+
+- Formatação no macOS: o cluster 32 KB volta a ser aplicado (o sistema pede administrador se for preciso)
 
 ### Desenvolvimento
 
+- Progresso de operação (`core/progress.py`, `OpSink` / `get_logs.progress`) com ETA na UI
 - `core/about.py`, `Api.get_about` / `open_external_url`, e `CHANGELOG.md` incluído no build PyInstaller
 - Pipeline Windows preparado para Authenticode (Azure Artifact Signing); ver `docs/WINDOWS_SIGNING.md`
 - Script Windows com fases `build` / `package` / `all`

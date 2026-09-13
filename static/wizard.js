@@ -349,19 +349,24 @@ const Wizard = (() => {
 
   /* ---------- API helpers ---------- */
 
-  async function refreshInspect() {
+  async function refreshInspect(sourceBtn) {
     if (!selectedDrive) {
       alert("Selecione um cartão SD primeiro.");
       return false;
     }
+    if (busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return false;
+    }
     const gen = renderGen;
+    setBusy(true, sourceBtn || null, "A inspecionar o cartão…", expectedMsForMethod("inspect_sd"));
     try {
       const api = getApi() || (await waitForApi());
       if (gen !== renderGen) return false;
       const res = await api.inspect_sd(selectedDrive.mount_path);
       if (gen !== renderGen) return false;
-      if (!res.success) {
-        state.lastError = res.error || "Falha ao inspecionar.";
+      if (!res || !res.success) {
+        state.lastError = (res && res.error) || "Falha ao inspecionar.";
         render();
         return false;
       }
@@ -372,11 +377,23 @@ const Wizard = (() => {
       state.lastError = e.message;
       render();
       return false;
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function refreshKernels() {
+  async function refreshKernels(sourceBtn) {
+    if (busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return null;
+    }
     const gen = renderGen;
+    setBusy(
+      true,
+      sourceBtn || null,
+      "A procurar kernels em Downloads…",
+      expectedMsForMethod("probe_kernels")
+    );
     try {
       const api = getApi() || (await waitForApi());
       if (gen !== renderGen) return null;
@@ -388,6 +405,8 @@ const Wizard = (() => {
       if (gen !== renderGen) return null;
       state.kernels = { success: false, error: e.message, gei: null, r4: [] };
       return state.kernels;
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -612,8 +631,8 @@ const Wizard = (() => {
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-format">Formatar FAT32</button>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-format").onclick = async () => {
-      const res = await confirmFormat();
+    document.getElementById("wiz-format").onclick = async (ev) => {
+      const res = await confirmFormat(ev.currentTarget);
       if (res && res.success) goNext();
     };
   }
@@ -649,9 +668,13 @@ const Wizard = (() => {
       </div>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-backup").onclick = async () => {
-      const res = await runMountOp({ method: "backup" });
-      if (res.success) goNext();
+    document.getElementById("wiz-backup").onclick = async (ev) => {
+      const res = await runMountOp({
+        method: "backup",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A fazer backup do cartão…",
+      });
+      if (res && res.success) goNext();
     };
     document.getElementById("wiz-backup-skip").onclick = () => goNext();
   }
@@ -684,9 +707,9 @@ const Wizard = (() => {
     const next = document.getElementById("wiz-kernel-next");
     const status = document.getElementById("wiz-kernel-status");
 
-    async function probe() {
+    async function probe(ev) {
       const gen = renderGen;
-      const res = await refreshKernels();
+      const res = await refreshKernels(ev && ev.currentTarget);
       if (gen !== renderGen || !res || !status.isConnected) return;
       if (isGei) {
         if (res.gei) {
@@ -759,18 +782,27 @@ const Wizard = (() => {
       <button type="button" class="btn-primary wizard-cta" id="wiz-install-k">Instalar kernel</button>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-install-k").onclick = async () => {
+    document.getElementById("wiz-install-k").onclick = async (ev) => {
       let res;
       if (isGei) {
-        res = await runMountOp({ method: "setup_gei" });
+        res = await runMountOp({
+          method: "setup_gei",
+          sourceBtn: ev.currentTarget,
+          statusMsg: "A instalar kernel GEi…",
+        });
       } else {
-        res = await runMountOp({ method: "setup_r4", sourceDir: state.r4Source });
+        res = await runMountOp({
+          method: "setup_r4",
+          sourceDir: state.r4Source,
+          sourceBtn: ev.currentTarget,
+          statusMsg: "A instalar kernel R4…",
+        });
       }
-      if (res.success) {
+      if (res && res.success) {
         alert("Kernel instalado. Ejetar o cartão com segurança quando terminar as etapas seguintes.");
         goNext();
       } else {
-        state.lastError = res.error || "Falha na instalação.";
+        state.lastError = (res && res.error) || "Falha na instalação.";
         render();
       }
     };
@@ -790,9 +822,13 @@ const Wizard = (() => {
       </div>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-roms").onclick = async () => {
-      const res = await runMountOp({ method: "organize_roms" });
-      if (res.success || res.error === "cancelled") {
+    document.getElementById("wiz-roms").onclick = async (ev) => {
+      const res = await runMountOp({
+        method: "organize_roms",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A organizar jogos e apps…",
+      });
+      if (res && (res.success || res.error === "cancelled")) {
         if (res.success) goNext();
       }
     };
@@ -810,11 +846,19 @@ const Wizard = (() => {
       </div>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-roms").onclick = async () => {
-      await runMountOp({ method: "organize_roms" });
+    document.getElementById("wiz-roms").onclick = async (ev) => {
+      await runMountOp({
+        method: "organize_roms",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A organizar jogos e apps…",
+      });
     };
-    document.getElementById("wiz-clean").onclick = async () => {
-      await runMountOp({ method: "clean_sd" });
+    document.getElementById("wiz-clean").onclick = async (ev) => {
+      await runMountOp({
+        method: "clean_sd",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A limpar metadados do cartão…",
+      });
     };
     document.getElementById("wiz-roms-skip").onclick = () => goNext();
   }
@@ -913,9 +957,9 @@ const Wizard = (() => {
     const btnFmt = document.getElementById("wiz-fmt");
     const btnNext = document.getElementById("wiz-dcim-next");
 
-    async function check() {
+    async function check(ev) {
       const gen = renderGen;
-      const ok = await refreshInspect();
+      const ok = await refreshInspect(ev && ev.currentTarget);
       if (gen !== renderGen || !ok || !status.isConnected) return;
       const i = state.inspect;
       let msgs = [];
@@ -938,12 +982,16 @@ const Wizard = (() => {
     }
 
     document.getElementById("wiz-check").onclick = check;
-    btnDcim.onclick = async () => {
-      const res = await runMountOp({ method: "quarantine_dcim" });
-      if (res.success) await check();
+    btnDcim.onclick = async (ev) => {
+      const res = await runMountOp({
+        method: "quarantine_dcim",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A mover pasta DCIM…",
+      });
+      if (res && res.success) await check();
     };
-    btnFmt.onclick = async () => {
-      const res = await confirmFormat();
+    btnFmt.onclick = async (ev) => {
+      const res = await confirmFormat(ev.currentTarget);
       if (res && res.success) {
         alert("Cartão formatado. Atualize a lista, selecione de novo e Verifique.");
         await fetchDrives();
@@ -970,7 +1018,7 @@ const Wizard = (() => {
       <button type="button" class="btn-primary wizard-cta" id="wiz-s1">Configurar Passo 1 no SD</button>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-s1").onclick = async () => {
+    document.getElementById("wiz-s1").onclick = async (ev) => {
       if (state.hasFacebook === null) {
         alert("Volte e escolha a versão da câmera.");
         return;
@@ -978,14 +1026,16 @@ const Wizard = (() => {
       const res = await runMountOp({
         method: "setup_nand_dump",
         hasFacebook: state.hasFacebook,
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A configurar Passo 1 no SD…",
       });
-      if (res.success) {
+      if (res && res.success) {
         alert(
           "Passo 1 concluído. Ejete o SD com segurança e coloque-o no slot lateral do DSi."
         );
         goNext();
       } else {
-        state.lastError = res.error || "Falha no Passo 1.";
+        state.lastError = (res && res.error) || "Falha no Passo 1.";
         render();
       }
     };
@@ -1052,9 +1102,9 @@ const Wizard = (() => {
       go.disabled = !(has || risk.checked);
     }
 
-    document.getElementById("wiz-nand-check").onclick = async () => {
+    document.getElementById("wiz-nand-check").onclick = async (ev) => {
       const gen = renderGen;
-      const ok = await refreshInspect();
+      const ok = await refreshInspect(ev.currentTarget);
       if (gen !== renderGen || !ok || !status.isConnected) return;
       const dumps = state.inspect.nand_dumps || [];
       if (state.inspect.has_nand_dump) {
@@ -1095,13 +1145,17 @@ const Wizard = (() => {
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-s2">Configurar Passo 2 no SD</button>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-s2").onclick = async () => {
-      const res = await runMountOp({ method: "setup_unlaunch" });
-      if (res.success) {
+    document.getElementById("wiz-s2").onclick = async (ev) => {
+      const res = await runMountOp({
+        method: "setup_unlaunch",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A configurar Passo 2 no SD…",
+      });
+      if (res && res.success) {
         alert("Passo 2 concluído. Ejete o SD e coloque-o no DSi.");
         goNext();
       } else {
-        state.lastError = res.error || "Falha no Passo 2.";
+        state.lastError = (res && res.error) || "Falha no Passo 2.";
         render();
       }
     };
@@ -1154,11 +1208,15 @@ const Wizard = (() => {
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-upd">Atualizar TWiLight no SD</button>
     `;
     bindDrivePanel();
-    document.getElementById("wiz-upd").onclick = async () => {
-      const res = await runMountOp({ method: "setup_unlaunch" });
-      if (res.success) goNext();
+    document.getElementById("wiz-upd").onclick = async (ev) => {
+      const res = await runMountOp({
+        method: "setup_unlaunch",
+        sourceBtn: ev.currentTarget,
+        statusMsg: "A atualizar TWiLight Menu++…",
+      });
+      if (res && res.success) goNext();
       else {
-        state.lastError = res.error || "Falha ao atualizar.";
+        state.lastError = (res && res.error) || "Falha ao atualizar.";
         render();
       }
     };

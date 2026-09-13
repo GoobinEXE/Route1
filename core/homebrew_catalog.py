@@ -1,6 +1,6 @@
 """Catálogo de homebrew DS/DSi instalável (releases oficiais pinadas).
 
-Curadoria baseada na lista GameBrew de aplicações, limitada a artefactos
+Curadoria baseada na GameBrew e no Universal-DB, limitada a artefactos
 ``.nds``/``.dsi`` com URL HTTPS estável e SHA-256 em ``core.cache``.
 """
 
@@ -12,6 +12,7 @@ from core.cache import FILENAMES, PINNED_SHA256
 from core.homebrew_install import notes_for
 
 GAMEBREW_WIKI_PREFIX = "https://www.gamebrew.org/wiki/"
+UNIVERSAL_DB_DS_PREFIX = "https://db.universal-team.net/ds/"
 
 # Categorias alinhadas à lista GameBrew (subset útil no DSi).
 CATEGORIES: Dict[str, str] = {
@@ -23,6 +24,7 @@ CATEGORIES: Dict[str, str] = {
 }
 
 # Cada entrada: install_key deve existir em PINNED_SHA256 / FILENAMES.
+# universal_db_slug: slug em db.universal-team.net/ds/ (omitir se não existir).
 _APPS: List[Dict[str, Any]] = [
     {
         "id": "godmode9i",
@@ -32,6 +34,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "DS-Homebrew",
         "version": "3.9.0",
         "gamebrew_slug": "GodMode9i",
+        "universal_db_slug": "godmode9i",
         "install_key": "godmode9i",
         "warn_nand": False,
     },
@@ -43,6 +46,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "Epicpkmn11 (Pk11)",
         "version": "0.5.1",
         "gamebrew_slug": "NAND_Title_Manager",
+        "universal_db_slug": "ntm",
         "install_key": "ntm",
         "warn_nand": True,
     },
@@ -54,6 +58,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "Tasken (Nimbo)",
         "version": "0.8-tinkatuff",
         "gamebrew_slug": "Cart-Flasher_DS",
+        "universal_db_slug": "cart-flasher",
         "install_key": "cart_flasher",
         "warn_nand": False,
     },
@@ -65,6 +70,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "xPsycho999",
         "version": "1.0.0",
         "gamebrew_slug": "DSFetch",
+        "universal_db_slug": "dsfetch",
         "install_key": "dsfetch",
         "warn_nand": False,
     },
@@ -98,6 +104,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "mtheall",
         "version": "3.2.1",
         "gamebrew_slug": "Ftpd_NDS",
+        "universal_db_slug": "ftpd",
         "install_key": "ftpd",
         "warn_nand": False,
     },
@@ -109,6 +116,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "cavv-dev",
         "version": "1.2.0",
         "gamebrew_slug": "Kekatsu_DS",
+        "universal_db_slug": "kekatsu",
         "install_key": "kekatsu",
         "warn_nand": False,
     },
@@ -120,6 +128,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "Epicpkmn11",
         "version": "0.1.1",
         "gamebrew_slug": "Dsidl",
+        "universal_db_slug": "dsidl",
         "install_key": "dsidl",
         "warn_nand": False,
     },
@@ -131,6 +140,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "korbosoft",
         "version": "3.0.0",
         "gamebrew_slug": "Ds-micpassthrough",
+        "universal_db_slug": "ds-micpassthrough",
         "install_key": "ds_micpassthrough",
         "warn_nand": False,
     },
@@ -142,6 +152,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "edo9300",
         "version": "1.2",
         "gamebrew_slug": "NDSi_SaveDumper",
+        "universal_db_slug": "ndsi-savedumper",
         "install_key": "ndsi_savedumper",
         "warn_nand": False,
     },
@@ -153,6 +164,7 @@ _APPS: List[Dict[str, Any]] = [
         "author": "Universal-Team / Pk11",
         "version": "2.2",
         "gamebrew_slug": "Pkmn-chest",
+        "universal_db_slug": "pkmn-chest",
         "install_key": "pkmn_chest",
         "warn_nand": False,
     },
@@ -163,7 +175,11 @@ def _normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
     key = entry["install_key"]
     dest = FILENAMES.get(key) or f"{entry['id']}.nds"
     slug = entry["gamebrew_slug"]
-    return {
+    udb_slug = entry.get("universal_db_slug") or ""
+    if not isinstance(udb_slug, str):
+        udb_slug = ""
+    udb_slug = udb_slug.strip()
+    out: Dict[str, Any] = {
         "id": entry["id"],
         "title": entry["title"],
         "description": entry["description"],
@@ -179,6 +195,13 @@ def _normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
         "installable": key in PINNED_SHA256 and key in FILENAMES,
         "setup_notes": notes_for(entry["id"]),
     }
+    if udb_slug:
+        out["universal_db_slug"] = udb_slug
+        out["universal_db_url"] = f"{UNIVERSAL_DB_DS_PREFIX}{udb_slug}"
+    else:
+        out["universal_db_slug"] = None
+        out["universal_db_url"] = None
+    return out
 
 
 def list_apps() -> List[Dict[str, Any]]:
@@ -208,7 +231,7 @@ def build_catalog_payload() -> Dict[str, Any]:
         "apps": apps,
         "categories": cats,
         "attribution": (
-            "Seleção baseada na lista de aplicações da GameBrew; "
+            "Seleção baseada na GameBrew e no Universal-DB; "
             "downloads oficiais com verificação SHA-256."
         ),
     }

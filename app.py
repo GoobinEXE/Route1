@@ -6,6 +6,7 @@ Route 1 Kit — App desktop multiplataforma (pywebview).
 import os
 import sys
 import threading
+import time
 import webbrowser
 from collections import deque
 from functools import wraps
@@ -32,6 +33,7 @@ from core.exploits import setup_nand_backup_stage, setup_unlaunch_stage
 from core.homebrew_catalog import build_catalog_payload
 from core.inspect_sd import inspect_sd_card, quarantine_dcim as do_quarantine_dcim
 from core.privacy import expand_user_path, redact_path, redact_text
+from core.progress import clamp_fraction
 from core.rom_cleaner import organize_roms_directory
 from core.sd_utils import (
     copy_nand_backup as do_copy_nand_backup,
@@ -49,6 +51,15 @@ LOG_LOCK = threading.Lock()
 OP_LOCK = threading.Lock()
 _LOG_SEQ = 0
 
+# Progresso da operação em curso (lido pelo poll de logs da UI).
+_OP_PROGRESS = {
+    "active": False,
+    "fraction": 0.0,
+    "detail": "",
+    "started_at": 0.0,
+    "updated_at": 0.0,
+}
+
 # pywebview serializa JSON; rejeitar tipos inesperados na fronteira JS↔Python.
 _TRUE_LITERALS = frozenset({"1", "true", "yes", "on"})
 _FALSE_LITERALS = frozenset({"0", "false", "no", "off", ""})
@@ -59,6 +70,64 @@ def add_log(msg):
     with LOG_LOCK:
         _LOG_SEQ += 1
         SYSTEM_LOGS.append({"id": _LOG_SEQ, "msg": redact_text(msg)})
+
+
+def begin_op_progress(detail="Operação em andamento…"):
+    now = time.time()
+    with LOG_LOCK:
+        _OP_PROGRESS["active"] = True
+        _OP_PROGRESS["fraction"] = 0.0
+        _OP_PROGRESS["detail"] = redact_text(detail) if detail else ""
+        _OP_PROGRESS["started_at"] = now
+        _OP_PROGRESS["updated_at"] = now
+
+
+def set_op_progress(fraction, detail=None):
+    """Atualiza fração (0–1) e opcionalmente o detalhe; nunca regride a fração."""
+    frac = clamp_fraction(fraction)
+    with LOG_LOCK:
+        if not _OP_PROGRESS["active"]:
+            return
+        if frac >= _OP_PROGRESS["fraction"]:
+            _OP_PROGRESS["fraction"] = frac
+        if detail:
+            _OP_PROGRESS["detail"] = redact_text(detail)
+        _OP_PROGRESS["updated_at"] = time.time()
+
+
+def end_op_progress():
+    with LOG_LOCK:
+        _OP_PROGRESS["active"] = False
+        _OP_PROGRESS["fraction"] = 0.0
+        _OP_PROGRESS["detail"] = ""
+        _OP_PROGRESS["started_at"] = 0.0
+        _OP_PROGRESS["updated_at"] = 0.0
+
+
+def get_op_progress_snapshot():
+    with LOG_LOCK:
+        if not _OP_PROGRESS["active"]:
+            return None
+        return {
+            "active": True,
+            "fraction": float(_OP_PROGRESS["fraction"]),
+            "detail": _OP_PROGRESS["detail"],
+            "started_at": float(_OP_PROGRESS["started_at"]),
+            "updated_at": float(_OP_PROGRESS["updated_at"]),
+        }
+
+
+class OpSink:
+    """Callback de log + progresso (passado como log_callback às ops do core)."""
+
+    def __call__(self, msg):
+        add_log(msg)
+
+    def progress(self, fraction, detail=None):
+        set_op_progress(fraction, detail)
+
+
+op_sink = OpSink()
 
 
 def _reject(error):
@@ -114,17 +183,20 @@ def _run_mount_op(require_safe=True, min_free_mb=32, skip_preflight=False):
                 )
             if not OP_LOCK.acquire(blocking=False):
                 return _reject("Outra operação já está em andamento. Aguarde.")
+            begin_op_progress("Operação em andamento…")
             try:
                 # Preflight dentro do lock: evita I/O paralelo no cartão com outra op.
                 if not skip_preflight:
                     ok, msg, _drive = preflight(mount_path, min_free_mb=min_free_mb)
                     if not ok:
                         return _reject(msg)
+                set_op_progress(0.02, "Pré-voo concluído…")
                 return fn(self, mount_path, *args, **kwargs)
             except Exception as e:
                 add_log(f"❌ Erro na operação: {redact_text(e)}")
                 return _reject(e)
             finally:
+                end_op_progress()
                 OP_LOCK.release()
 
         return wrapper
@@ -157,7 +229,11 @@ class Api:
         with LOG_LOCK:
             sliced = [e["msg"] for e in SYSTEM_LOGS if e["id"] > since_id]
             next_id = _LOG_SEQ
-        return {"logs": sliced, "next_index": next_id}
+        return {
+            "logs": sliced,
+            "next_index": next_id,
+            "progress": get_op_progress_snapshot(),
+        }
 
     def get_about(self):
         """Metadados da tela Sobre + última entrada do CHANGELOG.md."""
@@ -167,7 +243,7 @@ class Api:
             return _reject(e)
 
     def open_external_url(self, url):
-        """Abre URL allowlisted no browser do sistema (Sobre / GameBrew)."""
+        """Abre URL allowlisted no browser do sistema (Sobre / GameBrew / Universal-DB)."""
         if not isinstance(url, str):
             return _reject("URL inválida.")
         cleaned = url.strip()
@@ -207,16 +283,25 @@ class Api:
             )
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
+        begin_op_progress("A inspecionar o cartão…")
         try:
-            return inspect_sd_card(mount_path)
+            set_op_progress(0.15, "A ler o cartão…")
+            result = inspect_sd_card(mount_path)
+            set_op_progress(1.0, "Inspeção concluída.")
+            return result
         except Exception as e:
             return _reject(e)
         finally:
+            end_op_progress()
             OP_LOCK.release()
 
     def probe_kernels(self):
+        begin_op_progress("A procurar kernels em Downloads…")
         try:
-            return probe_kernels()
+            set_op_progress(0.2, "A procurar em Downloads…")
+            result = probe_kernels()
+            set_op_progress(1.0, "Procura concluída.")
+            return result
         except Exception as e:
             return {
                 "success": False,
@@ -224,10 +309,12 @@ class Api:
                 "gei": None,
                 "r4": [],
             }
+        finally:
+            end_op_progress()
 
     @_run_mount_op(min_free_mb=1)
     def quarantine_dcim(self, mount_path):
-        success, msg = do_quarantine_dcim(mount_path, log_callback=add_log)
+        success, msg = do_quarantine_dcim(mount_path, log_callback=op_sink)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=8)
@@ -238,8 +325,9 @@ class Api:
         setup_nand_backup_stage(
             mount_path,
             has_facebook=flag,
-            log_callback=add_log,
+            log_callback=op_sink,
         )
+        set_op_progress(1.0, "Etapa 1 concluída.")
         return {
             "success": True,
             "message": "Etapa 1 (Memory Pit + dumpTool) configurada com sucesso!",
@@ -247,7 +335,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=64)
     def setup_unlaunch(self, mount_path):
-        setup_unlaunch_stage(mount_path, log_callback=add_log)
+        setup_unlaunch_stage(mount_path, log_callback=op_sink)
+        set_op_progress(1.0, "Etapa 2 concluída.")
         return {
             "success": True,
             "message": "Etapa 2 (TWiLight Menu++ & Unlaunch) configurada com sucesso!",
@@ -255,7 +344,9 @@ class Api:
 
     @_run_mount_op(min_free_mb=8)
     def setup_gei(self, mount_path):
-        success, msg = install_gei_kernel(mount_path, log_callback=add_log)
+        success, msg = install_gei_kernel(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Kernel GEi instalado.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=8)
@@ -270,23 +361,31 @@ class Api:
                 return _reject(err)
             source_dir = expand_user_path(source_dir)
         success, msg = install_r4_kernel(
-            mount_path, source_dir, log_callback=add_log
+            mount_path, source_dir, log_callback=op_sink
         )
+        if success:
+            set_op_progress(1.0, "Kernel R4 instalado.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=4)
     def organize_roms(self, mount_path):
-        success, msg = organize_roms_directory(mount_path, log_callback=add_log)
+        success, msg = organize_roms_directory(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Organização concluída.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=1)
     def sd_report(self, mount_path):
-        success, msg = do_sd_report(mount_path, log_callback=add_log)
+        success, msg = do_sd_report(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Relatório concluído.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=4)
     def setup_godmode9i(self, mount_path):
-        success, msg = do_setup_godmode9i(mount_path, log_callback=add_log)
+        success, msg = do_setup_godmode9i(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "GodMode9i instalado.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=16)
@@ -295,30 +394,39 @@ class Api:
         if err:
             return _reject(err)
         success, msg = do_install_homebrew(
-            mount_path, app_id, log_callback=add_log
+            mount_path, app_id, log_callback=op_sink
         )
+        if success:
+            set_op_progress(1.0, "App instalado.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=64)
     def install_cheats(self, mount_path):
-        success, msg = do_install_cheats(mount_path, log_callback=add_log)
+        success, msg = do_install_cheats(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Cheats instalados.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=1)
     def copy_nand_backup(self, mount_path):
-        success, msg = do_copy_nand_backup(mount_path, log_callback=add_log)
+        success, msg = do_copy_nand_backup(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Cópia do dump concluída.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=32)
     def install_boxarts(self, mount_path):
-        success, msg = do_install_boxarts(mount_path, log_callback=add_log)
+        success, msg = do_install_boxarts(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Boxarts instaladas.")
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=1)
     def backup(self, mount_path):
-        success, path = backup_drive(mount_path, log_callback=add_log)
+        success, path = backup_drive(mount_path, log_callback=op_sink)
         shown = redact_path(path) if path else path
         if success:
+            set_op_progress(1.0, "Backup concluído.")
             return {"success": True, "message": f"Backup salvo em: {shown}"}
         return {
             "success": False,
@@ -327,7 +435,9 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def clean_sd(self, mount_path):
-        success, msg = clean_macos_metadata(mount_path, log_callback=add_log)
+        success, msg = clean_macos_metadata(mount_path, log_callback=op_sink)
+        if success:
+            set_op_progress(1.0, "Limpeza concluída.")
         out = _api_result(success, msg)
         # clean_sd historicamente devolve message também em falha
         if not success:
@@ -338,12 +448,16 @@ class Api:
     def format_sd(self, mount_path):
         # Formatação: não exigir FAT no preflight (o objetivo é converter para FAT32).
         # Ainda valida removível via is_safe_mount_path no decorator e format_sd_card.
-        add_log(f"Formatando unidade {mount_path} em FAT32 (cluster 32 KB)...")
+        op_sink(f"Formatando unidade {mount_path} em FAT32 (cluster 32 KB)...")
+        set_op_progress(0.08, "A preparar formatação…")
         ok, msg, _drive = preflight(mount_path, min_free_mb=1, require_fat=False)
         if not ok:
             return _reject(msg)
+        set_op_progress(0.2, "A formatar o cartão (pode demorar)…")
         success, msg = format_sd_card(mount_path)
-        add_log(msg)
+        op_sink(msg)
+        if success:
+            set_op_progress(1.0, "Formatação concluída.")
         return _api_result(success, msg)
 
 

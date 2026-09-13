@@ -144,7 +144,7 @@ No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Prepa
 |------|-----------|
 | **Preparar** | Passo 1 (Memory Pit + dumpTool), Passo 2 (TWiLight + Unlaunch), kernel GEi |
 | **Cartão** | Organizar ROMs, cheats, boxarts, relatório, backup, limpeza, formatação, DCIM, cópia NAND |
-| **Apps** | Catálogo homebrew: download + SHA-256, pastas/configs das guias GameBrew, instalação em `/roms/apps/` |
+| **Apps** | Catálogo homebrew: download + SHA-256, guias GameBrew, links Universal-DB, instalação em `/roms/apps/` |
 
 Use o Assistente se ainda não tiver o hábito do fluxo completo; o modo avançado não “segura a mão” nas etapas críticas da mesma forma.
 

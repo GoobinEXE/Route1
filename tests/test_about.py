@@ -134,8 +134,16 @@ def test_api_open_external_allowlist(monkeypatch):
     assert ok2["success"] is True
     assert opened[-1] == gb
 
+    udb = "https://db.universal-team.net/ds/godmode9i"
+    ok3 = api.open_external_url(udb)
+    assert ok3["success"] is True
+    assert opened[-1] == udb
+
     nested = api.open_external_url("https://www.gamebrew.org/wiki/foo/bar")
     assert nested["success"] is False
+
+    udb_nested = api.open_external_url("https://db.universal-team.net/ds/foo/bar")
+    assert udb_nested["success"] is False
 
 
 def test_api_homebrew_catalog():

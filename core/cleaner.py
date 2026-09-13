@@ -5,6 +5,7 @@ import subprocess
 from datetime import datetime
 
 from core.logging_util import emit_log
+from core.progress import emit_progress
 
 _BACKUP_IGNORE_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 
@@ -22,9 +23,11 @@ def clean_macos_metadata(mount_path, log_callback=None):
     log = lambda msg: emit_log(log_callback, msg)
 
     log(f"Iniciando limpeza de metadados em {mount_path}...")
+    emit_progress(log_callback, 0.05, "A limpar metadados…")
 
     if sys.platform == "darwin":
         try:
+            emit_progress(log_callback, 0.15, "A executar dot_clean…")
             subprocess.run(
                 ["dot_clean", mount_path],
                 stderr=subprocess.DEVNULL,
@@ -41,7 +44,13 @@ def clean_macos_metadata(mount_path, log_callback=None):
     junk_files = {".DS_Store", "Thumbs.db", "desktop.ini"}
     junk_dirs = {".Spotlight-V100", ".Trashes", ".fseventsd", ".TemporaryItems"}
 
-    for root, dirs, files in os.walk(mount_path, topdown=False):
+    # Contagem aproximada para progresso
+    walk_roots = []
+    for root, dirs, files in os.walk(mount_path, topdown=True):
+        walk_roots.append((root, list(dirs), list(files)))
+    total_steps = max(1, len(walk_roots))
+
+    for idx, (root, dirs, files) in enumerate(walk_roots):
         for f in files:
             if f.startswith("._") or f in junk_files:
                 p = os.path.join(root, f)
@@ -58,14 +67,22 @@ def clean_macos_metadata(mount_path, log_callback=None):
                     deleted_count += 1
                 except Exception:
                     pass
+        if idx % 5 == 0 or idx + 1 == total_steps:
+            emit_progress(
+                log_callback,
+                0.2 + 0.7 * ((idx + 1) / total_steps),
+                f"A limpar… {idx + 1}/{total_steps}",
+            )
 
     if sys.platform != "win32":
         try:
+            emit_progress(log_callback, 0.95, "A sincronizar…")
             subprocess.run(["sync"], check=False, timeout=60)
         except Exception:
             pass  # best-effort: sync pode falhar/timeout sem invalidar a limpeza
 
     log(f"✅ Limpeza finalizada! {deleted_count} itens temporários removidos.")
+    emit_progress(log_callback, 1.0, "Limpeza concluída.")
     return True, f"{deleted_count} itens limpos com sucesso."
 
 
@@ -96,16 +113,23 @@ def backup_drive(mount_path, log_callback=None):
     backup_dir = os.path.join(desktop, f"Backup_{vol_name}_{timestamp}")
 
     log(f"Criando pasta de backup: {backup_dir}")
+    emit_progress(log_callback, 0.02, "A criar pasta de backup…")
     os.makedirs(backup_dir, exist_ok=True)
 
+    items = [item for item in os.listdir(mount_path) if not item.startswith(".")]
+    total_items = max(1, len(items))
     copied = 0
     file_count = 0
     errors = 0
-    for item in os.listdir(mount_path):
-        if item.startswith("."):
-            continue
+    for item in items:
         src = os.path.join(mount_path, item)
         dst = os.path.join(backup_dir, item)
+        frac = copied / total_items
+        emit_progress(
+            log_callback,
+            0.05 + 0.9 * frac,
+            f"A copiar {item}… ({copied}/{total_items})",
+        )
         log(f"Copiando: {item} ...")
         try:
             if os.path.isdir(src):
@@ -128,5 +152,6 @@ def backup_drive(mount_path, log_callback=None):
         log(f"❌ Backup incompleto em: {backup_dir} ({copied} itens, {errors} erros)")
         return False, backup_dir
 
+    emit_progress(log_callback, 1.0, "Backup concluído.")
     log(f"✅ Backup concluído em: {backup_dir} ({copied} itens, ~{file_count} arquivos)")
     return True, backup_dir

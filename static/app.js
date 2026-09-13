@@ -7,6 +7,11 @@ let logPollTimer = null;
 let logPollInFlight = false;
 let activeActionBtn = null;
 let activeActionLabel = null;
+let busyStartedAt = null;
+let busyElapsedTimer = null;
+let opProgressFraction = 0;
+let opProgressHasServer = false;
+let opProgressExpectedMs = 45000;
 let appMode = "wizard"; // wizard | advanced | about
 let aboutLoadInFlight = false;
 let advancedSection = "prepare"; // prepare | card | apps
@@ -139,6 +144,119 @@ function appendLog(msg, type = "info") {
     }
     container.scrollTop = container.scrollHeight;
   });
+
+  if (busy && clean) {
+    updateOpProgress({ detail: clean });
+  }
+}
+
+function formatElapsed(ms) {
+  const totalSec = Math.max(0, Math.floor(Number(ms) / 1000) || 0);
+  if (totalSec < 60) return `${totalSec}s`;
+  const mins = Math.floor(totalSec / 60);
+  const secs = totalSec % 60;
+  return `${mins}m ${String(secs).padStart(2, "0")}s`;
+}
+
+function estimateEtaMs(fraction, elapsedMs) {
+  const f = Math.max(0, Math.min(1, Number(fraction) || 0));
+  const elapsed = Math.max(0, Number(elapsedMs) || 0);
+  if (f >= 0.995) return 0;
+  if (f >= 0.04 && elapsed > 800) {
+    return Math.max(0, (elapsed * (1 - f)) / f);
+  }
+  // Sem progresso útil ainda: estimar pelo tempo típico da operação.
+  const expected = Math.max(5000, opProgressExpectedMs || 45000);
+  return Math.max(0, expected - elapsed);
+}
+
+function applyServerProgress(progress) {
+  if (!busy || !progress || !progress.active) return;
+  opProgressHasServer = true;
+  const frac = Math.max(0, Math.min(1, Number(progress.fraction) || 0));
+  if (frac >= opProgressFraction) {
+    opProgressFraction = frac;
+  }
+  updateOpProgress({
+    detail: progress.detail || undefined,
+    fraction: opProgressFraction,
+  });
+}
+
+function updateOpProgress({ detail, fraction } = {}) {
+  const root = document.getElementById("op-progress");
+  const textEl = document.getElementById("op-progress-text");
+  const elapsedEl = document.getElementById("op-progress-elapsed");
+  const etaEl = document.getElementById("op-progress-eta");
+  const pctEl = document.getElementById("op-progress-pct");
+  const barEl = document.getElementById("op-progress-bar");
+  if (!root) return;
+
+  if (!busy) {
+    root.hidden = true;
+    root.setAttribute("aria-hidden", "true");
+    document.body.removeAttribute("aria-busy");
+    return;
+  }
+
+  root.hidden = false;
+  root.setAttribute("aria-hidden", "false");
+  document.body.setAttribute("aria-busy", "true");
+
+  const elapsedMs =
+    busyStartedAt != null ? Math.max(0, Date.now() - busyStartedAt) : 0;
+
+  // Sem updates do servidor: avanço suave até ~88% com base no tempo típico.
+  if (!opProgressHasServer && typeof fraction !== "number") {
+    const expected = Math.max(5000, opProgressExpectedMs || 45000);
+    const soft = 1 - Math.exp(-elapsedMs / expected);
+    opProgressFraction = Math.max(opProgressFraction, Math.min(0.88, soft));
+  } else if (typeof fraction === "number" && Number.isFinite(fraction)) {
+    opProgressFraction = Math.max(
+      opProgressFraction,
+      Math.max(0, Math.min(1, fraction))
+    );
+  }
+
+  const pct = Math.round(opProgressFraction * 100);
+  const etaMs = estimateEtaMs(opProgressFraction, elapsedMs);
+
+  if (detail && textEl) {
+    textEl.textContent = String(detail);
+  }
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (elapsedEl) elapsedEl.textContent = `Decorrido ${formatElapsed(elapsedMs)}`;
+  if (etaEl) {
+    if (pct >= 100) etaEl.textContent = "Quase pronto";
+    else if (opProgressFraction < 0.04 && elapsedMs < 2500) {
+      etaEl.textContent = "A estimar…";
+    } else {
+      etaEl.textContent = `Restam ~${formatElapsed(etaMs)}`;
+    }
+  }
+  if (barEl) {
+    const indeterminate = !opProgressHasServer && opProgressFraction < 0.08;
+    barEl.classList.toggle("op-progress-bar--indeterminate", indeterminate);
+    if (!indeterminate) {
+      barEl.style.width = `${Math.max(2, pct)}%`;
+    } else {
+      barEl.style.width = "";
+    }
+  }
+}
+
+function startBusyElapsedTimer() {
+  if (busyElapsedTimer) return;
+  busyElapsedTimer = setInterval(() => {
+    if (!busy) return;
+    updateOpProgress();
+  }, 500);
+}
+
+function stopBusyElapsedTimer() {
+  if (!busyElapsedTimer) return;
+  clearInterval(busyElapsedTimer);
+  busyElapsedTimer = null;
 }
 
 function escapeHtml(text) {
@@ -180,8 +298,35 @@ function actionButtons() {
   );
 }
 
-function setBusy(isBusy, sourceBtn) {
-  busy = !!isBusy;
+function expectedMsForMethod(methodName) {
+  const map = {
+    format_sd: 180000,
+    backup: 120000,
+    setup_nand_dump: 90000,
+    setup_unlaunch: 150000,
+    setup_gei: 60000,
+    setup_r4: 60000,
+    install_boxarts: 180000,
+    install_homebrew: 60000,
+    setup_godmode9i: 45000,
+    organize_roms: 45000,
+    clean_sd: 45000,
+    copy_nand_backup: 90000,
+    install_cheats: 20000,
+    quarantine_dcim: 15000,
+    sd_report: 20000,
+    inspect_sd: 10000,
+    probe_kernels: 20000,
+  };
+  return map[methodName] || 60000;
+}
+
+function setBusy(isBusy, sourceBtn, statusMsg, expectedMs) {
+  const next = !!isBusy;
+  const starting = next && !busy;
+  const stopping = !next && busy;
+
+  busy = next;
   actionButtons().forEach((btn) => {
     if (
       (btn.classList.contains("mode-tab") || btn.classList.contains("adv-tab")) &&
@@ -205,6 +350,28 @@ function setBusy(isBusy, sourceBtn) {
     activeActionBtn.innerHTML = activeActionLabel;
     activeActionBtn = null;
     activeActionLabel = null;
+  }
+
+  if (starting) {
+    busyStartedAt = Date.now();
+    opProgressFraction = 0;
+    opProgressHasServer = false;
+    if (typeof expectedMs === "number" && expectedMs > 0) {
+      opProgressExpectedMs = expectedMs;
+    }
+    startBusyElapsedTimer();
+    updateOpProgress({
+      detail: statusMsg || "Operação em andamento…",
+      fraction: 0,
+    });
+  } else if (busy && statusMsg) {
+    updateOpProgress({ detail: statusMsg });
+  } else if (stopping) {
+    busyStartedAt = null;
+    opProgressFraction = 0;
+    opProgressHasServer = false;
+    stopBusyElapsedTimer();
+    updateOpProgress();
   }
 
   scheduleLogPolling();
@@ -333,7 +500,7 @@ function findActionButton(endpoint) {
     "organize-roms": "runAction('organize-roms')",
     backup: "runAction('backup')",
     "clean-sd": "runAction('clean-sd')",
-    "format-sd": "confirmFormat()",
+    "format-sd": "confirmFormat(",
     "quarantine-dcim": "runAction('quarantine-dcim')",
     "sd-report": "runAction('sd-report')",
     "setup-godmode9i": "runAction('setup-godmode9i')",
@@ -420,8 +587,15 @@ async function runMountOp(options = {}) {
   }
 
   const driveName = selectedDrive?.name || mount;
-  appendLog(`Iniciando: ${methodName} em ${driveName}…`, "info");
-  setBusy(true, options.sourceBtn || null);
+  const statusLabel =
+    options.statusMsg || `Iniciando: ${methodName} em ${driveName}…`;
+  setBusy(
+    true,
+    options.sourceBtn || null,
+    statusLabel,
+    options.expectedMs || expectedMsForMethod(methodName)
+  );
+  appendLog(statusLabel, "info");
 
   try {
     const api = getApi() || (await waitForApi());
@@ -484,7 +658,7 @@ function toggleIdGuide() {
   if (opening) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
-async function confirmFormat() {
+async function confirmFormat(sourceBtn) {
   if (busy) {
     appendLog("Aguarde a operação em andamento terminar.", "warn");
     return { success: false, error: "busy" };
@@ -509,7 +683,8 @@ async function confirmFormat() {
 
   return runMountOp({
     method: "format_sd",
-    sourceBtn: findActionButton("format-sd"),
+    sourceBtn: sourceBtn || findActionButton("format-sd"),
+    statusMsg: `A formatar ${selectedDrive.name}…`,
   });
 }
 
@@ -713,6 +888,7 @@ function renderHomebrewCatalog() {
         ? `<span class="text-[11px] text-fg-mute">v${escapeHtml(a.version)}</span>`
         : "";
       const gbUrl = escapeHtml(a.gamebrew_url || "");
+      const udbUrl = escapeHtml(a.universal_db_url || "");
       const appId = escapeHtml(a.id || "");
       const notes = Array.isArray(a.setup_notes) ? a.setup_notes : [];
       const notesHtml = notes.length
@@ -744,6 +920,9 @@ function renderHomebrewCatalog() {
         `onclick="installHomebrewApp(this)">Instalar no SD</button>` +
         (gbUrl
           ? `<button type="button" class="btn-ghost !py-1.5 !px-2.5 text-[11px]" onclick="openExternal('${gbUrl}')">GameBrew</button>`
+          : "") +
+        (udbUrl
+          ? `<button type="button" class="btn-ghost !py-1.5 !px-2.5 text-[11px]" onclick="openExternal('${udbUrl}')">Universal-DB</button>`
           : "") +
         `</div>` +
         `</article>`
@@ -991,11 +1170,14 @@ async function pollLogsOnce() {
     if (!api) return;
     const since = lastLogIndex;
     const data = await api.get_logs(since);
-    if (data.logs && data.logs.length > 0) {
+    if (data && data.logs && data.logs.length > 0) {
       data.logs.forEach((l) => appendLog(l));
     }
-    if (typeof data.next_index === "number") {
+    if (data && typeof data.next_index === "number") {
       lastLogIndex = Math.max(lastLogIndex, data.next_index);
+    }
+    if (busy && data && data.progress) {
+      applyServerProgress(data.progress);
     }
   } catch (e) {
     /* polling best-effort */

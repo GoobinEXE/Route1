@@ -664,6 +664,104 @@ button:disabled {
   vertical-align: -0.1em;
 }
 
+/* ---------- progresso de operação global ---------- */
+
+.op-progress {
+  position: sticky;
+  top: 4rem; /* sob o header (h-16) */
+  z-index: 40;
+  background: rgb(var(--c-surface) / 0.94);
+  border-bottom: 1px solid rgb(var(--c-line));
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+}
+
+.op-progress[hidden] {
+  display: none !important;
+}
+
+.op-progress-inner {
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.op-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+}
+
+.op-progress-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgb(var(--c-accent-fg));
+}
+
+.op-progress-label #op-progress-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.op-progress-elapsed {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-fg-mute));
+}
+
+.op-progress-times {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 0.35rem;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-fg-mute));
+  white-space: nowrap;
+}
+
+.op-progress-pct {
+  font-weight: 600;
+  color: rgb(var(--c-accent-fg));
+}
+
+.op-progress-sep {
+  opacity: 0.45;
+}
+
+.op-progress-track {
+  height: 4px;
+  background: rgb(var(--c-line));
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.op-progress-bar {
+  height: 100%;
+  width: 0%;
+  min-width: 0;
+  background: linear-gradient(90deg, rgb(var(--c-accent)), rgb(var(--c-accent-strong)));
+  border-radius: 999px;
+  transition: width 0.35s var(--ease);
+}
+
+.op-progress-bar--indeterminate {
+  width: 40% !important;
+  animation: op-progress-slide 1.35s ease-in-out infinite;
+}
+
+@keyframes op-progress-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
 #id-guide-chevron.rotate-180 {
   transform: rotate(180deg);
 }
@@ -1105,6 +1203,15 @@ html[data-theme="gameboy"] .wizard-progress {
   background: rgb(15 56 15 / 0.18);
 }
 
+html[data-theme="gameboy"] .op-progress {
+  background: var(--shell-hi);
+  border-bottom-color: var(--shell-line);
+}
+
+html[data-theme="gameboy"] .op-progress-track {
+  background: rgb(15 56 15 / 0.18);
+}
+
 html[data-theme="gameboy"] .brand-mark {
   box-shadow: 0 2px 6px rgb(20 24 30 / 0.25);
 }
@@ -1118,8 +1225,8 @@ html[data-theme="gameboy"] .brand-mark {
 /* ---------- movimento reduzido ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  /* Mantém os spinners (indicadores funcionais); remove só o movimento decorativo. */
-  *:not(.spinning):not(.spinning-dot):not(.status-dot--live),
+  /* Mantém spinners e barra de operação (indicadores funcionais); remove só o decorativo. */
+  *:not(.spinning):not(.spinning-dot):not(.status-dot--live):not(.op-progress-bar--indeterminate),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;

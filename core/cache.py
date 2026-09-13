@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import os
-import shutil
 import urllib.request
 from typing import Optional
 
 from core import __version__ as _APP_VERSION
 from core.logging_util import emit_log
+from core.progress import emit_progress
 
 CACHE_DIR = os.path.expanduser("~/.route_1_kit_cache")
 USER_AGENT = (
@@ -276,7 +276,7 @@ def _is_valid_cached(key: str, path: str) -> bool:
     return True
 
 
-def download_url(url: str, target_path: str, log_callback=None) -> None:
+def download_url(url: str, target_path: str, log_callback=None, progress_span=None) -> None:
     """Baixa URL HTTPS para target_path com User-Agent consistente."""
     if not url.startswith("https://"):
         raise ValueError(f"Apenas HTTPS é permitido: {url}")
@@ -287,10 +287,43 @@ def download_url(url: str, target_path: str, log_callback=None) -> None:
     try:
         # URLs vêm exclusivamente de URLS (constantes); não há input do usuário.
         with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_path, "wb") as out:  # nosec B310  # nosemgrep: dynamic-urllib-use-detected
-            shutil.copyfileobj(resp, out)
+            total = 0
+            try:
+                total = int(resp.headers.get("Content-Length") or 0)
+            except (TypeError, ValueError):
+                total = 0
+            done = 0
+            last_emit = -1
+            while True:
+                chunk = resp.read(64 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
+                done += len(chunk)
+                if total > 0:
+                    pct = int((done * 100) / total)
+                    if pct >= last_emit + 5 or done >= total:
+                        last_emit = pct
+                        emit_progress(
+                            log_callback,
+                            done / total,
+                            f"A baixar… {pct}%",
+                            span=progress_span,
+                        )
+                elif progress_span and done > 0:
+                    # Sem Content-Length: avança suavemente até ~85% do span.
+                    soft = min(0.85, done / (8 * 1024 * 1024))
+                    emit_progress(
+                        log_callback,
+                        soft,
+                        f"A baixar… {done // (1024 * 1024)} MB",
+                        span=progress_span,
+                    )
             out.flush()
             os.fsync(out.fileno())
         os.replace(tmp_path, target_path)
+        if progress_span:
+            emit_progress(log_callback, 1.0, "Download concluído.", span=progress_span)
     except Exception:
         if os.path.exists(tmp_path):
             try:
@@ -300,7 +333,7 @@ def download_url(url: str, target_path: str, log_callback=None) -> None:
         raise
 
 
-def ensure_cached(key: str, log_callback=None) -> str:
+def ensure_cached(key: str, log_callback=None, progress_span=None) -> str:
     """
     Garante que o artefato `key` esteja no cache local e íntegro (SHA-256 pinado).
     Invalida e rebaixa se o arquivo estiver vazio, for HTML ou falhar no pin.
@@ -318,6 +351,10 @@ def ensure_cached(key: str, log_callback=None) -> str:
         )
 
     if _is_valid_cached(key, target_path):
+        if progress_span:
+            emit_progress(
+                log_callback, 1.0, f"{key} já em cache.", span=progress_span
+            )
         return target_path
 
     # Cache inválido → remover e baixar de novo
@@ -333,7 +370,7 @@ def ensure_cached(key: str, log_callback=None) -> str:
         raise ValueError(f"URL desconhecida para a chave: {key}")
 
     emit_log(log_callback, f"Baixando componente {key}...")
-    download_url(url, target_path, log_callback)
+    download_url(url, target_path, log_callback, progress_span=progress_span)
 
     if not os.path.isfile(target_path) or os.path.getsize(target_path) < MIN_SIZES.get(key, 1):
         raise RuntimeError(f"Download de {key} falhou: arquivo vazio ou muito pequeno.")

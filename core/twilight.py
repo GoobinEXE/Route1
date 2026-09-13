@@ -10,6 +10,7 @@ from typing import Any, Optional
 from core.cache import CACHE_DIR, ensure_cached, ensure_cache_dir
 from core.logging_util import emit_log
 from core.privacy import expand_user_path, redact_path
+from core.progress import emit_progress
 from core.sdio import UndoStack, copy_verified, copytree_verified, sync_volume
 from core.validate import twilight_tree_ok, validate_nds_header
 
@@ -57,7 +58,7 @@ def _stage_file_copy(undo: UndoStack, src: str, dst: str, log_callback=None, exp
     return bak
 
 
-def _stage_dir_copy(undo: UndoStack, src: str, dst: str, log_callback=None) -> int:
+def _stage_dir_copy(undo: UndoStack, src: str, dst: str, log_callback=None, progress_span=None) -> int:
     """
     Copia árvore verificada. Se dst não existia, rollback remove a pasta inteira.
     Se já existia, cada ficheiro fica protegido pelo verify-before-replace
@@ -66,7 +67,9 @@ def _stage_dir_copy(undo: UndoStack, src: str, dst: str, log_callback=None) -> i
     """
     if not os.path.isdir(dst):
         undo.push_remove(dst)
-    return copytree_verified(src, dst, log_callback=log_callback)
+    return copytree_verified(
+        src, dst, log_callback=log_callback, progress_span=progress_span
+    )
 
 def _cleanup_baks(paths) -> None:
     for bak in paths:
@@ -474,11 +477,18 @@ def _extract_twilight_7z(archive_path, extract_dir, log_callback=None):
     return extract_dir
 
 
-def install_twilight_menu(mount_path, log_callback=None):
+def install_twilight_menu(mount_path, log_callback=None, progress_span=None):
     """Copia e instala os arquivos do TWiLight Menu++ no cartão SD (com verificação)."""
     log = lambda msg: emit_log(log_callback, msg)
+    span = progress_span or (0.0, 1.0)
+    start, end = float(span[0]), float(span[1])
+    width = max(0.0, end - start)
+
+    def _at(local, detail):
+        emit_progress(log_callback, start + width * local, detail)
 
     log("=== Instalando TWiLight Menu++ ===")
+    _at(0.02, "A preparar TWiLight Menu++…")
     src = find_twilight_source()
     # Se a origem for só Downloads (sem manifesto), forçar re-extração do archive pinado
     if src and not src.startswith(CACHE_DIR) and not os.path.isfile(
@@ -493,8 +503,13 @@ def install_twilight_menu(mount_path, log_callback=None):
     if not src:
         log("🔍 Baixando pacote pinado do TWiLight Menu++...")
         try:
-            archive_path = ensure_cached("twilight_7z", log_callback)
+            archive_path = ensure_cached(
+                "twilight_7z",
+                log_callback,
+                progress_span=(start, start + width * 0.35),
+            )
             extract_dir = os.path.join(CACHE_DIR, "TWiLightMenu-DSi")
+            _at(0.38, "A extrair TWiLight Menu++…")
             src = _extract_twilight_7z(archive_path, extract_dir, log_callback)
         except Exception as e:
             log(f"⚠️ Erro ao baixar/extrair TWiLight automaticamente: {e}")
@@ -514,6 +529,7 @@ def install_twilight_menu(mount_path, log_callback=None):
     undo = UndoStack()
     baks: list[Optional[str]] = []
     try:
+        _at(0.45, "A copiar BOOT.NDS…")
         boot_src = os.path.join(src, "BOOT.NDS")
         bak = _stage_file_copy(
             undo, boot_src, os.path.join(mount_path, "BOOT.NDS"), log_callback
@@ -525,14 +541,22 @@ def install_twilight_menu(mount_path, log_callback=None):
         if os.path.exists(nds_src):
             log("Copiando pasta _nds (motor do TWiLight)...")
             n = _stage_dir_copy(
-                undo, nds_src, os.path.join(mount_path, "_nds"), log_callback
+                undo,
+                nds_src,
+                os.path.join(mount_path, "_nds"),
+                log_callback,
+                progress_span=(start + width * 0.5, start + width * 0.85),
             )
             log(f"✅ Pasta _nds copiada ({n} arquivos verificados).")
 
         title_src = os.path.join(src, "title")
         if os.path.exists(title_src):
             n = _stage_dir_copy(
-                undo, title_src, os.path.join(mount_path, "title"), log_callback
+                undo,
+                title_src,
+                os.path.join(mount_path, "title"),
+                log_callback,
+                progress_span=(start + width * 0.85, start + width * 0.93),
             )
             log(f"✅ Pasta title copiada ({n} arquivos verificados).")
 
@@ -540,9 +564,11 @@ def install_twilight_menu(mount_path, log_callback=None):
             os.makedirs(os.path.join(mount_path, "roms", console), exist_ok=True)
         log("✅ Pastas /roms/ criadas.")
 
+        _at(0.96, "A sincronizar o volume…")
         sync_volume(mount_path)
         _cleanup_baks(baks)
         log("🎉 TWiLight Menu++ instalado com sucesso no SD!")
+        _at(1.0, "TWiLight Menu++ instalado.")
         return True, "TWiLight Menu++ instalado."
     except Exception as e:
         log(f"⚠️ Falha ao instalar TWiLight — revertendo: {e}")

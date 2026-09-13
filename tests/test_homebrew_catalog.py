@@ -18,6 +18,10 @@ def test_catalog_ids_unique_and_pinned():
         assert app["dest_filename"] == cache.FILENAMES[key]
         assert app["gamebrew_url"].startswith(homebrew_catalog.GAMEBREW_WIKI_PREFIX)
         assert is_allowed_external_url(app["gamebrew_url"])
+        udb = app.get("universal_db_url")
+        if udb:
+            assert udb.startswith(homebrew_catalog.UNIVERSAL_DB_DS_PREFIX)
+            assert is_allowed_external_url(udb)
         assert isinstance(app.get("setup_notes"), list)
 
 
@@ -41,6 +45,25 @@ def test_gamebrew_url_allowlist():
     assert not is_allowed_external_url("https://www.gamebrew.org/wiki/foo/bar")
     assert not is_allowed_external_url("https://www.gamebrew.org/wiki/../x")
     assert not is_allowed_external_url("javascript:alert(1)")
+
+
+def test_universal_db_url_allowlist():
+    assert is_allowed_external_url("https://db.universal-team.net/ds/")
+    assert is_allowed_external_url("https://db.universal-team.net/ds/godmode9i")
+    assert is_allowed_external_url("https://db.universal-team.net/ds/pkmn-chest")
+    assert not is_allowed_external_url("https://db.universal-team.net/3ds/godmode9i")
+    assert not is_allowed_external_url("https://db.universal-team.net/ds/foo/bar")
+    assert not is_allowed_external_url("https://db.universal-team.net/ds/../x")
+    assert not is_allowed_external_url("https://evil.example/ds/godmode9i")
+
+
+def test_media_apps_may_omit_universal_db():
+    rocket = homebrew_catalog.get_app("rocket_video")
+    fast = homebrew_catalog.get_app("fastvideo_ds")
+    assert rocket and rocket["universal_db_url"] is None
+    assert fast and fast["universal_db_url"] is None
+    gm9 = homebrew_catalog.get_app("godmode9i")
+    assert gm9 and gm9["universal_db_url"].endswith("/godmode9i")
 
 
 def test_install_homebrew(tmp_path, monkeypatch, fake_cache):
