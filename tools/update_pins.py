@@ -23,7 +23,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from core.cache import PIN_META, PINNED_SHA256, URLS, USER_AGENT  # noqa: E402
+from core.cache import PIN_META, PINNED_SHA256, URLS, USER_AGENT, urls_for  # noqa: E402
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -56,13 +56,34 @@ def main() -> int:
     args = parser.parse_args()
 
     ok = True
-    for key, url in URLS.items():
+    for key in URLS:
+        urls = urls_for(key)
         print(f"\n=== {key} ===")
-        print(f"URL: {url}")
-        data = download(url)
-        digest = sha256_bytes(data)
+        print(f"Fontes ({len(urls)}):")
+        for i, url in enumerate(urls, 1):
+            print(f"  [{i}] {url}")
+
+        digest = None
+        for i, url in enumerate(urls, 1):
+            try:
+                data = download(url)
+            except Exception as e:
+                print(f"  [{i}] falhou: {e}")
+                ok = False
+                continue
+            digest = sha256_bytes(data)
+            print(f"  [{i}] SHA-256: {digest}")
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{key}") as tf:
+                tf.write(data)
+                print(f"  [{i}] Salvo temp: {tf.name}")
+            break
+
+        if digest is None:
+            print("Nenhuma fonte devolveu bytes.")
+            ok = False
+            continue
+
         pinned = (PINNED_SHA256.get(key) or "").lower()
-        print(f"SHA-256 baixado: {digest}")
         print(f"Pin atual:       {pinned or '(nenhum)'}")
         match = pinned == digest
         print(f"Match pin:       {match}")
@@ -81,11 +102,6 @@ def main() -> int:
                     print("GitHub digest:  OK")
             except Exception as e:
                 print(f"GitHub API:      falhou ({e})")
-
-        # Escreve cópia local opcional
-        with tempfile.NamedTemporaryFile(delete=False, suffix=f".{key}") as tf:
-            tf.write(data)
-            print(f"Salvo temp:      {tf.name}")
 
     if args.check and not ok:
         print("\nFalha: pins desatualizados ou divergentes.", file=sys.stderr)

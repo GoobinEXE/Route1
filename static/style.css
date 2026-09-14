@@ -573,6 +573,45 @@ button:disabled {
   margin-top: 0.2rem;
 }
 
+.hb-sources {
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+  color: rgb(var(--c-fg-soft));
+  line-height: 1.45;
+}
+
+.hb-sources li + li {
+  margin-top: 0.25rem;
+}
+
+.hb-source-label {
+  font-weight: 600;
+  color: rgb(var(--c-fg-mute));
+}
+
+.hb-source-url {
+  font-size: 10px;
+  word-break: break-all;
+  color: rgb(var(--c-fg-soft));
+}
+
+.hb-source-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgb(var(--c-accent-fg));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.hb-source-link:hover {
+  opacity: 0.85;
+}
+
 .util-btn {
   display: flex;
   align-items: flex-start;

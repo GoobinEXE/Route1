@@ -339,6 +339,11 @@ class Api:
         # Formatação: não exigir FAT no preflight (o objetivo é converter para FAT32).
         # Ainda valida removível via is_safe_mount_path no decorator e format_sd_card.
         add_log(f"Formatando unidade {mount_path} em FAT32 (cluster 32 KB)...")
+        if sys.platform == "darwin":
+            add_log(
+                "No macOS, pode abrir uma janela do Terminal para confirmares "
+                "a palavra-passe do sudo (cluster 32 KB)."
+            )
         ok, msg, _drive = preflight(mount_path, min_free_mb=1, require_fat=False)
         if not ok:
             return _reject(msg)

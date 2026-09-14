@@ -10,6 +10,8 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+## [1.0.3] — 2026-09-14
+
 ### Adicionado
 
 - Aba **Sobre**
@@ -17,6 +19,11 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - Catálogo **Apps** no modo Avançado: instalação autónoma (download + SHA-256) de homebrew em `/roms/apps/` (GodMode9i, ftpd, NTM, Rocket Video Player, pkmn-chest, etc.)
 - Sub-navegação do modo Avançado: **Preparar** · **Cartão** · **Apps**
 - Guias GameBrew/README aplicadas na instalação (pastas, `databases.txt` do Kekatsu, cópia nitroFS do pkmn-chest, pastas de vídeos/backups)
+- Atalho **GitHub** em cada app do catálogo (abre o repositório oficial) e listagem de todas as fontes de download disponíveis
+
+### Corrigido
+
+- Formatação no macOS: o cluster 32 KB volta a ser aplicado (o sistema pede administrador; se o macOS bloquear, abre o Terminal com sudo)
 
 ### Desenvolvimento
 
@@ -24,6 +31,8 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - Pipeline Windows preparado para Authenticode (Azure Artifact Signing); ver `docs/WINDOWS_SIGNING.md`
 - Script Windows com fases `build` / `package` / `all`
 - `core/homebrew_catalog.py`, `core/homebrew_install.py`, `install_homebrew`, pins GitHub adicionais em `core/cache.py`
+- Catálogo expõe `github_url` + `download_sources` (lista); `URLS` aceita uma ou várias fontes; allowlist GitHub em `open_external_url`
+
 ## [1.0.2] — 2026-09-08
 
 ### Corrigido

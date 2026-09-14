@@ -90,8 +90,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Route 1 Kit",
             "CFBundleDisplayName": "Route 1 Kit",
-            "CFBundleShortVersionString": "1.0.2",
-            "CFBundleVersion": "1.0.2",
+            "CFBundleShortVersionString": "1.0.3",
+            "CFBundleVersion": "1.0.3",
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
         },

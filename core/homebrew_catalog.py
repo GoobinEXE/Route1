@@ -8,10 +8,59 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from core.cache import FILENAMES, PINNED_SHA256
+from core.cache import FILENAMES, PIN_META, PINNED_SHA256, urls_for
 from core.homebrew_install import notes_for
 
 GAMEBREW_WIKI_PREFIX = "https://www.gamebrew.org/wiki/"
+GITHUB_PREFIX = "https://github.com/"
+
+
+def _github_repo_url(install_key: str) -> Optional[str]:
+    meta = PIN_META.get(install_key) or {}
+    repo = meta.get("repo")
+    if not isinstance(repo, str):
+        return None
+    repo = repo.strip().strip("/")
+    if not repo or "/" not in repo or ".." in repo:
+        return None
+    return f"{GITHUB_PREFIX}{repo}"
+
+
+def _github_release_page(install_key: str) -> Optional[str]:
+    meta = PIN_META.get(install_key) or {}
+    repo = meta.get("repo")
+    tag = meta.get("tag")
+    if not isinstance(repo, str) or not isinstance(tag, str):
+        return None
+    repo = repo.strip().strip("/")
+    tag = tag.strip()
+    if not repo or "/" not in repo or not tag or ".." in repo or "/" in tag:
+        return None
+    return f"{GITHUB_PREFIX}{repo}/releases/tag/{tag}"
+
+
+def _label_for_download_url(url: str) -> str:
+    low = url.lower()
+    if "github.com" in low and "/releases/" in low:
+        return "GitHub Release"
+    if "dsi.cfw.guide" in low:
+        return "dsi.cfw.guide"
+    return "Download"
+
+
+def _download_sources(install_key: str) -> List[Dict[str, str]]:
+    """Todas as URLs de download (sempre lista; 1+ entradas quando pinadas)."""
+    release_page = _github_release_page(install_key) or ""
+    sources: List[Dict[str, str]] = []
+    for url in urls_for(install_key):
+        entry: Dict[str, str] = {
+            "url": url,
+            "label": _label_for_download_url(url),
+        }
+        if release_page and "github.com" in url.lower():
+            entry["open_url"] = release_page
+        sources.append(entry)
+    return sources
 
 # Categorias alinhadas à lista GameBrew (subset útil no DSi).
 CATEGORIES: Dict[str, str] = {
@@ -163,6 +212,7 @@ def _normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
     key = entry["install_key"]
     dest = FILENAMES.get(key) or f"{entry['id']}.nds"
     slug = entry["gamebrew_slug"]
+    github_url = _github_repo_url(key)
     return {
         "id": entry["id"],
         "title": entry["title"],
@@ -173,10 +223,14 @@ def _normalize(entry: Dict[str, Any]) -> Dict[str, Any]:
         "version": entry["version"],
         "gamebrew_slug": slug,
         "gamebrew_url": f"{GAMEBREW_WIKI_PREFIX}{slug}",
+        "github_url": github_url,
+        "download_sources": _download_sources(key),
         "install_key": key,
         "dest_filename": dest,
         "warn_nand": bool(entry.get("warn_nand")),
-        "installable": key in PINNED_SHA256 and key in FILENAMES,
+        "installable": (
+            key in PINNED_SHA256 and key in FILENAMES and bool(urls_for(key))
+        ),
         "setup_notes": notes_for(entry["id"]),
     }
 
@@ -209,7 +263,8 @@ def build_catalog_payload() -> Dict[str, Any]:
         "categories": cats,
         "attribution": (
             "Seleção baseada na lista de aplicações da GameBrew; "
-            "downloads oficiais com verificação SHA-256."
+            "downloads oficiais (GitHub e outras fontes pinadas) com verificação SHA-256. "
+            "Cada app lista todas as fontes de download disponíveis."
         ),
     }
 

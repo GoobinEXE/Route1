@@ -15,10 +15,40 @@ def test_catalog_ids_unique_and_pinned():
         assert key in cache.PINNED_SHA256
         assert key in cache.URLS
         assert key in cache.FILENAMES
+        assert key in cache.PIN_META
         assert app["dest_filename"] == cache.FILENAMES[key]
         assert app["gamebrew_url"].startswith(homebrew_catalog.GAMEBREW_WIKI_PREFIX)
         assert is_allowed_external_url(app["gamebrew_url"])
+        assert app["github_url"]
+        assert app["github_url"].startswith("https://github.com/")
+        assert is_allowed_external_url(app["github_url"])
+        sources = app["download_sources"]
+        assert isinstance(sources, list) and len(sources) >= 1
+        assert len(sources) == len(cache.urls_for(key))
+        for src in sources:
+            assert src["url"]
+            assert src["label"]
+            if src.get("open_url"):
+                assert is_allowed_external_url(src["open_url"])
         assert isinstance(app.get("setup_notes"), list)
+
+
+def test_urls_for_always_list_and_multi_source():
+    single = cache.urls_for("ftpd")
+    assert isinstance(single, list) and len(single) == 1
+    assert single[0].startswith("https://")
+
+    original = cache.URLS["ftpd"]
+    try:
+        cache.URLS["ftpd"] = [
+            "https://example.invalid/a.nds",
+            "https://github.com/mtheall/ftpd/releases/download/v3.2.1/ftpd.nds",
+        ]
+        urls = cache.urls_for("ftpd")
+        assert len(urls) == 2
+        assert urls[0].endswith("a.nds")
+    finally:
+        cache.URLS["ftpd"] = original
 
 
 def test_get_app_and_payload():
@@ -26,6 +56,8 @@ def test_get_app_and_payload():
     assert homebrew_catalog.get_app("nope") is None
     gm9 = homebrew_catalog.get_app("godmode9i")
     assert gm9 and gm9["title"] == "GodMode9i"
+    assert gm9["github_url"] == "https://github.com/DS-Homebrew/GodMode9i"
+    assert len(gm9["download_sources"]) >= 1
     payload = homebrew_catalog.build_catalog_payload()
     assert payload["success"] is True
     assert len(payload["apps"]) == len(homebrew_catalog.list_apps())
@@ -41,6 +73,18 @@ def test_gamebrew_url_allowlist():
     assert not is_allowed_external_url("https://www.gamebrew.org/wiki/foo/bar")
     assert not is_allowed_external_url("https://www.gamebrew.org/wiki/../x")
     assert not is_allowed_external_url("javascript:alert(1)")
+
+
+def test_github_url_allowlist_from_pins():
+    assert is_allowed_external_url("https://github.com/DS-Homebrew/GodMode9i")
+    assert is_allowed_external_url(
+        "https://github.com/DS-Homebrew/GodMode9i/releases/tag/v3.9.0"
+    )
+    assert not is_allowed_external_url("https://github.com/evil/malware")
+    assert not is_allowed_external_url(
+        "https://github.com/DS-Homebrew/GodMode9i/releases/download/v3.9.0/x.dsi"
+    )
+    assert not is_allowed_external_url("https://github.com/DS-Homebrew/GodMode9i/issues")
 
 
 def test_install_homebrew(tmp_path, monkeypatch, fake_cache):

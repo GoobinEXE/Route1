@@ -3,7 +3,7 @@
 ; Pré-requisito: dist\Route1Kit\ gerado pelo PyInstaller.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.2"
+  #define MyAppVersion "1.0.3"
 #endif
 
 #define MyAppName "Route 1 Kit"

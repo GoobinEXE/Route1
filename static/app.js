@@ -713,12 +713,40 @@ function renderHomebrewCatalog() {
         ? `<span class="text-[11px] text-fg-mute">v${escapeHtml(a.version)}</span>`
         : "";
       const gbUrl = escapeHtml(a.gamebrew_url || "");
+      const ghUrl = escapeHtml(a.github_url || "");
       const appId = escapeHtml(a.id || "");
       const notes = Array.isArray(a.setup_notes) ? a.setup_notes : [];
       const notesHtml = notes.length
         ? `<ul class="hb-notes">${notes
             .map((n) => `<li>${escapeHtml(n)}</li>`)
             .join("")}</ul>`
+        : "";
+      const sources = Array.isArray(a.download_sources) ? a.download_sources : [];
+      const sourcesHtml = sources.length
+        ? `<ul class="hb-sources" aria-label="Fontes de download">` +
+          sources
+            .map((s) => {
+              const label = escapeHtml((s && s.label) || "Download");
+              const openUrl = escapeHtml((s && s.open_url) || "");
+              const rawUrl = String((s && s.url) || "");
+              const shortUrl =
+                rawUrl.length > 64 ? `${rawUrl.slice(0, 61)}…` : rawUrl;
+              const openBtn = openUrl
+                ? `<button type="button" class="hb-source-link" onclick="openExternal('${openUrl}')">abrir</button>`
+                : "";
+              return (
+                `<li><span class="hb-source-label">${label}</span>` +
+                (shortUrl
+                  ? ` <code class="hb-source-url" title="${escapeHtml(
+                      rawUrl
+                    )}">${escapeHtml(shortUrl)}</code>`
+                  : "") +
+                (openBtn ? ` ${openBtn}` : "") +
+                `</li>`
+              );
+            })
+            .join("") +
+          `</ul>`
         : "";
       return (
         `<article class="hb-card">` +
@@ -736,12 +764,16 @@ function renderHomebrewCatalog() {
           a.author || ""
         )} · ${escapeHtml(a.category_label || a.category || "")}</p>` +
         notesHtml +
+        sourcesHtml +
         `</div>` +
         `<div class="hb-card-actions">` +
         `<button type="button" class="btn-primary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
         `data-app-id="${appId}" data-warn-nand="${a.warn_nand ? "1" : "0"}" ` +
         `data-title="${escapeHtml(a.title || "")}" ` +
         `onclick="installHomebrewApp(this)">Instalar no SD</button>` +
+        (ghUrl
+          ? `<button type="button" class="btn-ghost !py-1.5 !px-2.5 text-[11px]" onclick="openExternal('${ghUrl}')">GitHub</button>`
+          : "") +
         (gbUrl
           ? `<button type="button" class="btn-ghost !py-1.5 !px-2.5 text-[11px]" onclick="openExternal('${gbUrl}')">GameBrew</button>`
           : "") +

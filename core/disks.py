@@ -5,6 +5,8 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import time
 
 # Capacidade acima disso quase certamente não é cartão SD / pendrive típico de DSi.
 MAX_SAFE_VOLUME_GB = 256
@@ -589,6 +591,9 @@ def get_mounted_drives():
 _VOLUME_NAME_RE = re.compile(r"^[A-Za-z0-9_]{1,11}$")
 _WIN_LETTER_RE = re.compile(r"^[D-Z]$")
 _MACOS_DISK_ID_RE = re.compile(r"^(disk\d+)(?:s\d+)?$")
+_MACOS_SLICE_RE = re.compile(r"^disk\d+s\d+$")
+_NEWFS_MSDOS_BINS = ("/sbin/newfs_msdos", "/usr/sbin/newfs_msdos")
+_DISKUTIL_BIN = "/usr/sbin/diskutil"
 
 
 def _macos_whole_disk_id(identifier):
@@ -653,6 +658,277 @@ def get_cluster_size_bytes(mount_path: str):
         return None
 
 
+def _macos_newfs_bin():
+    found = shutil.which("newfs_msdos") or "/sbin/newfs_msdos"
+    if found in _NEWFS_MSDOS_BINS:
+        return found
+    return "/sbin/newfs_msdos"
+
+
+def _macos_newfs_argv(newfs_bin, volume_name, dev):
+    return [
+        newfs_bin,
+        "-F",
+        "32",
+        "-b",
+        str(TARGET_CLUSTER_BYTES),
+        "-v",
+        volume_name,
+        dev,
+    ]
+
+
+def _macos_newfs_needs_privilege(returncode, stderr, stdout):
+    """True se newfs falhou por permissão ou volume ainda montado (não por geometria)."""
+    if returncode == 0:
+        return False
+    text = f"{stderr or ''} {stdout or ''}".lower()
+    hints = (
+        "permission denied",
+        "operation not permitted",
+        "not permitted",
+        "resource busy",
+        "device busy",
+    )
+    return any(h in text for h in hints)
+
+
+def _macos_admin_cancelled(text):
+    t = (text or "").lower()
+    return (
+        "user canceled" in t
+        or "user cancelled" in t
+        or "cancelou" in t
+        or "(-128)" in t
+    )
+
+
+def _macos_admin_newfs_shell(newfs_bin, volume_name, parent_disk, part_id):
+    """
+    Shell elevado via osascript: desmontar + newfs em /dev/disk… (-c 64 = 32 KiB).
+    Em macOS recentes isto pode falhar com EPERM (TCC); o caminho normal é Terminal+sudo.
+    Só chamar com ids/nome já validados (allowlist).
+    """
+    spc = int(_FAT_SECTORS_PER_CLUSTER_32K)
+    return (
+        f"{_DISKUTIL_BIN} unmountDisk force /dev/{parent_disk} && "
+        f"{newfs_bin} -F 32 -S 512 -c {spc} -v {volume_name} /dev/{part_id}"
+    )
+
+
+def _macos_run_admin_shell(shell_cmd):
+    """Corre um comando allowlisted com o diálogo de administrador do macOS."""
+    timeout_s = int(_SUBPROC_FORMAT_TIMEOUT)
+    script = (
+        f"with timeout of {timeout_s} seconds\n"
+        f"do shell script {json.dumps(shell_cmd)} "
+        f'with prompt "Route 1 Kit precisa de administrador para definir cluster 32 KB." '
+        f"with administrator privileges\n"
+        "end timeout"
+    )
+    osa = shutil.which("osascript") or "/usr/bin/osascript"
+    return subprocess.run(
+        [osa, "-e", script],
+        capture_output=True,
+        text=True,
+        timeout=timeout_s + 90,
+    )
+
+
+def _macos_terminal_newfs(newfs_bin, volume_name, parent_disk, part_id):
+    """
+    Abre um .command no Terminal com sudo (acesso fiável a /dev/disk* no macOS).
+    Retorna (ok, mensagem_erro).
+    """
+    spc = int(_FAT_SECTORS_PER_CLUSTER_32K)
+    work = tempfile.mkdtemp(prefix="route1_fmt_")
+    ok_path = os.path.join(work, "ok")
+    fail_path = os.path.join(work, "fail")
+    log_path = os.path.join(work, "log.txt")
+    cmd_path = os.path.join(work, "format_cluster32.command")
+    try:
+        # Paths do mkdtemp são seguros; ids já validados pelo caller.
+        script = (
+            "#!/bin/bash\n"
+            f'LOG="{log_path}"\n'
+            f'OK="{ok_path}"\n'
+            f'FAIL="{fail_path}"\n'
+            "echo 'Route 1 Kit: a definir cluster 32 KB — confirma a palavra-passe do sudo.' | tee \"$LOG\"\n"
+            f'{_DISKUTIL_BIN} unmountDisk force /dev/{parent_disk} 2>&1 | tee -a "$LOG"\n'
+            f"sudo {newfs_bin} -F 32 -S 512 -c {spc} -v {volume_name} /dev/{part_id} 2>&1 | tee -a \"$LOG\"\n"
+            'rc=${PIPESTATUS[0]}\n'
+            'if [ "$rc" -eq 0 ]; then touch "$OK"; echo OK | tee -a "$LOG"; '
+            'else touch "$FAIL"; echo FAIL:$rc | tee -a "$LOG"; fi\n'
+            'echo "Podes fechar esta janela do Terminal."\n'
+            "exit $rc\n"
+        )
+        with open(cmd_path, "w", encoding="utf-8") as f:
+            f.write(script)
+        os.chmod(cmd_path, 0o700)
+        opened = subprocess.run(
+            ["open", cmd_path],
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        if opened.returncode != 0:
+            return (
+                False,
+                f"não foi possível abrir o Terminal: "
+                f"{(opened.stderr or opened.stdout or '').strip()}",
+            )
+
+        deadline = time.monotonic() + float(_SUBPROC_FORMAT_TIMEOUT)
+        while time.monotonic() < deadline:
+            if os.path.isfile(ok_path):
+                return True, ""
+            if os.path.isfile(fail_path):
+                detail = ""
+                try:
+                    with open(log_path, encoding="utf-8", errors="replace") as lf:
+                        detail = lf.read()[-400:]
+                except OSError:
+                    pass
+                return False, detail or "sudo/newfs falhou no Terminal"
+            time.sleep(0.4)
+        return (
+            False,
+            "tempo esgotado à espera do Terminal/sudo — "
+            "confirma a palavra-passe na janela do Terminal.",
+        )
+    finally:
+        try:
+            for name in os.listdir(work):
+                try:
+                    os.remove(os.path.join(work, name))
+                except OSError:
+                    pass
+            os.rmdir(work)
+        except OSError:
+            pass  # best-effort cleanup do staging
+
+
+def _macos_first_fat_slice(parent_disk):
+    """Identificador diskNsM da partição FAT após partitionDisk; fallback s1."""
+    fallback = f"{parent_disk}s1"
+    try:
+        out = subprocess.check_output(
+            ["diskutil", "list", "-plist", f"/dev/{parent_disk}"],
+            stderr=subprocess.DEVNULL,
+            timeout=_SUBPROC_INFO_TIMEOUT,
+        )
+        data = plistlib.loads(out)
+        candidates = []
+        for item in data.get("AllDisksAndPartitions") or []:
+            for part in item.get("Partitions") or []:
+                ident = part.get("DeviceIdentifier") or ""
+                if not _MACOS_SLICE_RE.fullmatch(ident):
+                    continue
+                content = (part.get("Content") or "").upper()
+                if "FAT" in content or "DOS_FAT" in content:
+                    return ident
+                candidates.append(ident)
+        if candidates:
+            return candidates[0]
+        for ident in data.get("AllDisks") or []:
+            if isinstance(ident, str) and _MACOS_SLICE_RE.fullmatch(ident):
+                return ident
+    except Exception:
+        pass
+    return fallback
+
+
+def _macos_force_cluster32(parent_disk, part_id, volume_name):
+    """
+    Força FAT32 com cluster 32 KB via newfs_msdos.
+    Utilizador normal: Terminal + sudo (osascript admin leva EPERM em /dev/disk*).
+    Root: tenta newfs directo; se falhar por permissão, osascript admin.
+    Retorna (ok, mensagem_de_erro).
+    """
+    if _macos_whole_disk_id(parent_disk) != parent_disk:
+        return False, "identificador de disco inválido"
+    if not _MACOS_SLICE_RE.fullmatch(part_id or ""):
+        return False, "identificador de partição inválido"
+    if not _VOLUME_NAME_RE.fullmatch(volume_name or ""):
+        return False, "nome de volume inválido"
+    if not part_id.startswith(parent_disk + "s"):
+        return False, "partição não pertence ao disco selecionado"
+
+    newfs = _macos_newfs_bin()
+    rpart = f"/dev/r{part_id}"
+    part = f"/dev/{part_id}"
+    whole = f"/dev/{parent_disk}"
+
+    subprocess.run(
+        ["diskutil", "unmountDisk", "force", whole],
+        capture_output=True,
+        text=True,
+        timeout=_SUBPROC_INFO_TIMEOUT,
+        check=False,
+    )
+
+    euid = os.geteuid() if hasattr(os, "geteuid") else None
+    last_err = ""
+    need_priv = euid not in (0, None)
+
+    if euid == 0:
+        nf = subprocess.run(
+            _macos_newfs_argv(newfs, volume_name, rpart),
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_FORMAT_TIMEOUT,
+        )
+        if nf.returncode == 0:
+            return True, ""
+
+        nf2 = subprocess.run(
+            _macos_newfs_argv(newfs, volume_name, part),
+            capture_output=True,
+            text=True,
+            timeout=_SUBPROC_FORMAT_TIMEOUT,
+        )
+        if nf2.returncode == 0:
+            return True, ""
+
+        last_err = (nf2.stderr or nf.stderr or nf2.stdout or nf.stdout or "").strip()
+        need_priv = _macos_newfs_needs_privilege(
+            nf.returncode, nf.stderr, nf.stdout
+        ) or _macos_newfs_needs_privilege(nf2.returncode, nf2.stderr, nf2.stdout)
+    else:
+        # Utilizador normal: ir directo ao Terminal+sudo.
+        last_err = "Permission denied (euid!=0)"
+
+    if not need_priv:
+        return False, last_err
+
+    # Preferir Terminal+sudo: osascript admin recebe EPERM ao abrir /dev/disk*.
+    if euid not in (0, None):
+        tok, terr = _macos_terminal_newfs(
+            newfs, volume_name, parent_disk, part_id
+        )
+        if tok:
+            return True, ""
+        return (
+            False,
+            "falha ao forçar cluster 32 KB no Terminal (sudo): "
+            f"{terr or last_err}",
+        )
+
+    admin = _macos_run_admin_shell(
+        _macos_admin_newfs_shell(newfs, volume_name, parent_disk, part_id)
+    )
+    if admin.returncode == 0:
+        return True, ""
+    admin_err = (admin.stderr or admin.stdout or last_err).strip()
+    if _macos_admin_cancelled(admin_err):
+        return (
+            False,
+            "autorização de administrador cancelada — "
+            "no macOS o cluster 32 KB exige privilégios.",
+        )
+    return False, admin_err or last_err
+
+
 def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
     try:
         out = subprocess.check_output(
@@ -682,6 +958,7 @@ def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
         if not parent_disk:
             return False, f"Identificador de disco inválido: {raw_id}"
 
+
         cmd = [
             "diskutil",
             "partitionDisk",
@@ -698,64 +975,25 @@ def _format_sd_macos(mount_path, volume_name, expected_device_id=""):
             return False, f"Erro ao formatar: {res.stderr or res.stdout}"
 
         # partitionDisk não garante cluster 32 KB — reforçar com newfs_msdos.
-        part_id = f"{parent_disk}s1"
+        part_id = _macos_first_fat_slice(parent_disk)
         part_dev = f"/dev/{part_id}"
-        rpart_dev = f"/dev/r{part_id}"
-        # Desmontar volume (pode ter remontado automaticamente).
-        subprocess.run(
-            ["diskutil", "unmount", "force", part_dev],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_INFO_TIMEOUT,
-            check=False,
-        )
-        newfs = shutil.which("newfs_msdos") or "/sbin/newfs_msdos"
-        nf = subprocess.run(
-            [
-                newfs,
-                "-F",
-                "32",
-                "-b",
-                str(TARGET_CLUSTER_BYTES),
-                "-v",
-                volume_name,
-                rpart_dev,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_FORMAT_TIMEOUT,
-        )
-        if nf.returncode != 0:
-            # Fallback: tentar sem raw device.
-            nf2 = subprocess.run(
-                [
-                    newfs,
-                    "-F",
-                    "32",
-                    "-b",
-                    str(TARGET_CLUSTER_BYTES),
-                    "-v",
-                    volume_name,
-                    part_dev,
-                ],
-                capture_output=True,
-                text=True,
-                timeout=_SUBPROC_FORMAT_TIMEOUT,
-            )
-            if nf2.returncode != 0:
+        try:
+            ok, err = _macos_force_cluster32(parent_disk, part_id, volume_name)
+            if not ok:
                 return (
                     False,
                     "FAT32 criado, mas falhou ao forçar cluster 32 KB: "
-                    f"{(nf2.stderr or nf.stderr or nf2.stdout or nf.stdout).strip()}",
+                    f"{err or 'newfs_msdos recusou o dispositivo'}",
                 )
-
-        subprocess.run(
-            ["diskutil", "mount", part_dev],
-            capture_output=True,
-            text=True,
-            timeout=_SUBPROC_INFO_TIMEOUT,
-            check=False,
-        )
+        finally:
+            # Remontar mesmo em falha — senão o cartão fica invisível no Finder.
+            subprocess.run(
+                ["diskutil", "mount", part_dev],
+                capture_output=True,
+                text=True,
+                timeout=_SUBPROC_INFO_TIMEOUT,
+                check=False,
+            )
         return (
             True,
             f"Cartão formatado com sucesso como {volume_name} "

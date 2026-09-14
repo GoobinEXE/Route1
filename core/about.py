@@ -14,6 +14,13 @@ GUIDE_URL = "https://dsi.cfw.guide/"
 LICENSE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 GAMEBREW_WIKI_PREFIX = "https://www.gamebrew.org/wiki/"
 _GAMEBREW_SLUG_RE = re.compile(r"^[A-Za-z0-9_()%.\-]+$")
+_GITHUB_REPO_RE = re.compile(
+    r"^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/?$"
+)
+_GITHUB_RELEASE_TAG_RE = re.compile(
+    r"^https://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)"
+    r"/releases/tag/([A-Za-z0-9_.\-]+)$"
+)
 
 # URLs exactas que a UI pode abrir no browser do sistema (allowlist).
 EXTERNAL_URL_ALLOWLIST = frozenset(
@@ -29,19 +36,58 @@ EXTERNAL_URL_ALLOWLIST = frozenset(
 )
 
 
+def _pinned_github_repos() -> frozenset:
+    """Repositórios GitHub pinados em PIN_META (import lazy)."""
+    from core.cache import PIN_META
+
+    repos = set()
+    for meta in PIN_META.values():
+        repo = meta.get("repo") if isinstance(meta, dict) else None
+        if isinstance(repo, str) and repo.strip() and "/" in repo:
+            repos.add(repo.strip().strip("/"))
+    return frozenset(repos)
+
+
+def _pinned_github_release_pages() -> frozenset:
+    from core.cache import PIN_META
+
+    pages = set()
+    for meta in PIN_META.values():
+        if not isinstance(meta, dict):
+            continue
+        repo = meta.get("repo")
+        tag = meta.get("tag")
+        if not isinstance(repo, str) or not isinstance(tag, str):
+            continue
+        repo = repo.strip().strip("/")
+        tag = tag.strip()
+        if repo and tag and "/" in repo and "/" not in tag and ".." not in repo:
+            pages.add(f"https://github.com/{repo}/releases/tag/{tag}")
+    return frozenset(pages)
+
+
 def is_allowed_external_url(url: str) -> bool:
-    """Allowlist exacta + páginas wiki GameBrew com slug seguro."""
+    """Allowlist exacta + GameBrew wiki + repos/releases GitHub pinados."""
     if not isinstance(url, str):
         return False
     cleaned = url.strip()
     if cleaned in EXTERNAL_URL_ALLOWLIST:
         return True
-    if not cleaned.startswith(GAMEBREW_WIKI_PREFIX):
-        return False
-    slug = cleaned[len(GAMEBREW_WIKI_PREFIX) :]
-    if not slug or "/" in slug or "\\" in slug or ".." in slug:
-        return False
-    return bool(_GAMEBREW_SLUG_RE.fullmatch(slug))
+    if cleaned.startswith(GAMEBREW_WIKI_PREFIX):
+        slug = cleaned[len(GAMEBREW_WIKI_PREFIX) :]
+        if not slug or "/" in slug or "\\" in slug or ".." in slug:
+            return False
+        return bool(_GAMEBREW_SLUG_RE.fullmatch(slug))
+
+    repo_m = _GITHUB_REPO_RE.fullmatch(cleaned.rstrip("/"))
+    if repo_m:
+        repo = f"{repo_m.group(1)}/{repo_m.group(2)}"
+        return repo in _pinned_github_repos()
+
+    if _GITHUB_RELEASE_TAG_RE.fullmatch(cleaned):
+        return cleaned in _pinned_github_release_pages()
+
+    return False
 
 _HEADING_RE = re.compile(
     r"^##\s+\[([^\]]+)\](?:\s*[—–-]\s*(\d{4}-\d{2}-\d{2}))?\s*$"

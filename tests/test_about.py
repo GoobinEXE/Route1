@@ -88,7 +88,7 @@ def test_build_about_payload_user_facing_latest():
     assert data["version"] == __version__
     release = data["latest_release"]
     assert release is not None
-    assert release["version"] == "1.0.2"
+    assert release["version"] == "1.0.3"
     titles = [s["title"] for s in release["sections"]]
     assert "Desenvolvimento" not in titles
     assert "Correções" in titles
@@ -136,6 +136,14 @@ def test_api_open_external_allowlist(monkeypatch):
 
     nested = api.open_external_url("https://www.gamebrew.org/wiki/foo/bar")
     assert nested["success"] is False
+
+    gh = "https://github.com/DS-Homebrew/GodMode9i"
+    ok3 = api.open_external_url(gh)
+    assert ok3["success"] is True
+    assert opened[-1] == gh
+
+    evil_gh = api.open_external_url("https://github.com/evil/repo")
+    assert evil_gh["success"] is False
 
 
 def test_api_homebrew_catalog():

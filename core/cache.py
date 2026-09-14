@@ -6,10 +6,13 @@ import hashlib
 import os
 import shutil
 import urllib.request
-from typing import Optional
+from typing import List, Optional, Sequence, Union
 
 from core import __version__ as _APP_VERSION
 from core.logging_util import emit_log
+
+# Valor em URLS: uma URL HTTPS ou lista ordenada de mirrors (primeira = preferida).
+UrlEntry = Union[str, Sequence[str]]
 
 CACHE_DIR = os.path.expanduser("~/.route_1_kit_cache")
 USER_AGENT = (
@@ -104,7 +107,7 @@ PIN_META = {
     },
 }
 
-URLS = {
+URLS: dict[str, UrlEntry] = {
     "pit_facebook": "https://dsi.cfw.guide/assets/files/memory_pit/768_1024/pit.bin",
     "pit_no_facebook": "https://dsi.cfw.guide/assets/files/memory_pit/256/pit.bin",
     "dumptool": "https://dsi.cfw.guide/assets/files/dumptool/boot.nds",
@@ -156,6 +159,27 @@ URLS = {
         "https://github.com/cavv-dev/Kekatsu-DS/releases/download/v1.2.0/Kekatsu.nds"
     ),
 }
+
+
+def urls_for(key: str) -> List[str]:
+    """Lista ordenada de URLs HTTPS para ``key`` (sempre lista, mesmo com 1 fonte)."""
+    raw = URLS.get(key)
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        u = raw.strip()
+        return [u] if u else []
+    out: List[str] = []
+    seen = set()
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        u = item.strip()
+        if not u or u in seen:
+            continue
+        seen.add(u)
+        out.append(u)
+    return out
 
 FILENAMES = {
     "pit_facebook": "pit_facebook.bin",
@@ -328,36 +352,68 @@ def ensure_cached(key: str, log_callback=None) -> str:
             except OSError:
                 pass
 
-    url = URLS.get(key)
-    if not url:
+    urls = urls_for(key)
+    if not urls:
         raise ValueError(f"URL desconhecida para a chave: {key}")
 
-    emit_log(log_callback, f"Baixando componente {key}...")
-    download_url(url, target_path, log_callback)
-
-    if not os.path.isfile(target_path) or os.path.getsize(target_path) < MIN_SIZES.get(key, 1):
-        raise RuntimeError(f"Download de {key} falhou: arquivo vazio ou muito pequeno.")
-    if _looks_like_html(target_path):
-        try:
-            os.remove(target_path)
-        except OSError:
-            pass
-        raise RuntimeError(f"Download de {key} retornou HTML (possível erro 404/rate-limit).")
-
-    digest = _sha256_file(target_path)
-    if digest != pinned.lower():
-        try:
-            os.remove(target_path)
-        except OSError:
-            pass
-        raise RuntimeError(
-            f"Integridade de {key} falhou (SHA-256 diferente do esperado). "
-            "O arquivo upstream pode ter mudado — rode tools/update_pins.py."
-        )
-
-    _write_sidecar(target_path, digest)
     emit_log(
         log_callback,
-        f"✅ {key} baixado com sucesso ({os.path.getsize(target_path)} bytes).",
+        f"Baixando componente {key} ({len(urls)} fonte(s) disponível(is))...",
     )
-    return target_path
+    last_error: Optional[Exception] = None
+    for idx, url in enumerate(urls):
+        if len(urls) > 1:
+            emit_log(log_callback, f"Tentativa {idx + 1}/{len(urls)}…")
+        try:
+            download_url(url, target_path, log_callback)
+        except Exception as e:
+            last_error = e
+            emit_log(log_callback, f"Falha na fonte {idx + 1}: {e}")
+            continue
+
+        if not os.path.isfile(target_path) or os.path.getsize(target_path) < MIN_SIZES.get(
+            key, 1
+        ):
+            last_error = RuntimeError(
+                f"Download de {key} falhou: arquivo vazio ou muito pequeno."
+            )
+            try:
+                os.remove(target_path)
+            except OSError:
+                pass
+            continue
+        if _looks_like_html(target_path):
+            try:
+                os.remove(target_path)
+            except OSError:
+                pass
+            last_error = RuntimeError(
+                f"Download de {key} retornou HTML (possível erro 404/rate-limit)."
+            )
+            continue
+
+        digest = _sha256_file(target_path)
+        if digest != pinned.lower():
+            try:
+                os.remove(target_path)
+            except OSError:
+                pass
+            last_error = RuntimeError(
+                f"Integridade de {key} falhou (SHA-256 diferente do esperado)."
+            )
+            emit_log(log_callback, str(last_error))
+            continue
+
+        _write_sidecar(target_path, digest)
+        emit_log(
+            log_callback,
+            f"✅ {key} baixado com sucesso ({os.path.getsize(target_path)} bytes).",
+        )
+        return target_path
+
+    if last_error is not None:
+        raise RuntimeError(
+            f"Todas as fontes de download de {key} falharam. "
+            "O arquivo upstream pode ter mudado — rode tools/update_pins.py."
+        ) from last_error
+    raise RuntimeError(f"Download de {key} falhou sem fontes válidas.")

@@ -86,6 +86,74 @@ def test_is_safe_requires_removable(monkeypatch):
     assert disks.is_safe_mount_path("/Volumes/Data") is False
 
 
+def test_macos_newfs_needs_privilege():
+    assert disks._macos_newfs_needs_privilege(
+        1, "newfs_msdos: /dev/rdisk4s1: Permission denied", ""
+    )
+    assert disks._macos_newfs_needs_privilege(1, "Resource busy", "")
+    assert not disks._macos_newfs_needs_privilege(1, "too few clusters for FAT32", "")
+    assert not disks._macos_newfs_needs_privilege(0, "Permission denied", "")
+
+
+class _Proc:
+    def __init__(self, code=0, err="", out=""):
+        self.returncode = code
+        self.stderr = err
+        self.stdout = out
+
+
+def test_macos_force_cluster_retries_admin_on_permission(monkeypatch):
+    term_calls = []
+
+    monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
+    monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(
+        disks,
+        "_macos_terminal_newfs",
+        lambda *a, **k: term_calls.append(a) or (True, ""),
+    )
+    monkeypatch.setattr(
+        disks,
+        "_macos_run_admin_shell",
+        lambda sh: (_ for _ in ()).throw(AssertionError("não deve usar osascript")),
+    )
+    ok, err = disks._macos_force_cluster32("disk4", "disk4s1", "DSI_SD")
+    assert ok is True
+    assert err == ""
+    assert term_calls
+
+
+def test_macos_force_cluster_terminal_fallback_on_eperm(monkeypatch):
+    """Mantido: euid!=0 usa Terminal directamente (sem osascript)."""
+    term_calls = []
+
+    monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
+    monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(
+        disks,
+        "_macos_terminal_newfs",
+        lambda *a, **k: term_calls.append(a) or (True, ""),
+    )
+    ok, err = disks._macos_force_cluster32("disk4", "disk4s1", "DSI_SD")
+    assert ok is True
+    assert term_calls
+
+
+def test_macos_admin_shell_uses_disk_c64():
+    sh = disks._macos_admin_newfs_shell(
+        "/sbin/newfs_msdos", "DSI_SD", "disk4", "disk4s1"
+    )
+    assert "-c 64" in sh
+    assert "/dev/disk4s1" in sh
+    assert "unmountDisk force /dev/disk4" in sh
+    ok, _ = disks._macos_force_cluster32("disk4;rm", "disk4s1", "DSI_SD")
+    assert ok is False
+    ok, _ = disks._macos_force_cluster32("disk4", "disk5s1", "DSI_SD")
+    assert ok is False
+
+
 def test_resolve_safe_drive_match(monkeypatch, tmp_path):
     sd = tmp_path / "SD"
     sd.mkdir()
