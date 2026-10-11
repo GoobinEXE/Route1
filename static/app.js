@@ -107,6 +107,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     R1K.events.on("busy", (p) => {
       if (p && typeof p.busy === "boolean") setBusy(!!p.busy);
     });
+    R1K.events.on("progress", (p) => {
+      updateOpProgress(p);
+    });
   }
 
   try {
@@ -232,6 +235,10 @@ function setBusy(isBusy, sourceBtn) {
     activeActionLabel = null;
   }
 
+  if (!busy) {
+    hideOpProgress();
+  }
+
   scheduleLogPolling();
   if (typeof RomExplorer !== "undefined" && RomExplorer.updateRemoveBtn) {
     RomExplorer.updateRemoveBtn();
@@ -239,6 +246,56 @@ function setBusy(isBusy, sourceBtn) {
   if (typeof Wizard !== "undefined" && Wizard.onBusyChange) {
     Wizard.onBusyChange(busy);
   }
+}
+
+const _PROGRESS_OPS = new Set([
+  "dspico_artwork_batch",
+  "twilight_artwork_batch",
+  "dspico_import_games",
+]);
+
+function hideOpProgress() {
+  const root = document.getElementById("r1k-op-progress");
+  if (!root) return;
+  root.classList.add("hidden");
+  root.setAttribute("aria-hidden", "true");
+}
+
+function updateOpProgress(payload) {
+  if (!payload || typeof payload !== "object") return;
+  const op = payload.op || "";
+  if (!_PROGRESS_OPS.has(op) && !payload.done) return;
+
+  const root = document.getElementById("r1k-op-progress");
+  const bar = document.getElementById("r1k-op-progress-bar");
+  const countEl = document.getElementById("r1k-op-progress-count");
+  const labelEl = document.getElementById("r1k-op-progress-label");
+  if (!root || !bar || !countEl || !labelEl) return;
+
+  if (payload.done) {
+    const total = Math.max(0, parseInt(payload.total, 10) || 0);
+    const written = Math.max(0, parseInt(payload.written, 10) || 0);
+    countEl.textContent =
+      total > 0 ? `${total} / ${total} · ${written} feitos` : "Concluído";
+    labelEl.textContent = String(payload.label || "Concluído");
+    bar.style.width = "100%";
+    root.classList.remove("hidden");
+    root.setAttribute("aria-hidden", "false");
+    return;
+  }
+
+  const total = Math.max(0, parseInt(payload.total, 10) || 0);
+  const current = Math.max(0, parseInt(payload.current, 10) || 0);
+  const written = Math.max(0, parseInt(payload.written, 10) || 0);
+  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+  countEl.textContent =
+    total > 0
+      ? `${current} / ${total} · ${written} feitos`
+      : `${written} feitos`;
+  labelEl.textContent = String(payload.label || "A processar…");
+  bar.style.width = `${pct}%`;
+  root.classList.remove("hidden");
+  root.setAttribute("aria-hidden", "false");
 }
 
 function syncDriveSelects() {

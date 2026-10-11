@@ -108,6 +108,9 @@ IMPORTABLE_EXTS = frozenset(
     ext for ext, plat in PLATFORM_BY_EXT.items() if plat is not None
 ) | {".ids", ".app", ".srl"}
 
+CONFLICT_RESOLUTIONS = frozenset({"replace", "keep_both", "skip"})
+NDS_ROM_EXTS = frozenset({".nds", ".dsi", ".ids", ".app"})
+
 
 def normalize_save_mode(mode) -> Optional[str]:
     if mode is None or mode == "":
@@ -164,6 +167,66 @@ def _format_size(n: int) -> str:
     if n < 1024 * 1024:
         return f"{n / 1024:.1f} KB"
     return f"{n / (1024 * 1024):.1f} MB"
+
+
+def _valid_nds_tid(game_code: Optional[str]) -> Optional[str]:
+    code = (game_code or "").replace("\x00", "").strip().upper()
+    if len(code) != 4 or not code.isalnum():
+        return None
+    return code
+
+
+def _strip_unique_name_suffix(name: str) -> str:
+    """Remove sufixos de cópia: «Game (2)» / «Game_2» → «Game»."""
+    s = (name or "").strip()
+    if not s:
+        return s
+    s = re.sub(r"\s*\(\d+\)$", "", s)
+    s = re.sub(r"_\d+$", "", s)
+    return s.strip() or name.strip()
+
+
+def duplicate_key(
+    platform: Optional[str],
+    game_code: Optional[str],
+    clean_name: Optional[str],
+) -> Optional[str]:
+    """
+    Chave de identidade para «mesmo jogo».
+    NDS/DSi com TID válido → tid:XXXX; senão platform:nome_limpo.
+    """
+    tid = _valid_nds_tid(game_code)
+    if tid:
+        return f"tid:{tid}"
+    plat = (platform or "").strip().lower()
+    name = _strip_unique_name_suffix((clean_name or "").strip()).lower()
+    if not plat or not name:
+        return None
+    return f"name:{plat}:{name}"
+
+
+def conflict_id_for(dup_key: str, src_basename: str) -> str:
+    base = os.path.basename(src_basename or "").strip() or "?"
+    return f"{dup_key}|{base}"
+
+
+def normalize_conflict_resolutions(raw) -> Optional[dict[str, str]]:
+    """Valida mapa conflict_id → replace|keep_both|skip. None se inválido."""
+    if raw is None:
+        return {}
+    if not isinstance(raw, dict):
+        return None
+    out: dict[str, str] = {}
+    for k, v in raw.items():
+        if not isinstance(k, str) or not k.strip():
+            continue
+        if not isinstance(v, str):
+            return None
+        low = v.strip().lower()
+        if low not in CONFLICT_RESOLUTIONS:
+            return None
+        out[k.strip()] = low
+    return out
 
 
 def _find_sidecars(rom_path: str, roms_root: str) -> list[dict[str, Any]]:
@@ -738,22 +801,279 @@ def _companion_saves_near(host_path: str) -> list[str]:
     return out
 
 
+def _rom_dup_summary(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "rel_path": item.get("rel_path"),
+        "name": item.get("name"),
+        "display_name": item.get("display_name") or item.get("name"),
+        "platform": item.get("platform"),
+        "game_code": item.get("game_code"),
+        "size": item.get("size") or 0,
+        "size_label": item.get("size_label") or _format_size(item.get("size") or 0),
+        "has_save": bool(item.get("has_save")),
+    }
+
+
+def _index_roms_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]:
+    """Indexa ROMs do cartão por chave de duplicata (ignora system)."""
+    listed = list_roms(mount_path)
+    if not listed.get("success"):
+        return {}
+    index: dict[str, list[dict[str, Any]]] = {}
+    for item in listed.get("roms") or []:
+        if not isinstance(item, dict):
+            continue
+        if (item.get("kind") or "game") == "system":
+            continue
+        key = duplicate_key(
+            item.get("platform"),
+            item.get("game_code"),
+            item.get("display_name") or clean_rom_filename(
+                item.get("name") or "", item.get("game_code")
+            ),
+        )
+        if not key:
+            continue
+        index.setdefault(key, []).append(_rom_dup_summary(item))
+    return index
+
+
+def find_duplicate_roms(mount_path: str) -> dict[str, Any]:
+    """Grupos de jogos iguais sob /roms/ (≥2 ficheiros por chave)."""
+    if not os.path.isdir(mount_path):
+        return {"success": False, "error": "Cartão inexistente.", "groups": []}
+    index = _index_roms_by_dup_key(mount_path)
+    groups: list[dict[str, Any]] = []
+    for key, items in sorted(index.items(), key=lambda kv: kv[0]):
+        if len(items) < 2:
+            continue
+        label = items[0].get("display_name") or key
+        tid = key[4:] if key.startswith("tid:") else None
+        if tid:
+            label = f"{label} ({tid})"
+        groups.append({"key": key, "label": label, "items": items})
+    return {"success": True, "groups": groups, "count": len(groups)}
+
+
+def _collect_import_jobs(
+    mount_path: str,
+    host_paths: list,
+    log=None,
+) -> tuple[list[tuple], int, dict, list[str]]:
+    """
+    Expande arquivos e monta jobs de import.
+    Devolve (jobs, skipped, expand_stats, expand_errors).
+    Cada job: (src, clean, ext, platform, game_code, raw_title, kind, companions, bytes).
+    Caller deve cleanup_expand_staging(expand_stats).
+    """
+    from core.archive_roms import expand_rom_sources
+
+    jobs: list[tuple] = []
+    skipped = 0
+    expand_stats: dict = {}
+    rom_paths, expand_errors, expand_stats = expand_rom_sources(
+        list(host_paths), IMPORTABLE_EXTS
+    )
+    mount_real = os.path.realpath(mount_path)
+    for src in rom_paths:
+        if not os.path.isfile(src):
+            if log:
+                log(f"⚠️ Ignorado (não é ficheiro): {redact_path(src)}")
+            skipped += 1
+            continue
+        try:
+            if os.path.commonpath([mount_real, src]) == mount_real:
+                if log:
+                    log(f"⚠️ Ignorado (já no cartão): {os.path.basename(src)}")
+                skipped += 1
+                continue
+        except ValueError:
+            pass
+
+        name = os.path.basename(src)
+        ext = os.path.splitext(name)[1].lower()
+        if ext not in IMPORTABLE_EXTS and PLATFORM_BY_EXT.get(ext) is None:
+            if log:
+                log(f"⚠️ Extensão não suportada: {name}")
+            skipped += 1
+            continue
+
+        header_info = None
+        game_code = None
+        raw_title = None
+        kind = None
+        if ext in NDS_ROM_EXTS:
+            header_info = get_nds_header_info(src)
+            raw_title, game_code, _uc, maker = header_info
+            kind = classify_nds_kind(raw_title, game_code, maker, name, at_sd_root=False)
+            if kind == "system":
+                if log:
+                    log(f"⚠️ Ignorado (bootloader/sistema): {name}")
+                skipped += 1
+                continue
+
+        platform = detect_platform(src, name, ext, header_info=header_info, kind=kind)
+        if not platform:
+            if log:
+                log(f"⚠️ Plataforma desconhecida: {name}")
+            skipped += 1
+            continue
+
+        clean = clean_rom_filename(name, game_code)
+        companions = _companion_saves_near(src)
+        job_bytes = 0
+        try:
+            job_bytes += os.path.getsize(src)
+            for c in companions:
+                job_bytes += os.path.getsize(c)
+        except OSError:
+            pass
+        jobs.append(
+            (src, clean, ext, platform, game_code, raw_title, kind, companions, job_bytes)
+        )
+    return jobs, skipped, expand_stats, list(expand_errors)
+
+
+def _remove_existing_rom_files(
+    mount_path: str,
+    existing_items: list[dict[str, Any]],
+    log=None,
+) -> None:
+    """Apaga ROMs existentes (e sidecars locais) antes de substituir no import."""
+    roms_root = _roms_root(mount_path)
+    for item in existing_items:
+        rel = item.get("rel_path") if isinstance(item, dict) else None
+        if not isinstance(rel, str) or not rel.strip():
+            continue
+        path = _resolve_under_roms(mount_path, rel)
+        if not path or not os.path.isfile(path):
+            continue
+        sidecars = _find_sidecars(path, roms_root)
+        try:
+            os.remove(path)
+            if log:
+                log(f"🗑️ Substituir: removido /roms/{rel}")
+        except OSError as e:
+            if log:
+                log(f"⚠️ Não foi possível remover /roms/{rel}: {e}")
+            continue
+        for sc in sidecars:
+            sc_rel = sc.get("rel_path")
+            if not sc_rel:
+                continue
+            sc_path = _resolve_under_roms(mount_path, sc_rel)
+            if not sc_path or not os.path.isfile(sc_path):
+                continue
+            try:
+                os.remove(sc_path)
+            except OSError:
+                pass
+
+
+def check_rom_import_conflicts(
+    mount_path: str,
+    host_paths: list,
+    layout: str = "console",
+    dest_rel_dir: str = "",
+) -> dict[str, Any]:
+    """Pré-scan de import: conflitos por chave de duplicata (sem escrever)."""
+    from core.archive_roms import cleanup_expand_staging
+
+    mode = normalize_layout(layout)
+    if mode is None:
+        return {"success": False, "error": f"Layout inválido: {layout!r}.", "conflicts": []}
+    dest_norm = _normalize_rel_dir(dest_rel_dir) if dest_rel_dir else ""
+    if dest_norm is None:
+        return {"success": False, "error": "Pasta de destino inválida.", "conflicts": []}
+    if dest_norm:
+        forced = _resolve_under_roms(mount_path, dest_norm)
+        if not forced or not os.path.isdir(forced):
+            return {
+                "success": False,
+                "error": f"Destino /roms/{dest_norm}/ inexistente.",
+                "conflicts": [],
+            }
+    if not isinstance(host_paths, (list, tuple)) or not host_paths:
+        return {"success": False, "error": "Nenhum ficheiro seleccionado.", "conflicts": []}
+    if not os.path.isdir(mount_path):
+        return {"success": False, "error": "Cartão inexistente.", "conflicts": []}
+
+    expand_stats: dict = {}
+    try:
+        jobs, skipped, expand_stats, expand_errors = _collect_import_jobs(
+            mount_path, list(host_paths)
+        )
+    except Exception as e:
+        return {"success": False, "error": f"Falha ao preparar ficheiros: {e}", "conflicts": []}
+
+    try:
+        if not jobs:
+            return {
+                "success": False,
+                "error": "Nenhum ROM válido para importar.",
+                "conflicts": [],
+                "skipped": skipped,
+                "expand_errors": expand_errors[:5],
+            }
+        index = _index_roms_by_dup_key(mount_path)
+        conflicts: list[dict[str, Any]] = []
+        for job in jobs:
+            src, clean, _ext, platform, game_code, _rt, _kind, _comp, _b = job
+            key = duplicate_key(platform, game_code, clean)
+            if not key:
+                continue
+            existing = index.get(key) or []
+            if not existing:
+                continue
+            basename = os.path.basename(src)
+            conflicts.append(
+                {
+                    "conflict_id": conflict_id_for(key, basename),
+                    "key": key,
+                    "src_name": basename,
+                    "display_name": clean,
+                    "platform": platform,
+                    "game_code": _valid_nds_tid(game_code),
+                    "existing": existing,
+                }
+            )
+        return {
+            "success": True,
+            "conflicts": conflicts,
+            "job_count": len(jobs),
+            "skipped": skipped,
+            "has_conflicts": bool(conflicts),
+        }
+    finally:
+        cleanup_expand_staging(expand_stats)
+
+
 def import_roms(
     mount_path: str,
     host_paths: list,
     layout: str = "console",
     dest_rel_dir: str = "",
     log_callback=None,
+    conflict_resolutions=None,
 ) -> tuple[bool, str, dict]:
     """
     Copia ROMs (e saves companheiros) do host para /roms/ com cópia rápida.
     Se dest_rel_dir for uma pasta existente sob /roms/, grava lá (ignora layout).
     Caso contrário usa rom_dest_dir + layout.
+
+    conflict_resolutions: mapa conflict_id → replace|keep_both|skip.
+    Sem entrada para um conflito → keep_both (comportamento histórico).
     """
+    from core.archive_roms import cleanup_expand_staging
+
     log = lambda msg: emit_log(log_callback, msg)
     mode = normalize_layout(layout)
     if mode is None:
         return False, f"Layout inválido: {layout!r}.", {}
+
+    resolutions = normalize_conflict_resolutions(conflict_resolutions)
+    if resolutions is None:
+        return False, "Resoluções de conflito inválidas.", {}
 
     forced_dest = None
     dest_norm = _normalize_rel_dir(dest_rel_dir) if dest_rel_dir else ""
@@ -770,77 +1090,61 @@ def import_roms(
     roms_root = _roms_root(mount_path)
     os.makedirs(roms_root, exist_ok=True)
 
-    # Pré-validar e estimar espaço
-    jobs: list[tuple] = []
-    # (src, clean, ext, platform, game_code, raw_title, kind, companions)
-    total_bytes = 0
-    skipped = 0
+    expand_stats: dict = {}
+    try:
+        jobs, skipped, expand_stats, expand_errors = _collect_import_jobs(
+            mount_path, list(host_paths), log=log
+        )
+    except Exception as e:
+        return False, f"Falha ao preparar ficheiros: {e}", {}
 
-    for raw in host_paths:
-        if not isinstance(raw, str) or not raw.strip() or "\x00" in raw:
-            skipped += 1
-            continue
-        src = os.path.realpath(raw.strip())
-        if not os.path.isfile(src):
-            log(f"⚠️ Ignorado (não é ficheiro): {redact_path(src)}")
-            skipped += 1
-            continue
-        # Não importar de dentro do próprio cartão
-        try:
-            if os.path.commonpath([os.path.realpath(mount_path), src]) == os.path.realpath(
-                mount_path
-            ):
-                log(f"⚠️ Ignorado (já no cartão): {os.path.basename(src)}")
-                skipped += 1
-                continue
-        except ValueError:
-            pass
-
-        name = os.path.basename(src)
-        ext = os.path.splitext(name)[1].lower()
-        if ext not in IMPORTABLE_EXTS and PLATFORM_BY_EXT.get(ext) is None:
-            log(f"⚠️ Extensão não suportada: {name}")
-            skipped += 1
-            continue
-
-        header_info = None
-        game_code = None
-        raw_title = None
-        kind = None
-        if ext in (".nds", ".dsi", ".ids", ".app"):
-            header_info = get_nds_header_info(src)
-            raw_title, game_code, _uc, maker = header_info
-            kind = classify_nds_kind(raw_title, game_code, maker, name, at_sd_root=False)
-            if kind == "system":
-                log(f"⚠️ Ignorado (bootloader/sistema): {name}")
-                skipped += 1
-                continue
-
-        platform = detect_platform(src, name, ext, header_info=header_info, kind=kind)
-        if not platform:
-            log(f"⚠️ Plataforma desconhecida: {name}")
-            skipped += 1
-            continue
-
-        clean = clean_rom_filename(name, game_code)
-        companions = _companion_saves_near(src)
-        try:
-            total_bytes += os.path.getsize(src)
-            for c in companions:
-                total_bytes += os.path.getsize(c)
-        except OSError:
-            pass
-        jobs.append((src, clean, ext, platform, game_code, raw_title, kind, companions))
+    for err in expand_errors:
+        log(f"⚠️ {err}")
+        skipped += 1
+    if expand_stats.get("archives"):
+        log(
+            f"Arquivos: {expand_stats['archives']} · "
+            f"ROMs extraídas: {expand_stats.get('extracted_roms', 0)}"
+        )
 
     if not jobs:
+        cleanup_expand_staging(expand_stats)
         return False, "Nenhum ROM válido para importar.", {"skipped": skipped}
 
-    # Espaço livre
+    index = _index_roms_by_dup_key(mount_path)
+    # Filtrar skips e calcular bytes a copiar
+    active_jobs: list[tuple] = []
+    total_bytes = 0
+    for job in jobs:
+        src, clean, ext, platform, game_code, raw_title, kind, companions, job_bytes = job
+        key = duplicate_key(platform, game_code, clean)
+        cid = conflict_id_for(key, os.path.basename(src)) if key else None
+        existing = index.get(key) if key else None
+        resolution = "keep_both"
+        if existing and cid:
+            resolution = resolutions.get(cid, "keep_both")
+        if resolution == "skip":
+            log(f"⏭️ Ignorado (duplicata): {os.path.basename(src)}")
+            skipped += 1
+            continue
+        active_jobs.append(
+            (src, clean, ext, platform, game_code, raw_title, kind, companions, resolution, existing or [])
+        )
+        total_bytes += job_bytes
+
+    if not active_jobs:
+        cleanup_expand_staging(expand_stats)
+        return True, f"Nada a importar ({skipped} ignorado(s)).", {
+            "imported": 0,
+            "skipped": skipped,
+        }
+
     try:
         st = os.statvfs(mount_path)
         free = st.f_bavail * st.f_frsize
         if free < total_bytes + (4 * 1024 * 1024):
             need_mb = (total_bytes / (1024 * 1024)) + 4
+            cleanup_expand_staging(expand_stats)
             return (
                 False,
                 f"Espaço insuficiente no cartão (precisa ~{need_mb:.0f} MB livres).",
@@ -850,17 +1154,27 @@ def import_roms(
         pass
 
     dest_note = f"pasta=/roms/{dest_norm}/" if forced_dest else f"layout={mode}"
-    log(f"=== Importar {len(jobs)} ROM(s) (cópia rápida, {dest_note}) ===")
+    log(f"=== Importar {len(active_jobs)} ROM(s) (cópia rápida, {dest_note}) ===")
     undo = UndoStack()
     imported = 0
     saves_copied = 0
     failures = 0
     bytes_copied = 0
+    replaced = 0
 
     try:
-        for i, (src, clean, ext, platform, game_code, raw_title, kind, companions) in enumerate(
-            jobs, start=1
-        ):
+        for i, (
+            src,
+            clean,
+            ext,
+            platform,
+            game_code,
+            raw_title,
+            kind,
+            companions,
+            resolution,
+            existing,
+        ) in enumerate(active_jobs, start=1):
             if forced_dest:
                 dest_dir = forced_dest
             else:
@@ -881,7 +1195,14 @@ def import_roms(
             if out_ext == ".app":
                 out_ext = ".dsi"
 
-            dest = _unique_path(os.path.join(dest_dir, f"{clean}{out_ext}"))
+            intended = os.path.join(dest_dir, f"{clean}{out_ext}")
+            if resolution == "replace" and existing:
+                _remove_existing_rom_files(mount_path, existing, log=log)
+                replaced += len(existing)
+                dest = intended
+            else:
+                dest = _unique_path(intended)
+
             try:
                 n = copy_fast(src, dest, log_callback=log_callback)
                 undo.push_remove(dest)
@@ -891,7 +1212,7 @@ def import_roms(
                     rel = os.path.relpath(dest, roms_root).replace("\\", "/")
                 except ValueError:
                     rel = os.path.basename(dest)
-                log(f"📥 [{i}/{len(jobs)}] {os.path.basename(src)} ➔ /roms/{rel}")
+                log(f"📥 [{i}/{len(active_jobs)}] {os.path.basename(src)} ➔ /roms/{rel}")
             except Exception as e:
                 failures += 1
                 log(f"⚠️ Falha ao copiar {os.path.basename(src)}: {e}")
@@ -917,29 +1238,36 @@ def import_roms(
     except Exception as e:
         log(f"⚠️ Erro na importação — a reverter cópias deste lote…")
         undo.rollback(log_callback=log_callback, mount_path=mount_path)
+        cleanup_expand_staging(expand_stats)
         return False, f"Importação falhou: {e}", {"imported": 0}
 
-    # Se tudo falhou, reverter
     if imported == 0 and failures:
         undo.rollback(log_callback=log_callback, mount_path=mount_path)
+        cleanup_expand_staging(expand_stats)
         return False, f"Nenhum ficheiro copiado ({failures} erro(s)).", {"failures": failures}
 
     mb = bytes_copied / (1024 * 1024)
     msg = (
         f"{imported} jogo(s) importado(s) ({mb:.1f} MB)"
         + (f", {saves_copied} save(s)" if saves_copied else "")
+        + (f"; {replaced} substituído(s)" if replaced else "")
         + (f"; {skipped} ignorado(s)" if skipped else "")
         + (f"; {failures} falha(s)" if failures else "")
         + "."
     )
+    if expand_stats.get("archives"):
+        msg = msg.rstrip(".") + f"; {expand_stats['archives']} arquivo(s)."
     log(f"✅ {msg}")
     ok = imported > 0
+    cleanup_expand_staging(expand_stats)
     return ok, msg, {
         "imported": imported,
         "saves": saves_copied,
         "skipped": skipped,
         "failures": failures,
         "bytes": bytes_copied,
+        "replaced": replaced,
+        "archives": expand_stats.get("archives", 0),
     }
 
 
@@ -947,13 +1275,6 @@ def _twilight_asset_dir(mount_path: str, kind: str) -> str:
     """kind: boxart | icons"""
     name = "boxart" if kind == "boxart" else "icons"
     return os.path.join(mount_path, "_nds", "TWiLightMenu", name)
-
-
-def _valid_nds_tid(game_code: Optional[str]) -> Optional[str]:
-    code = (game_code or "").replace("\x00", "").strip().upper()
-    if len(code) != 4 or not code.isalnum():
-        return None
-    return code
 
 
 def _boxart_path(mount_path: str, game_code: Optional[str]) -> Optional[str]:

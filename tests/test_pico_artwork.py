@@ -190,17 +190,24 @@ def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypat
     make_nds(str(games / "Miss.nds"), title=b"MISSINGGAME", code=b"ZZZZ", maker=b"01")
 
     png = _solid_png(64, 48)
+    gets = {"n": 0, "exists": 0}
 
     def fake_exists(url):
-        return "AMCE" in url or "Mario" in url or "Kart" in url
+        gets["exists"] += 1
+        return False
 
-    def fake_get(url):
+    def fake_get(url, timeout=None):
+        gets["n"] += 1
         if "AMCE" in url or "Kart" in url or "Mario" in url:
             return png
-        raise OSError("not found")
+        return None
+
+    syncs = {"n": 0}
 
     monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
-    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+    monkeypatch.setattr(
+        pico_artwork, "sync_volume", lambda *a, **k: syncs.__setitem__("n", syncs["n"] + 1)
+    )
     monkeypatch.setattr(pico_artwork, "_http_exists", fake_exists)
     monkeypatch.setattr(pico_artwork, "_http_get", fake_get)
 
@@ -208,6 +215,9 @@ def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypat
     assert res["success"] is True
     assert res["written"] >= 1
     assert (fake_sd / "_pico" / "covers" / "nds" / "AMCE.bmp").is_file()
+    # Lote optimizado: sem HEAD; sync uma vez no fim
+    assert gets["exists"] == 0
+    assert syncs["n"] == 1
     missing = res.get("missing") or []
     assert any(
         (m.get("rel_path") or "").endswith("Miss.nds")
@@ -216,13 +226,51 @@ def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypat
     )
 
 
+def test_batch_candidate_urls_capped():
+    urls = pico_artwork._batch_candidate_urls(
+        kind="cover",
+        platform="nds",
+        basename="Super Long Game Name (USA) (Rev 1).nds",
+        tid="AMCE",
+        title="Super Long Game Name",
+    )
+    assert len(urls) <= pico_artwork._BATCH_MAX_CANDIDATES
+    assert any("gametdb.com" in u for u in urls)
+    # Sem explosão de sufixos região (usa libretro_name_candidates)
+    assert len(urls) < 20
+
+
+def test_dspico_batch_emits_progress(fake_sd, monkeypatch):
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+
+    events = []
+
+    def fake_emit(payload):
+        events.append(payload)
+
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "_http_get", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "_emit_batch_progress", fake_emit)
+
+    res = pico_artwork.generate_dspico_artwork_batch(str(fake_sd), max_games=10)
+    assert res["success"] is True
+    assert events
+    assert events[0]["op"] == "dspico_artwork_batch"
+    assert events[-1].get("done") is True
+    currents = [e["current"] for e in events if e.get("total")]
+    assert max(currents) >= 1
+
+
 def test_generate_dspico_covers_batch_alias(fake_sd, monkeypatch):
     games = fake_sd / "Games"
     games.mkdir()
     make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
     monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
     monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
-    monkeypatch.setattr(pico_artwork, "_http_exists", lambda u: False)
+    monkeypatch.setattr(pico_artwork, "_http_get", lambda *a, **k: None)
     res = pico_artwork.generate_dspico_covers_batch(str(fake_sd), max_games=10)
     assert res["success"] is True
     assert "missing" in res

@@ -2131,6 +2131,62 @@ html[data-theme="gameboy"] .brand-mark {
   transition: transform 0.18s var(--ease);
 }
 
+.rom-x-sheet--wide {
+  width: min(100%, 32rem);
+  max-height: min(80vh, 36rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.rom-x-dupe-list {
+  overflow: auto;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-right: 0.15rem;
+}
+
+.rom-x-dupe-group {
+  border: 1px solid rgb(var(--c-line));
+  border-radius: var(--radius-sm);
+  padding: 0.55rem 0.65rem;
+  background: rgb(var(--c-surface-2) / 0.55);
+}
+
+.rom-x-dupe-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--c-fg));
+  margin: 0 0 0.35rem;
+}
+
+.rom-x-dupe-group-sub {
+  font-size: 11px;
+  color: rgb(var(--c-fg-mute));
+  margin: 0 0 0.45rem;
+}
+
+.rom-x-dupe-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.rom-x-dupe-choices label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 11px;
+  color: rgb(var(--c-fg-soft));
+  cursor: pointer;
+}
+
+.rom-x-dupe-choices label code {
+  font-size: 10px;
+  color: rgb(var(--c-fg-mute));
+}
+
 .rom-x-overlay:not(.hidden) .rom-x-sheet {
   transform: none;
 }

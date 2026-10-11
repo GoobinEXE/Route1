@@ -293,3 +293,112 @@ def test_set_rom_artwork_rejects_traversal(fake_sd, tmp_path):
         str(fake_sd), "../boot.nds", "boxart", str(png)
     )
     assert not ok
+
+
+def test_find_duplicate_roms_by_game_code(fake_sd):
+    nds = fake_sd / "roms" / "nds"
+    nds.mkdir(parents=True)
+    make_nds(nds / "Kart.nds", title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    make_nds(nds / "Kart (2).nds", title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    make_nds(nds / "Other.nds", title=b"OTHERGAME", code=b"BBBB", maker=b"01")
+
+    data = rom_manager.find_duplicate_roms(str(fake_sd))
+    assert data["success"]
+    assert data["count"] == 1
+    group = data["groups"][0]
+    assert group["key"] == "tid:AMCE"
+    assert len(group["items"]) == 2
+
+
+def test_find_duplicate_roms_gba_by_name(fake_sd):
+    gba = fake_sd / "roms" / "gba"
+    gba.mkdir(parents=True)
+    (gba / "Minish.gba").write_bytes(b"GBA-ROM-A" * 20)
+    (gba / "Minish (2).gba").write_bytes(b"GBA-ROM-B" * 20)
+
+    data = rom_manager.find_duplicate_roms(str(fake_sd))
+    assert data["success"]
+    assert data["count"] == 1
+    assert data["groups"][0]["key"].startswith("name:gba:")
+    assert len(data["groups"][0]["items"]) == 2
+
+
+def test_check_and_import_conflict_resolutions(fake_sd, tmp_path):
+    nds = fake_sd / "roms" / "nds"
+    nds.mkdir(parents=True)
+    make_nds(nds / "Kart.nds", title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+
+    src = tmp_path / "NewKart.nds"
+    make_nds(src, title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+
+    check = rom_manager.check_rom_import_conflicts(
+        str(fake_sd), [str(src)], layout="console"
+    )
+    assert check["success"]
+    assert check["has_conflicts"]
+    assert len(check["conflicts"]) == 1
+    cid = check["conflicts"][0]["conflict_id"]
+    assert cid.startswith("tid:AMCE|")
+
+    ok, msg, stats = rom_manager.import_roms(
+        str(fake_sd),
+        [str(src)],
+        layout="console",
+        conflict_resolutions={cid: "skip"},
+    )
+    assert ok, msg
+    assert stats["imported"] == 0
+    assert stats["skipped"] >= 1
+    assert len(list(nds.glob("*.nds"))) == 1
+
+    ok, msg, stats = rom_manager.import_roms(
+        str(fake_sd),
+        [str(src)],
+        layout="console",
+        conflict_resolutions={cid: "keep_both"},
+    )
+    assert ok, msg
+    assert stats["imported"] == 1
+    assert len(list(nds.glob("*.nds"))) == 2
+
+    for p in nds.glob("*.nds"):
+        p.unlink()
+    make_nds(
+        nds / "Kart.nds",
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+        payload=b"\x00" * 100,
+    )
+    old_size = (nds / "Kart.nds").stat().st_size
+    src2 = tmp_path / "Bigger.nds"
+    make_nds(
+        src2,
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+        payload=b"\x11" * 4096,
+    )
+    check2 = rom_manager.check_rom_import_conflicts(
+        str(fake_sd), [str(src2)], layout="console"
+    )
+    cid2 = check2["conflicts"][0]["conflict_id"]
+    ok, msg, stats = rom_manager.import_roms(
+        str(fake_sd),
+        [str(src2)],
+        layout="console",
+        conflict_resolutions={cid2: "replace"},
+    )
+    assert ok, msg
+    assert stats["imported"] == 1
+    assert stats.get("replaced", 0) >= 1
+    files = list(nds.glob("*.nds"))
+    assert len(files) == 1
+    assert files[0].stat().st_size > old_size
+
+
+def test_normalize_conflict_resolutions_rejects_bad():
+    assert rom_manager.normalize_conflict_resolutions(None) == {}
+    assert rom_manager.normalize_conflict_resolutions({"a": "skip"}) == {"a": "skip"}
+    assert rom_manager.normalize_conflict_resolutions({"a": "nope"}) is None
+    assert rom_manager.normalize_conflict_resolutions("x") is None

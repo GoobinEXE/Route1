@@ -41,10 +41,22 @@ _ALLOWED_HOSTS = frozenset(
 _DOWNLOAD_TIMEOUT = 25
 _PROBE_TIMEOUT = 12
 _MAX_CANDIDATES = 16
+_BATCH_MAX_CANDIDATES = 8
+_BATCH_DOWNLOAD_TIMEOUT = 10
 _INTER_DELAY = 0.08
 # Capas/ícones são imagens pequenas; sem teto um redirect/stream pode encher o disco.
 _MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
 _MAX_PROBE_BYTES = 256
+
+
+def _emit_batch_progress(payload: dict[str, Any]) -> None:
+    """Push best-effort para a UI (não bloqueia o lote)."""
+    try:
+        from services import web_events
+
+        web_events.emit("progress", payload)
+    except Exception:
+        pass
 
 _REGION_SUFFIXES = (
     "",
@@ -557,6 +569,7 @@ def _write_pico_bmp(
     log: LogFn,
     stats: dict[str, Any],
     note: str,
+    defer_sync: bool = False,
 ) -> tuple[bool, str, dict[str, Any]]:
     dests = _dest_paths(mount_path, meta["basename"], meta["game_code"], kind)
     if not dests:
@@ -582,10 +595,11 @@ def _write_pico_bmp(
             pass
         return False, f"Falha ao gravar arte: {e}", stats
 
-    try:
-        sync_volume(mount_path)
-    except Exception:
-        pass
+    if not defer_sync:
+        try:
+            sync_volume(mount_path)
+        except Exception:
+            pass
 
     label = "capa" if kind == "cover" else "ícone"
     rel_dest = os.path.relpath(dest, mount_path).replace("\\", "/")
@@ -593,6 +607,82 @@ def _write_pico_bmp(
     stats["path"] = rel_dest
     stats["kind"] = kind
     return True, f"{label.capitalize()} actualizada em /{rel_dest}.", stats
+
+
+def _batch_candidate_urls(
+    *,
+    kind: str,
+    platform: str,
+    basename: str,
+    tid: Optional[str],
+    title: Optional[str],
+) -> list[str]:
+    """
+    Lista curta para lote: GameTDB → Libretro (sem sufixos região) → jsDelivr.
+    Sem HEAD — o caller faz GET directo na 1.ª que converter.
+    """
+    urls: list[str] = []
+    seen: set[str] = set()
+
+    def _push(url: str) -> None:
+        if not url or url in seen or not _url_allowed(url):
+            return
+        seen.add(url)
+        urls.append(url)
+
+    lr_kind = "boxart" if kind == "cover" else "icon"
+    plat = platform if platform in LIBRETRO_SYSTEMS else "nds"
+
+    if kind == "cover" and tid:
+        for url in boxart_urls_for_tid(tid)[:3]:
+            _push(url)
+
+    names: list[str] = []
+    for raw in (basename, title or ""):
+        if not raw:
+            continue
+        for n in libretro_name_candidates(raw if "." in raw else f"{raw}.nds"):
+            if n not in names:
+                names.append(n)
+        if len(names) >= 3:
+            break
+
+    for name in names[:3]:
+        for url in libretro_urls(plat, name, kind=lr_kind):
+            _push(url)
+        for url in jsdelivr_libretro_urls(plat, name, kind=lr_kind):
+            _push(url)
+        if len(urls) >= _BATCH_MAX_CANDIDATES:
+            break
+
+    return urls[:_BATCH_MAX_CANDIDATES]
+
+
+def _apply_bytes_to_meta(
+    mount_path: str,
+    meta: dict[str, Any],
+    kind: str,
+    raw: bytes,
+    *,
+    log: LogFn,
+    defer_sync: bool = True,
+) -> bool:
+    """Converte bytes → BMP Pico e grava com meta já resolvido."""
+    try:
+        bmp = image_bytes_to_pico_bmp(raw, kind)
+    except ValueError:
+        return False
+    ok, _msg, _st = _write_pico_bmp(
+        mount_path,
+        meta,
+        kind,
+        bmp,
+        log=log,
+        stats={},
+        note="lote",
+        defer_sync=defer_sync,
+    )
+    return ok
 
 
 def get_dspico_game_artwork(
@@ -646,6 +736,7 @@ def generate_dspico_artwork_batch(
     """
     Gera capas e ícones Pico (BMP) em lote — 1.ª URL válida por kind.
     Não sobrescreve arte já existente. Retorna missing[] para falhas.
+    Optimizado: poucos candidatos, GET directo (sem HEAD), sync no fim.
     """
     log = lambda msg: emit_log(log_callback, msg)
     try:
@@ -693,10 +784,27 @@ def generate_dspico_artwork_batch(
     skipped = 0
     failed = 0
     missing: list[dict[str, Any]] = []
-    log(f"=== Capas e ícones DSPico em lote: {len(roms)} jogo(s) ===")
+    total = len(roms)
+    log(f"=== Capas e ícones DSPico em lote: {total} jogo(s) ===")
 
-    def _try_kind(rel: str, meta: dict[str, Any], kind: str) -> str:
-        """Retorna 'written' | 'skipped' | 'failed'."""
+    def _progress(
+        current: int, label: str, *, done: bool = False
+    ) -> None:
+        _emit_batch_progress(
+            {
+                "op": "dspico_artwork_batch",
+                "current": current,
+                "total": total,
+                "written": written,
+                "skipped": skipped,
+                "failed": failed,
+                "label": label,
+                "done": done,
+            }
+        )
+
+    def _try_kind(meta: dict[str, Any], kind: str) -> str:
+        """Retorna 'written' | 'skipped' | 'failed'. Sem HEAD; GET curto."""
         nonlocal written, skipped
         existing = resolve_existing_art(
             mount_path, meta["basename"], meta.get("game_code"), kind
@@ -704,31 +812,28 @@ def generate_dspico_artwork_batch(
         if existing:
             skipped += 1
             return "skipped"
-        probes = _collect_candidate_urls(
+        probes = _batch_candidate_urls(
             kind=kind,
             platform=meta.get("platform") or "nds",
             basename=meta["basename"],
             tid=meta.get("game_code"),
             title=meta.get("title"),
-            query="",
         )
-        for item in probes:
-            url = item.get("url")
-            if not isinstance(url, str) or not _url_allowed(url):
-                continue
-            if not _http_exists(url):
+        for url in probes:
+            raw = _http_get(url, timeout=_BATCH_DOWNLOAD_TIMEOUT)
+            if not raw:
                 time.sleep(_INTER_DELAY)
                 continue
-            ok, _msg, _st = apply_dspico_artwork_url(
-                mount_path, rel, kind, url, log_callback=log_callback
-            )
-            time.sleep(_INTER_DELAY)
-            if ok:
+            if _apply_bytes_to_meta(
+                mount_path, meta, kind, raw, log=log, defer_sync=True
+            ):
                 written += 1
                 return "written"
+            time.sleep(_INTER_DELAY)
         return "failed"
 
-    for rel in roms:
+    _progress(0, "A iniciar…")
+    for idx, rel in enumerate(roms, start=1):
         err, meta = _resolve_game(mount_path, rel)
         if err or not meta:
             failed += 1
@@ -741,9 +846,13 @@ def generate_dspico_artwork_batch(
                     "missing_icon": True,
                 }
             )
+            _progress(idx, os.path.basename(rel))
             continue
-        cover_st = _try_kind(rel, meta, "cover")
-        icon_st = _try_kind(rel, meta, "icon")
+        display = meta.get("display_name") or meta.get("basename") or rel
+        _progress(idx, f"{display} — capa")
+        cover_st = _try_kind(meta, "cover")
+        _progress(idx, f"{display} — ícone")
+        icon_st = _try_kind(meta, "icon")
         miss_cover = cover_st == "failed"
         miss_icon = icon_st == "failed"
         if miss_cover or miss_icon:
@@ -758,18 +867,24 @@ def generate_dspico_artwork_batch(
                 }
             )
 
+    try:
+        sync_volume(mount_path)
+    except Exception:
+        pass
+
     msg = (
         f"{written} arte(s) gravada(s); {skipped} já existiam; "
         f"{len(missing)} jogo(s) com falhas."
     )
     log(f"✅ {msg}" if written else f"⚠️ {msg}")
+    _progress(total, msg, done=True)
     return {
         "success": True,
         "message": msg,
         "written": written,
         "skipped": skipped,
         "failed": failed,
-        "scanned": len(roms),
+        "scanned": total,
         "missing": missing,
     }
 

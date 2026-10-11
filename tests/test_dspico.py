@@ -303,3 +303,64 @@ def test_organize_dspico_platform_layout(tmp_path):
     assert any((tmp_path / "Games" / "nds").glob("*.nds"))
     assert (tmp_path / "Games" / "dsi").is_dir()
     assert any((tmp_path / "Games" / "dsi").glob("*.dsi"))
+
+
+def test_find_duplicate_dspico_games(tmp_path):
+    from tests.conftest import make_nds
+
+    _minimal_dspico_sd(tmp_path)
+    games = tmp_path / "Games"
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    make_nds(str(games / "Kart_2.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    make_nds(str(games / "Other.nds"), title=b"OTHERGAME", code=b"ZZZZ", maker=b"01")
+
+    data = dspico.find_duplicate_dspico_games(str(tmp_path))
+    assert data["success"]
+    assert data["count"] == 1
+    assert data["groups"][0]["key"] == "tid:AMCE"
+    assert len(data["groups"][0]["items"]) == 2
+
+
+def test_dspico_import_conflict_skip_and_replace(tmp_path):
+    from tests.conftest import make_nds
+
+    _minimal_dspico_sd(tmp_path)
+    games = tmp_path / "Games"
+    make_nds(
+        str(games / "Kart.nds"),
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+        payload=b"\x00" * 100,
+    )
+    src = tmp_path / "host" / "New.nds"
+    src.parent.mkdir()
+    make_nds(
+        str(src),
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+        payload=b"\x22" * 2048,
+    )
+
+    check = dspico.check_dspico_import_conflicts(str(tmp_path), [str(src)])
+    assert check["success"]
+    assert check["has_conflicts"]
+    cid = check["conflicts"][0]["conflict_id"]
+
+    ok, msg, stats = dspico.import_dspico_games(
+        str(tmp_path), [str(src)], conflict_resolutions={cid: "skip"}
+    )
+    assert ok, msg
+    assert stats["copied"] == 0
+    assert len(list(games.glob("*.nds"))) == 1
+
+    ok, msg, stats = dspico.import_dspico_games(
+        str(tmp_path), [str(src)], conflict_resolutions={cid: "replace"}
+    )
+    assert ok, msg
+    assert stats["copied"] == 1
+    assert stats.get("replaced", 0) >= 1
+    files = list(games.glob("*.nds"))
+    assert len(files) == 1
+    assert files[0].stat().st_size > 0x200 + 100

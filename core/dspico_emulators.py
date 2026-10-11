@@ -382,8 +382,27 @@ def catalog_by_id(emu_id: str) -> Optional[dict[str, Any]]:
     return _CATALOG_BY_ID.get(emu_id)
 
 
-def list_emulators() -> dict[str, Any]:
-    """Catálogo para a UI (sem I/O de cartão)."""
+def probe_emulator_installed(mount_path: str, entry: dict[str, Any]) -> bool:
+    """True se o NDS de destino do emulador existe no cartão."""
+    if not mount_path or not isinstance(mount_path, str):
+        return False
+    rel = (entry or {}).get("nds_dest") or ""
+    if not _safe_rel(rel):
+        return False
+    full = os.path.join(mount_path, *rel.replace("\\", "/").split("/"))
+    try:
+        mount_r = os.path.realpath(mount_path)
+        full_r = os.path.realpath(full)
+        if os.path.commonpath([mount_r, full_r]) != mount_r:
+            return False
+    except (ValueError, OSError):
+        return False
+    return os.path.isfile(full_r)
+
+
+def list_emulators(mount_path: Optional[str] = None) -> dict[str, Any]:
+    """Catálogo para a UI; com mount_path, marca installed por NDS no cartão."""
+    probe = bool(mount_path and isinstance(mount_path, str) and mount_path.strip())
     items = []
     for e in EMULATOR_CATALOG:
         ready = _pin_ready(e["cache_key"])
@@ -391,6 +410,7 @@ def list_emulators() -> dict[str, Any]:
             if not _pin_ready(ck):
                 ready = False
                 break
+        installed = probe_emulator_installed(mount_path or "", e) if probe else False
         items.append(
             {
                 "id": e["id"],
@@ -398,6 +418,7 @@ def list_emulators() -> dict[str, Any]:
                 "category": e["category"],
                 "install_mode": e["install_mode"],
                 "available": ready,
+                "installed": installed,
                 "popular": bool(e.get("popular")),
                 "bios_notes": e.get("bios_notes") or "",
                 "rom_dirs": list(e.get("rom_dirs") or []),

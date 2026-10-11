@@ -40,14 +40,17 @@ from core.privacy import expand_user_path, redact_path, redact_text
 from core.rom_cleaner import normalize_layout, organize_roms_directory
 from core.rom_manager import (
     browse_roms as do_browse_roms,
+    check_rom_import_conflicts as do_check_rom_import_conflicts,
     default_saves_backup_dir,
     delete_roms as do_delete_roms,
+    find_duplicate_roms as do_find_duplicate_roms,
     import_roms as do_import_roms,
     list_rom_dir as do_list_rom_dir,
     list_rom_tree as do_list_rom_tree,
     list_roms as do_list_roms,
     mkdir_rom_dir as do_mkdir_rom_dir,
     move_roms as do_move_roms,
+    normalize_conflict_resolutions,
     normalize_save_mode,
     rom_details as do_rom_details,
     set_rom_artwork as do_set_rom_artwork,
@@ -62,8 +65,11 @@ from core.sd_utils import (
 from core.sdio import preflight
 from core.dspico import (
     browse_dspico_games as do_browse_dspico_games,
+    check_dspico_import_conflicts as do_check_dspico_import_conflicts,
     delete_dspico_games as do_delete_dspico_games,
+    delete_dspico_retro_roms as do_delete_dspico_retro_roms,
     ensure_emunand_skeleton as do_ensure_emunand_skeleton,
+    find_duplicate_dspico_games as do_find_duplicate_dspico_games,
     flash_dspico_firmware as do_flash_dspico_firmware,
     get_dspico_settings as do_get_dspico_settings,
     import_biosnds7 as do_import_biosnds7,
@@ -386,7 +392,9 @@ class Api:
             OP_LOCK.release()
 
     @_run_mount_op(min_free_mb=8)
-    def import_dspico_games(self, mount_path, host_paths=None, dest_rel_dir=""):
+    def import_dspico_games(
+        self, mount_path, host_paths=None, dest_rel_dir="", conflict_resolutions=None
+    ):
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
@@ -404,12 +412,72 @@ class Api:
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
+        resolutions = normalize_conflict_resolutions(conflict_resolutions)
+        if resolutions is None:
+            return _reject("Resoluções de conflito inválidas.")
         success, msg, stats = do_import_dspico_games(
-            mount_path, expanded, dest_rel_dir=dest, log_callback=add_log
+            mount_path,
+            expanded,
+            dest_rel_dir=dest,
+            log_callback=add_log,
+            conflict_resolutions=resolutions,
         )
         result = _api_result(success, msg)
         result["stats"] = stats or {}
         return result
+
+    def find_duplicate_dspico_games(self, mount_path):
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        if not is_safe_mount_path(mount_path):
+            return _reject(
+                "Unidade não reconhecida como volume removível/USB/SD."
+            )
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return do_find_duplicate_dspico_games(mount_path)
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
+
+    def check_dspico_import_conflicts(self, mount_path, host_paths=None, dest_rel_dir=""):
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        if not is_safe_mount_path(mount_path):
+            return _reject(
+                "Unidade não reconhecida como volume removível/USB/SD."
+            )
+        if host_paths is None:
+            host_paths = []
+        if not isinstance(host_paths, (list, tuple)):
+            return _reject("Lista de ficheiros inválida.")
+        expanded = []
+        for raw in host_paths:
+            if not isinstance(raw, str):
+                continue
+            p, err = _as_path_str(raw, label="ficheiro")
+            if err:
+                continue
+            expanded.append(expand_user_path(p) if p.startswith("~") else p)
+        if not expanded:
+            return _reject("Nenhum ficheiro válido seleccionado.")
+        dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
+        if "\x00" in dest:
+            return _reject("Destino inválido.")
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return do_check_dspico_import_conflicts(
+                mount_path, expanded, dest_rel_dir=dest
+            )
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
 
     @_run_mount_op(min_free_mb=1)
     def delete_dspico_games(self, mount_path, rel_paths=None):
@@ -419,6 +487,20 @@ class Api:
             return _reject("Lista inválida.")
         cleaned = [p for p in rel_paths if isinstance(p, str) and p.strip()]
         success, msg, stats = do_delete_dspico_games(
+            mount_path, cleaned, log_callback=add_log
+        )
+        result = _api_result(success, msg)
+        result["stats"] = stats or {}
+        return result
+
+    @_run_mount_op(min_free_mb=1)
+    def delete_dspico_retro_roms(self, mount_path, rel_paths=None):
+        if rel_paths is None:
+            rel_paths = []
+        if not isinstance(rel_paths, (list, tuple)):
+            return _reject("Lista inválida.")
+        cleaned = [p for p in rel_paths if isinstance(p, str) and p.strip()]
+        success, msg, stats = do_delete_dspico_retro_roms(
             mount_path, cleaned, log_callback=add_log
         )
         result = _api_result(success, msg)
@@ -673,10 +755,27 @@ class Api:
         )
         return _api_result(success, msg)
 
-    def list_dspico_emulators(self):
-        """Catálogo de emuladores Pico-Launcher (pins SHA-256)."""
+    def list_dspico_emulators(self, mount_path=""):
+        """Catálogo de emuladores; com cartão, marca installed se o NDS existir."""
+        mount = ""
+        if mount_path is not None and mount_path != "":
+            mount, err = _as_path_str(mount_path, label="caminho do cartão")
+            if err:
+                return _reject(err)
+            if not is_safe_mount_path(mount):
+                return _reject(
+                    "Unidade não reconhecida como volume removível/USB/SD."
+                )
+            if not OP_LOCK.acquire(blocking=False):
+                return _reject("Outra operação já está em andamento. Aguarde.")
+            try:
+                return do_list_dspico_emulators(mount)
+            except Exception as e:
+                return _reject(e)
+            finally:
+                OP_LOCK.release()
         try:
-            return do_list_dspico_emulators()
+            return do_list_dspico_emulators(None)
         except Exception as e:
             return _reject(e)
 
@@ -742,13 +841,20 @@ class Api:
             OP_LOCK.release()
 
     def pick_dspico_rom_files(self):
-        """Diálogo para ROMs DSPico (.nds/.dsi/.ids)."""
+        """Diálogo multi-ficheiro: ROMs DSPico e arquivos (.zip/.7z/.rar)."""
         if self._picker is None:
             return _reject("Diálogo de ficheiros indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
-                caption="ROMs DSPico",
-                filters=("ROMs DS/DSi (*.nds *.dsi *.ids)", "Todos os ficheiros (*.*)"),
+                caption="ROMs / arquivos DSPico",
+                filters=(
+                    # pywebview rejeita '/' no rótulo do filtro (interpreta como separador).
+                    "ROMs e arquivos (*.nds *.dsi *.ids *.gb *.gbc *.gba *.sfc *.smc *.zip *.7z *.7zip *.rar)",
+                    "ROMs NDS DSi (*.nds *.dsi *.ids)",
+                    "ROMs GB GBA SNES (*.gb *.gbc *.gba *.sfc *.smc)",
+                    "Arquivos (*.zip *.7z *.7zip *.rar)",
+                    "Todos os ficheiros (*.*)",
+                ),
                 multiple=True,
             )
         except Exception as e:
@@ -1011,15 +1117,19 @@ class Api:
         return result
 
     def pick_rom_files(self):
-        """Diálogo multi-ficheiro para escolher ROMs no computador."""
+        """Diálogo multi-ficheiro: ROMs e arquivos (.zip/.7z/.rar)."""
         if self._picker is None:
             return _reject("Diálogo de ficheiros indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
-                caption="Importar ROMs",
+                caption="Importar ROMs / arquivos",
                 filters=(
+                    "ROMs e arquivos (*.nds *.dsi *.ids *.gba *.gb *.gbc *.nes "
+                    "*.sfc *.smc *.md *.gen *.sms *.gg *.pce *.col *.a26 *.ws "
+                    "*.ngp *.zip *.7z *.7zip *.rar)",
                     "ROMs (*.nds *.dsi *.ids *.gba *.gb *.gbc *.nes *.sfc *.smc "
                     "*.md *.gen *.sms *.gg *.pce *.col *.a26 *.ws *.ngp)",
+                    "Arquivos (*.zip *.7z *.7zip *.rar)",
                     "Todos os ficheiros (*.*)",
                 ),
                 multiple=True,
@@ -1061,7 +1171,14 @@ class Api:
             return _reject(e)
 
     @_run_mount_op(min_free_mb=8)
-    def import_roms(self, mount_path, host_paths=None, layout="console", dest_rel_dir=""):
+    def import_roms(
+        self,
+        mount_path,
+        host_paths=None,
+        layout="console",
+        dest_rel_dir="",
+        conflict_resolutions=None,
+    ):
         mode = normalize_layout(layout)
         if mode is None:
             return _reject("Layout inválido. Use: console, franchise ou both.")
@@ -1082,16 +1199,78 @@ class Api:
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
+        resolutions = normalize_conflict_resolutions(conflict_resolutions)
+        if resolutions is None:
+            return _reject("Resoluções de conflito inválidas.")
         success, msg, stats = do_import_roms(
             mount_path,
             expanded,
             layout=mode,
             dest_rel_dir=dest,
             log_callback=add_log,
+            conflict_resolutions=resolutions,
         )
         result = _api_result(success, msg)
         result["stats"] = stats or {}
         return result
+
+    def find_duplicate_roms(self, mount_path):
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        if not is_safe_mount_path(mount_path):
+            return _reject(
+                "Unidade não reconhecida como volume removível/USB/SD."
+            )
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return do_find_duplicate_roms(mount_path)
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
+
+    def check_rom_import_conflicts(
+        self, mount_path, host_paths=None, layout="console", dest_rel_dir=""
+    ):
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        if not is_safe_mount_path(mount_path):
+            return _reject(
+                "Unidade não reconhecida como volume removível/USB/SD."
+            )
+        mode = normalize_layout(layout)
+        if mode is None:
+            return _reject("Layout inválido. Use: console, franchise ou both.")
+        if host_paths is None:
+            host_paths = []
+        if not isinstance(host_paths, (list, tuple)):
+            return _reject("Lista de ficheiros inválida.")
+        expanded = []
+        for raw in host_paths:
+            if not isinstance(raw, str):
+                continue
+            p, err = _as_path_str(raw, label="ficheiro")
+            if err:
+                continue
+            expanded.append(expand_user_path(p) if p.startswith("~") else p)
+        if not expanded:
+            return _reject("Nenhum ficheiro válido seleccionado.")
+        dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
+        if "\x00" in dest:
+            return _reject("Destino inválido.")
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return do_check_rom_import_conflicts(
+                mount_path, expanded, layout=mode, dest_rel_dir=dest
+            )
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
 
     @_run_mount_op(min_free_mb=1)
     def delete_roms(

@@ -323,7 +323,7 @@ const Dspico = (() => {
             O explorador abaixo lista só <code>Games/</code>.
           </p>
         </section>
-        <section class="panel p-5 space-y-3">
+        <section class="panel p-5 space-y-3 relative" id="dspico-games-panel">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="text-[12px]">
               <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" ${
@@ -334,17 +334,18 @@ const Dspico = (() => {
             <div class="flex flex-wrap gap-2">
               <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-batch-art">Buscar capas e ícones</button>
               <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-add">Adicionar jogos</button>
+              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-dupes">Apagar duplicatas</button>
               <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-mkdir">Nova pasta</button>
               <button type="button" class="btn-ghost !text-[11px] text-danger" id="dspico-games-del" disabled>Remover</button>
             </div>
           </div>
           <p class="text-[11px] text-fg-mute">
-            Arraste ficheiros .nds / .dsi / .ids para esta área ou use Adicionar.
-            Clique num jogo para escolher capa e ícone (Pico Launcher).
-            O lote grava a 1.ª capa/ícone encontrados; não sobrescreve arte existente.
+            Adicionar ou arrastar vários ficheiros: NDS/DSi → <code>Games/</code>;
+            GB/GBC/GBA/SNES → <code>ROMs/</code>; também arquivos (.zip / .7z / .rar).
+            Clique num jogo NDS para capa e ícone (Pico Launcher).
           </p>
           <div id="dspico-batch-missing" class="hidden space-y-2"></div>
-          <div id="dspico-games-drop" class="border border-dashed border-line rounded-lg p-3 min-h-[160px] space-y-1">
+          <div id="dspico-games-drop" class="border border-dashed border-line rounded-lg p-3 min-h-[160px] space-y-1 relative">
             ${
               dirs.length + files.length === 0
                 ? '<p class="text-fg-mute text-[12px]">Pasta vazia — adicione jogos.</p>'
@@ -397,6 +398,28 @@ const Dspico = (() => {
                   </div>`;
               })
               .join("")}
+          </div>
+          <div id="dspico-conflict-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true">
+            <div class="rom-x-sheet rom-x-sheet--wide">
+              <p class="rom-x-sheet-title">Jogos já no cartão</p>
+              <p class="rom-x-sheet-count" id="dspico-conflict-count"></p>
+              <div id="dspico-conflict-list" class="rom-x-dupe-list"></div>
+              <div class="rom-x-sheet-actions">
+                <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="dspico-conflict-ok">Continuar importação</button>
+                <button type="button" class="btn-ghost !py-1.5 !px-3 text-[11px]" id="dspico-conflict-cancel">Cancelar</button>
+              </div>
+            </div>
+          </div>
+          <div id="dspico-dupes-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true">
+            <div class="rom-x-sheet rom-x-sheet--wide">
+              <p class="rom-x-sheet-title">Apagar duplicatas</p>
+              <p class="rom-x-sheet-count" id="dspico-dupes-count"></p>
+              <div id="dspico-dupes-list" class="rom-x-dupe-list"></div>
+              <div class="rom-x-sheet-actions">
+                <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="dspico-dupes-ok">Aplicar</button>
+                <button type="button" class="btn-ghost !py-1.5 !px-3 text-[11px]" id="dspico-dupes-cancel">Cancelar</button>
+              </div>
+            </div>
           </div>
         </section>`;
 
@@ -469,6 +492,8 @@ const Dspico = (() => {
       }
       const addBtn = document.getElementById("dspico-games-add");
       if (addBtn) addBtn.onclick = () => addGames();
+      const dupesBtn = document.getElementById("dspico-games-dupes");
+      if (dupesBtn) dupesBtn.onclick = () => openDspicoDupesSheet();
       const mkdirBtn = document.getElementById("dspico-games-mkdir");
       if (mkdirBtn) {
         mkdirBtn.onclick = async () => {
@@ -516,6 +541,13 @@ const Dspico = (() => {
         drop.ondrop = (e) => {
           e.preventDefault();
           drop.classList.remove("ring-1", "ring-accent");
+          const paths = pathsFromDataTransfer(e.dataTransfer);
+          if (paths.length) importPaths(paths);
+          else
+            appendLog(
+              "Não foi possível ler os caminhos dos ficheiros arrastados. Use Adicionar.",
+              "warn"
+            );
         };
       }
     } catch (e) {
@@ -526,18 +558,47 @@ const Dspico = (() => {
     }
   }
 
+  function pathsFromDataTransfer(dt) {
+    const out = [];
+    if (!dt || !dt.files) return out;
+    // pywebview / Chromium: File.path = caminho absoluto no host
+    for (let i = 0; i < dt.files.length; i++) {
+      const f = dt.files[i];
+      if (f && typeof f.path === "string" && f.path) out.push(f.path);
+    }
+    return out;
+  }
+
   async function addGames() {
     const m = mount();
     if (!m) {
       alert("Seleccione o microSD primeiro.");
       return;
     }
+    if (typeof busy !== "undefined" && busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
     try {
       const api = getApi() || (await waitForApi());
+      if (!api || typeof api.pick_dspico_rom_files !== "function") {
+        appendLog("API de selecção de jogos indisponível.", "error");
+        return;
+      }
       const picked = await api.pick_dspico_rom_files();
-      if (!(picked && picked.success) || picked.cancelled) return;
+      if (!picked || !picked.success) {
+        appendLog(
+          `Erro ao escolher ficheiros: ${(picked && picked.error) || "falha"}`,
+          "error"
+        );
+        return;
+      }
+      if (picked.cancelled) return;
       const paths = picked.paths || [];
-      if (!paths.length) return;
+      if (!paths.length) {
+        appendLog("Nenhum ficheiro seleccionado.", "warn");
+        return;
+      }
       await importPaths(paths);
     } catch (e) {
       appendLog(e.message || String(e), "error");
@@ -998,15 +1059,286 @@ const Dspico = (() => {
     }
   }
 
+  function closeDspicoOverlay(id) {
+    const sheet = document.getElementById(id);
+    if (sheet) {
+      sheet.classList.add("hidden");
+      sheet.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function openDspicoOverlay(id) {
+    const sheet = document.getElementById(id);
+    if (sheet) {
+      sheet.classList.remove("hidden");
+      sheet.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function askDspicoImportConflicts(conflicts) {
+    return new Promise((resolve) => {
+      const list = document.getElementById("dspico-conflict-list");
+      const count = document.getElementById("dspico-conflict-count");
+      const okBtn = document.getElementById("dspico-conflict-ok");
+      const cancelBtn = document.getElementById("dspico-conflict-cancel");
+      if (!list || !okBtn || !cancelBtn) {
+        resolve(null);
+        return;
+      }
+      if (count) {
+        count.textContent = `${conflicts.length} jogo(s) já existem. Escolha o que fazer.`;
+      }
+      list.innerHTML = conflicts
+        .map((c, i) => {
+          const name = escapeHtml(c.display_name || c.src_name || "?");
+          const src = escapeHtml(c.src_name || "");
+          const existing = (c.existing || [])
+            .map((e) => {
+              const prefix = e.scope === "retro" ? "/" : "Games/";
+              return (
+                `<li><code>${prefix}${escapeHtml(e.rel_path || "")}</code>` +
+                (e.size_label ? ` · ${escapeHtml(e.size_label)}` : "") +
+                `</li>`
+              );
+            })
+            .join("");
+          return (
+            `<div class="rom-x-dupe-group">` +
+            `<p class="rom-x-dupe-group-title">${name}</p>` +
+            `<p class="rom-x-dupe-group-sub">A importar: ${src}</p>` +
+            (existing
+              ? `<ul class="text-[11px] text-fg-mute mb-2 list-disc pl-4">${existing}</ul>`
+              : "") +
+            `<div class="rom-x-dupe-choices">` +
+            `<label><input type="radio" name="dspico-cf-${i}" value="replace"> <span>Substituir</span></label>` +
+            `<label><input type="radio" name="dspico-cf-${i}" value="keep_both" checked> <span>Manter ambos</span></label>` +
+            `<label><input type="radio" name="dspico-cf-${i}" value="skip"> <span>Não importar este</span></label>` +
+            `</div></div>`
+          );
+        })
+        .join("");
+
+      const finish = (value) => {
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        closeDspicoOverlay("dspico-conflict-sheet");
+        resolve(value);
+      };
+      const onOk = () => {
+        const map = {};
+        conflicts.forEach((c, i) => {
+          if (!c.conflict_id) return;
+          const sel = document.querySelector(
+            `input[name="dspico-cf-${i}"]:checked`
+          );
+          map[c.conflict_id] = (sel && sel.value) || "keep_both";
+        });
+        finish(map);
+      };
+      const onCancel = () => finish(null);
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      openDspicoOverlay("dspico-conflict-sheet");
+    });
+  }
+
   async function importPaths(paths) {
     const m = mount();
     if (!m || !paths || !paths.length) return;
+    if (typeof busy !== "undefined" && busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
+    const list = Array.isArray(paths) ? paths.filter(Boolean) : [];
+    if (!list.length) return;
+    setBusy(true);
+    appendLog("A verificar duplicatas…", "info");
+    let resolutions = {};
+    try {
+      const api = getApi() || (await waitForApi());
+      const check = await api.check_dspico_import_conflicts(m, list, gamesCwd);
+      if (!check || !check.success) {
+        appendLog(
+          (check && check.error) || "Falha na verificação de duplicatas.",
+          "error"
+        );
+        return;
+      }
+      if (check.conflicts && check.conflicts.length) {
+        setBusy(false);
+        const chosen = await askDspicoImportConflicts(check.conflicts);
+        if (!chosen) {
+          appendLog("Importação cancelada.", "warn");
+          return;
+        }
+        resolutions = chosen;
+        setBusy(true);
+      }
+      appendLog(
+        `A importar ${list.length} item(ns) (ROMs ou arquivos)…`,
+        "info"
+      );
+      const res = await api.import_dspico_games(
+        m,
+        list,
+        gamesCwd,
+        resolutions
+      );
+      if (res && res.success) appendLog(res.message || "Importado.", "success");
+      else appendLog((res && res.error) || "Falha ao importar.", "error");
+    } catch (e) {
+      appendLog(e.message || String(e), "error");
+    } finally {
+      setBusy(false);
+      refresh();
+    }
+  }
+
+  async function openDspicoDupesSheet() {
+    const m = mount();
+    if (!m) {
+      alert("Seleccione um cartão SD primeiro.");
+      return;
+    }
+    if (typeof busy !== "undefined" && busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
     setBusy(true);
     try {
       const api = getApi() || (await waitForApi());
-      const res = await api.import_dspico_games(m, paths, gamesCwd);
-      if (res && res.success) appendLog(res.message || "Importado.", "success");
-      else appendLog((res && res.error) || "Falha ao importar.", "error");
+      const data = await api.find_duplicate_dspico_games(m);
+      if (!data || !data.success) {
+        appendLog(
+          (data && data.error) || "Falha ao procurar duplicatas.",
+          "error"
+        );
+        return;
+      }
+      const groups = data.groups || [];
+      if (!groups.length) {
+        appendLog("Não há jogos duplicados em Games/ ou ROMs/.", "info");
+        alert("Não há jogos duplicados no cartão.");
+        return;
+      }
+      const list = document.getElementById("dspico-dupes-list");
+      const count = document.getElementById("dspico-dupes-count");
+      if (count) {
+        count.textContent = `${groups.length} grupo(s) — escolha qual manter ou manter ambos.`;
+      }
+      if (list) {
+        list.innerHTML = groups
+          .map((g, gi) => {
+            const label = escapeHtml(g.label || g.key || "Grupo");
+            const items = g.items || [];
+            const radios = items
+              .map((it, ii) => {
+                const rel = escapeHtml(it.rel_path || "");
+                const scope = it.scope === "retro" ? "retro" : "games";
+                const prefix = scope === "retro" ? "/" : "Games/";
+                const dn = escapeHtml(it.display_name || it.name || rel);
+                const checked = ii === 0 ? " checked" : "";
+                const val = escapeHtml(`${scope}:${it.rel_path || ""}`);
+                return (
+                  `<label><input type="radio" name="dspico-dupe-${gi}" value="${val}"${checked}>` +
+                  `<span>${dn}<br><code>${prefix}${rel}</code>` +
+                  (it.size_label
+                    ? ` · ${escapeHtml(it.size_label)}`
+                    : "") +
+                  `</span></label>`
+                );
+              })
+              .join("");
+            return (
+              `<div class="rom-x-dupe-group" data-idx="${gi}">` +
+              `<p class="rom-x-dupe-group-title">${label}</p>` +
+              `<div class="rom-x-dupe-choices">` +
+              radios +
+              `<label><input type="radio" name="dspico-dupe-${gi}" value="__keep_both__">` +
+              `<span>Manter ambos</span></label>` +
+              `</div></div>`
+            );
+          })
+          .join("");
+      }
+      const okBtn = document.getElementById("dspico-dupes-ok");
+      const cancelBtn = document.getElementById("dspico-dupes-cancel");
+      if (okBtn) okBtn.onclick = () => confirmDspicoDupes();
+      if (cancelBtn) {
+        cancelBtn.onclick = () => closeDspicoOverlay("dspico-dupes-sheet");
+      }
+      openDspicoOverlay("dspico-dupes-sheet");
+    } catch (e) {
+      appendLog(e.message || String(e), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmDspicoDupes() {
+    const m = mount();
+    const list = document.getElementById("dspico-dupes-list");
+    if (!m || !list) {
+      closeDspicoOverlay("dspico-dupes-sheet");
+      return;
+    }
+    const toDeleteGames = [];
+    const toDeleteRetro = [];
+    list.querySelectorAll(".rom-x-dupe-group").forEach((group) => {
+      const idx = group.getAttribute("data-idx");
+      if (idx == null) return;
+      const sel = group.querySelector(
+        `input[name="dspico-dupe-${idx}"]:checked`
+      );
+      const keep = sel && sel.value;
+      if (!keep || keep === "__keep_both__") return;
+      group
+        .querySelectorAll(`input[name="dspico-dupe-${idx}"]`)
+        .forEach((inp) => {
+          if (
+            !inp.value ||
+            inp.value === "__keep_both__" ||
+            inp.value === keep
+          ) {
+            return;
+          }
+          if (inp.value.startsWith("games:")) {
+            toDeleteGames.push(inp.value.slice("games:".length));
+          } else if (inp.value.startsWith("retro:")) {
+            toDeleteRetro.push(inp.value.slice("retro:".length));
+          }
+        });
+    });
+
+    closeDspicoOverlay("dspico-dupes-sheet");
+    if (!toDeleteGames.length && !toDeleteRetro.length) {
+      appendLog("Nenhuma duplicata removida (manteve ambos).", "info");
+      return;
+    }
+    const total = toDeleteGames.length + toDeleteRetro.length;
+    if (!confirm(`Apagar ${total} ficheiro(s) duplicado(s)?`)) return;
+
+    setBusy(true);
+    appendLog(`A remover ${total} duplicata(s)…`, "info");
+    try {
+      const api = getApi() || (await waitForApi());
+      if (toDeleteGames.length) {
+        const res = await api.delete_dspico_games(m, toDeleteGames);
+        if (res && res.success) {
+          appendLog(res.message || "Duplicatas em Games/ removidas.", "success");
+        } else {
+          appendLog((res && res.error) || "Falha ao remover Games/.", "error");
+        }
+      }
+      if (toDeleteRetro.length) {
+        const resR = await api.delete_dspico_retro_roms(m, toDeleteRetro);
+        if (resR && resR.success) {
+          appendLog(resR.message || "Duplicatas em ROMs/ removidas.", "success");
+        } else {
+          appendLog((resR && resR.error) || "Falha ao remover ROMs/.", "error");
+        }
+      }
+      selectedRels.clear();
     } catch (e) {
       appendLog(e.message || String(e), "error");
     } finally {
@@ -1031,7 +1363,7 @@ const Dspico = (() => {
     el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A carregar catálogo…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
-      const data = await api.list_dspico_emulators();
+      const data = await api.list_dspico_emulators(m || "");
       if (gen !== renderGen) return;
       if (!(data && data.success)) {
         el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">${escapeHtml(
@@ -1058,6 +1390,9 @@ const Dspico = (() => {
                 e.install_mode === "manual"
                   ? `<span class="text-[10px] text-warn ml-1">manual</span>`
                   : `<span class="text-[10px] text-fg-mute ml-1">argv</span>`;
+              const installedBadge = e.installed
+                ? `<span class="text-[10px] text-accent-fg ml-1">Instalado</span>`
+                : "";
               const notes = e.bios_notes
                 ? `<p class="text-[11px] text-fg-mute mt-0.5 leading-snug">${escapeHtml(
                     e.bios_notes
@@ -1067,11 +1402,13 @@ const Dspico = (() => {
               <label class="flex gap-2 items-start py-1.5 px-2 rounded hover:bg-surface-2 cursor-pointer">
                 <input type="checkbox" class="dspico-emu-cb mt-1" value="${escapeHtml(
                   e.id
-                )}" data-popular="${e.popular ? "1" : "0"}">
+                )}" data-popular="${e.popular ? "1" : "0"}" data-installed="${
+                e.installed ? "1" : "0"
+              }" ${e.installed ? "checked" : ""}>
                 <span class="min-w-0">
                   <span class="text-[13px] text-fg font-medium">${escapeHtml(
                     e.label
-                  )}</span>${modeBadge}
+                  )}</span>${modeBadge}${installedBadge}
                   ${notes}
                 </span>
               </label>`;
@@ -1169,6 +1506,8 @@ const Dspico = (() => {
                   }
                 </div>`;
               }
+              // Re-render para marcar instalados
+              await renderEmulators(gen, m);
             } else {
               appendLog((res && res.error) || "Falha", "error");
               if (resultEl) {

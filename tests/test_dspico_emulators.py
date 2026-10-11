@@ -29,11 +29,25 @@ def test_list_emulators_all_available():
     emus = data["emulators"]
     assert len(emus) >= 18
     assert all(e["available"] for e in emus)
+    assert all(e.get("installed") is False for e in emus)
     ids = {e["id"] for e in emus}
     assert "gbarunner3" in ids
     assert "gameyob" in ids
     assert "snemulds_06a" in ids
     assert "neods" in ids
+
+
+def test_list_emulators_marks_installed(tmp_path):
+    _minimal_dspico_sd(tmp_path)
+    emu_dir = tmp_path / "_pico" / "emulators"
+    emu_dir.mkdir(parents=True)
+    (emu_dir / "gameyob.nds").write_bytes(b"GY")
+
+    data = dspico_emulators.list_emulators(str(tmp_path))
+    assert data["success"] is True
+    by_id = {e["id"]: e for e in data["emulators"]}
+    assert by_id["gameyob"]["installed"] is True
+    assert by_id["gbarunner3"]["installed"] is False
 
 
 def test_emu_cache_keys_pinned():

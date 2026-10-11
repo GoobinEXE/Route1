@@ -154,7 +154,7 @@ def test_generate_twilight_artwork_batch_writes_and_missing(fake_sd, monkeypatch
     png = _png_bytes() + b"\x00" * 64
     hits = {"n": 0}
 
-    def fake_download(url, dest):
+    def fake_download(url, dest, timeout=None):
         # Só a 1.ª URL GameTDB AMCE grava; Ghost falha → missing
         if "AMCE" in url:
             hits["n"] += 1
@@ -180,6 +180,8 @@ def test_generate_twilight_artwork_batch_writes_and_missing(fake_sd, monkeypatch
     missing = res.get("missing") or []
     assert any(m.get("rel_path", "").endswith("Ghost.nds") for m in missing)
     assert host_before == (set(tmp_path.iterdir()) if tmp_path.exists() else set())
+    # Teto de URLs no lote: poucos downloads tentados por jogo em falta
+    assert hits["n"] >= 1
 
 
 def test_twilight_candidates_include_jsdelivr():
@@ -194,3 +196,29 @@ def test_twilight_candidates_include_jsdelivr():
     i_lr = next(i for i, u in enumerate(urls) if "thumbnails.libretro.com" in u)
     i_jd = next(i for i, u in enumerate(urls) if "cdn.jsdelivr.net" in u)
     assert i_gt < i_lr < i_jd
+
+
+def test_twilight_batch_emits_progress_and_caps_urls(fake_sd, monkeypatch):
+    nds = fake_sd / "roms" / "nds"
+    nds.mkdir(parents=True)
+    make_nds(nds / "Mario.nds", title=b"MARIOKART", code=b"AMCE", maker=b"01")
+
+    events = []
+    attempts = {"n": 0}
+
+    def fake_download(url, dest, timeout=None):
+        attempts["n"] += 1
+        return False
+
+    monkeypatch.setattr(artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(artwork, "sync_volume", lambda *a, **k: None)
+    monkeypatch.setattr(artwork, "_download_png", fake_download)
+    monkeypatch.setattr(artwork, "_emit_batch_progress", lambda p: events.append(p))
+
+    res = artwork.generate_twilight_artwork_batch(str(fake_sd), max_games=10)
+    assert res["success"] is True
+    assert events
+    assert events[-1].get("done") is True
+    assert events[-1]["op"] == "twilight_artwork_batch"
+    # Capa + ícone, cada um ≤ _BATCH_MAX_URLS
+    assert attempts["n"] <= artwork._BATCH_MAX_URLS * 2

@@ -79,7 +79,10 @@ _JSDELIVR_LIBRETRO_BASE = (
 )
 _PNG_MIN = 64
 _DOWNLOAD_TIMEOUT = 30
+_BATCH_DOWNLOAD_TIMEOUT = 10
 _INTER_REQUEST_DELAY = 0.15
+_BATCH_MISS_DELAY = 0.05
+_BATCH_MAX_URLS = 6
 _MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
 
 # Caracteres proibidos nos nomes Libretro → underscore.
@@ -199,7 +202,19 @@ def _looks_like_png(path: str) -> bool:
         return False
 
 
-def _download_png(url: str, dest: str) -> bool:
+def _emit_batch_progress(payload: dict[str, Any]) -> None:
+    """Push best-effort para a UI (não bloqueia o lote)."""
+    try:
+        from services import web_events
+
+        web_events.emit("progress", payload)
+    except Exception:
+        pass
+
+
+def _download_png(
+    url: str, dest: str, *, timeout: Optional[float] = None
+) -> bool:
     if not url.startswith("https://"):
         return False
     host = urllib.parse.urlparse(url).hostname or ""
@@ -210,10 +225,11 @@ def _download_png(url: str, dest: str) -> bool:
         "cdn.jsdelivr.net",
     }:
         return False
+    to = _DOWNLOAD_TIMEOUT if timeout is None else float(timeout)
     partial = f"{dest}.partial"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=_DOWNLOAD_TIMEOUT) as resp, open(
+        with urllib.request.urlopen(req, timeout=to) as resp, open(
             partial, "wb"
         ) as out:  # nosec B310
             written = 0
@@ -423,11 +439,22 @@ def _import_local_pack(boxart_dir: str, log: LogFn) -> int:
     return imported
 
 
-def _try_download_urls(urls: list[str], dest: str) -> bool:
-    for url in urls:
-        if _download_png(url, dest):
+def _try_download_urls(
+    urls: list[str],
+    dest: str,
+    *,
+    max_urls: Optional[int] = None,
+    timeout: Optional[float] = None,
+    miss_delay: Optional[float] = None,
+) -> bool:
+    """Tenta URLs em ordem. Em sucesso não dorme; delay só entre misses."""
+    delay = _INTER_REQUEST_DELAY if miss_delay is None else float(miss_delay)
+    seq = urls if max_urls is None else urls[: max(0, int(max_urls))]
+    for i, url in enumerate(seq):
+        if _download_png(url, dest, timeout=timeout):
             return True
-        time.sleep(_INTER_REQUEST_DELAY)
+        if i + 1 < len(seq) and delay > 0:
+            time.sleep(delay)
     return False
 
 
@@ -746,9 +773,36 @@ def generate_twilight_artwork_batch(
     skipped = 0
     failed = 0
     missing: list[dict[str, Any]] = []
-    log(f"=== Capas e ícones TWiLight em lote: {len(roms)} jogo(s) ===")
+    total = len(roms)
+    log(f"=== Capas e ícones TWiLight em lote: {total} jogo(s) ===")
 
-    for item in roms:
+    def _progress(
+        current: int, label: str, *, done: bool = False
+    ) -> None:
+        _emit_batch_progress(
+            {
+                "op": "twilight_artwork_batch",
+                "current": current,
+                "total": total,
+                "written": written,
+                "skipped": skipped,
+                "failed": failed,
+                "label": label,
+                "done": done,
+            }
+        )
+
+    def _batch_get(urls: list[str], dest: str) -> bool:
+        return _try_download_urls(
+            urls,
+            dest,
+            max_urls=_BATCH_MAX_URLS,
+            timeout=_BATCH_DOWNLOAD_TIMEOUT,
+            miss_delay=_BATCH_MISS_DELAY,
+        )
+
+    _progress(0, "A iniciar…")
+    for idx, item in enumerate(roms, start=1):
         platform = item["platform"]
         basename = item["basename"]
         tid = item.get("game_code")
@@ -768,36 +822,35 @@ def generate_twilight_artwork_batch(
 
         miss_cover = False
         miss_icon = False
+        _progress(idx, f"{basename} — capa")
 
         # --- Capa ---
         if os.path.isfile(box_dest) and _looks_like_png(box_dest):
             skipped += 1
         else:
             urls = _twilight_candidate_urls(platform, basename, tid, "boxart")
-            if urls and _try_download_urls(urls, box_dest):
+            if urls and _batch_get(urls, box_dest):
                 written += 1
                 log(f"✅ Capa TWiLight {basename}")
             else:
                 miss_cover = True
                 failed += 1
-            time.sleep(_INTER_REQUEST_DELAY)
 
-        # --- Ícone (Named_Titles); NDS também tenta Libretro/jsDelivr ---
+        _progress(idx, f"{basename} — ícone")
+        # --- Ícone ---
         if os.path.isfile(icon_dest) and _looks_like_png(icon_dest):
             skipped += 1
         else:
             urls_i = _twilight_candidate_urls(platform, basename, tid, "icon")
-            if urls_i and _try_download_urls(urls_i, icon_dest):
+            if urls_i and _batch_get(urls_i, icon_dest):
                 written += 1
                 log(f"✅ Ícone TWiLight {basename}")
             else:
-                # NDS sem título Libretro é comum — só marcar se houver sistemas LR
                 if platform in LIBRETRO_SYSTEMS:
                     miss_icon = True
                     failed += 1
                 else:
                     skipped += 1
-            time.sleep(_INTER_REQUEST_DELAY)
 
         if miss_cover or miss_icon:
             missing.append(
@@ -820,13 +873,14 @@ def generate_twilight_artwork_batch(
         f"{len(missing)} jogo(s) com falhas."
     )
     log(f"✅ {msg}" if written else f"⚠️ {msg}")
+    _progress(total, msg, done=True)
     return {
         "success": True,
         "message": msg,
         "written": written,
         "skipped": skipped,
         "failed": failed,
-        "scanned": len(roms),
+        "scanned": total,
         "missing": missing,
     }
 

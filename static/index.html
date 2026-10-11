@@ -54,6 +54,15 @@
             <span id="info-free" class="stat-pill text-accent-fg">—</span>
           </div>
         </div>
+        <div id="r1k-op-progress" class="r1k-op-progress hidden" role="status" aria-live="polite" aria-hidden="true">
+          <div class="r1k-op-progress-meta">
+            <span id="r1k-op-progress-count" class="r1k-op-progress-count">0 / 0</span>
+            <span id="r1k-op-progress-label" class="r1k-op-progress-label">…</span>
+          </div>
+          <div class="wizard-progress r1k-op-progress-track" aria-hidden="true">
+            <div id="r1k-op-progress-bar" class="wizard-progress-bar" style="width:0%"></div>
+          </div>
+        </div>
         <div class="topbar-actions">
           <span id="drive-status-dot" class="status-dot status-dot--idle" aria-hidden="true"></span>
           <button id="btn-refresh" type="button" onclick="fetchDrives()" class="btn-ghost">Atualizar</button>
@@ -577,6 +586,10 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                 <span class="rom-x-toolbtn-label">Adicionar</span>
               </button>
+              <button type="button" class="rom-x-toolbtn" id="rom-x-dupes" onclick="RomExplorer.openDupesSheet()" title="Apagar duplicatas" aria-label="Apagar duplicatas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                <span class="rom-x-toolbtn-label">Duplicatas</span>
+              </button>
               <button type="button" class="rom-x-toolbtn rom-x-toolbtn--danger" id="rom-x-remove" onclick="RomExplorer.openDeleteSheet()" title="Remover seleccionados" aria-label="Remover seleccionados" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 <span class="rom-x-toolbtn-label">Remover</span>
@@ -631,6 +644,30 @@
                 <div class="rom-x-sheet-actions">
                   <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" onclick="RomExplorer.confirmDelete()">Confirmar remoção</button>
                   <button type="button" class="btn-ghost !py-1.5 !px-3 text-[11px]" onclick="RomExplorer.closeDeleteSheet()">Cancelar</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="rom-x-conflict-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="rom-x-conflict-title">
+              <div class="rom-x-sheet rom-x-sheet--wide">
+                <p class="rom-x-sheet-title" id="rom-x-conflict-title">Jogos já no cartão</p>
+                <p class="rom-x-sheet-count" id="rom-x-conflict-count"></p>
+                <div id="rom-x-conflict-list" class="rom-x-dupe-list"></div>
+                <div class="rom-x-sheet-actions">
+                  <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="rom-x-conflict-ok">Continuar importação</button>
+                  <button type="button" class="btn-ghost !py-1.5 !px-3 text-[11px]" id="rom-x-conflict-cancel">Cancelar</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="rom-x-dupes-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="rom-x-dupes-title">
+              <div class="rom-x-sheet rom-x-sheet--wide">
+                <p class="rom-x-sheet-title" id="rom-x-dupes-title">Apagar duplicatas</p>
+                <p class="rom-x-sheet-count" id="rom-x-dupes-count"></p>
+                <div id="rom-x-dupes-list" class="rom-x-dupe-list"></div>
+                <div class="rom-x-sheet-actions">
+                  <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="rom-x-dupes-ok">Aplicar</button>
+                  <button type="button" class="btn-ghost !py-1.5 !px-3 text-[11px]" id="rom-x-dupes-cancel">Cancelar</button>
                 </div>
               </div>
             </div>

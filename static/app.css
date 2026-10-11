@@ -298,6 +298,59 @@ body {
   line-height: 1.45;
 }
 
+.r1k-op-progress {
+  flex: 1 1 180px;
+  min-width: 140px;
+  max-width: 320px;
+  margin: 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.r1k-op-progress.hidden {
+  display: none;
+}
+
+.r1k-op-progress-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.r1k-op-progress-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-fg);
+  white-space: nowrap;
+}
+
+.r1k-op-progress-label {
+  font-size: 11px;
+  color: var(--c-fg-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.r1k-op-progress-track {
+  max-width: none;
+  width: 100%;
+  height: 4px;
+  background: var(--c-line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.r1k-op-progress-track .wizard-progress-bar {
+  height: 100%;
+  background: var(--c-accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
 .activity-drawer {
   border-top: 1px solid var(--c-line);
   background: var(--c-panel);

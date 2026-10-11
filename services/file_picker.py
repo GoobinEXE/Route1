@@ -79,7 +79,8 @@ class FilePickerPort:
                 file_types=file_types,
             )
         except Exception:
-            return True, []
+            # Não mascarar como cancelamento — o caller deve mostrar o erro.
+            raise
         if not result:
             return True, []
         cleaned = [str(p) for p in result if isinstance(p, str) and p.strip()]

@@ -1294,13 +1294,22 @@ const RomExplorer = (() => {
       await moveSelection(internal, destRel);
       return;
     }
-    // Drop do SO: paths chegam via pywebview (Python → onNativeDrop).
+    // Drop do SO: File.path (pywebview) — vários ficheiros / arquivos de uma vez.
     if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length) {
-      appendLog(
-        "A receber ficheiros… se o drop nativo estiver activo, a cópia inicia já.",
-        "info"
-      );
-      dropTargetRel = destRel;
+      const paths = [];
+      for (let i = 0; i < ev.dataTransfer.files.length; i++) {
+        const f = ev.dataTransfer.files[i];
+        if (f && typeof f.path === "string" && f.path) paths.push(f.path);
+      }
+      if (paths.length) {
+        dropTargetRel = destRel;
+        await onNativeDrop(paths);
+      } else {
+        appendLog(
+          "Não foi possível ler os caminhos dos ficheiros arrastados. Use Adicionar.",
+          "warn"
+        );
+      }
     }
   }
 
@@ -1342,6 +1351,90 @@ const RomExplorer = (() => {
     }
   }
 
+  function closeOverlay(id) {
+    const sheet = document.getElementById(id);
+    if (sheet) {
+      sheet.classList.add("hidden");
+      sheet.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function openOverlay(id) {
+    const sheet = document.getElementById(id);
+    if (sheet) {
+      sheet.classList.remove("hidden");
+      sheet.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function askImportConflicts(conflicts) {
+    return new Promise((resolve) => {
+      const list = document.getElementById("rom-x-conflict-list");
+      const count = document.getElementById("rom-x-conflict-count");
+      const okBtn = document.getElementById("rom-x-conflict-ok");
+      const cancelBtn = document.getElementById("rom-x-conflict-cancel");
+      if (!list || !okBtn || !cancelBtn) {
+        resolve(null);
+        return;
+      }
+      if (count) {
+        count.textContent = `${conflicts.length} jogo(s) já existem no cartão. Escolha o que fazer com cada um.`;
+      }
+      list.innerHTML = conflicts
+        .map((c, i) => {
+          const name = escapeHtml(c.display_name || c.src_name || "?");
+          const src = escapeHtml(c.src_name || "");
+          const existing = (c.existing || [])
+            .map(
+              (e) =>
+                `<li><code>/roms/${escapeHtml(e.rel_path || "")}</code>` +
+                (e.size_label
+                  ? ` · ${escapeHtml(e.size_label)}`
+                  : "") +
+                `</li>`
+            )
+            .join("");
+          return (
+            `<div class="rom-x-dupe-group" data-idx="${i}">` +
+            `<p class="rom-x-dupe-group-title">${name}</p>` +
+            `<p class="rom-x-dupe-group-sub">A importar: ${src}</p>` +
+            (existing
+              ? `<ul class="text-[11px] text-fg-mute mb-2 list-disc pl-4">${existing}</ul>`
+              : "") +
+            `<div class="rom-x-dupe-choices">` +
+            `<label><input type="radio" name="rom-x-cf-${i}" value="replace"> <span><span class="choice-title">Substituir</span> — apaga o(s) do cartão</span></label>` +
+            `<label><input type="radio" name="rom-x-cf-${i}" value="keep_both" checked> <span><span class="choice-title">Manter ambos</span> — importa com nome único</span></label>` +
+            `<label><input type="radio" name="rom-x-cf-${i}" value="skip"> <span><span class="choice-title">Não importar este</span></span></label>` +
+            `</div></div>`
+          );
+        })
+        .join("");
+
+      const finish = (value) => {
+        okBtn.removeEventListener("click", onOk);
+        cancelBtn.removeEventListener("click", onCancel);
+        closeOverlay("rom-x-conflict-sheet");
+        resolve(value);
+      };
+      const onOk = () => {
+        const map = {};
+        conflicts.forEach((c, i) => {
+          const cid = c.conflict_id;
+          if (!cid) return;
+          const sel = document.querySelector(
+            `input[name="rom-x-cf-${i}"]:checked`
+          );
+          map[cid] = (sel && sel.value) || "keep_both";
+        });
+        finish(map);
+      };
+      const onCancel = () => finish(null);
+      okBtn.addEventListener("click", onOk);
+      cancelBtn.addEventListener("click", onCancel);
+      openOverlay("rom-x-conflict-sheet");
+    });
+  }
+
   async function importPaths(paths, destRel) {
     if (!mount() || !paths || !paths.length) return;
     if (busy) {
@@ -1357,7 +1450,7 @@ const RomExplorer = (() => {
       : `layout «${layout}»`;
     if (
       !confirm(
-        `Copiar ${n} ficheiro(s) para ${where}?\n` +
+        `Importar ${n} item(ns) (ROMs ou arquivos .zip/.7z/.rar) para ${where}?\n` +
           (useDest
             ? ""
             : "Sem pasta alvo: usa o layout em Conteúdo.\n") +
@@ -1367,14 +1460,40 @@ const RomExplorer = (() => {
       return;
     }
     setBusy(true, document.getElementById("rom-x-add"));
-    appendLog(`A importar ${n} ROM(s)…`, "info");
+    appendLog(`A verificar duplicatas…`, "info");
+    let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
-      const result = await api.import_roms(
+      const check = await api.check_rom_import_conflicts(
         mount(),
         paths,
         layout,
         useDest
+      );
+      if (!check || !check.success) {
+        appendLog(
+          `Erro: ${(check && check.error) || "falha na verificação"}`,
+          "error"
+        );
+        return;
+      }
+      if (check.conflicts && check.conflicts.length) {
+        setBusy(false);
+        const chosen = await askImportConflicts(check.conflicts);
+        if (!chosen) {
+          appendLog("Importação cancelada.", "warn");
+          return;
+        }
+        resolutions = chosen;
+        setBusy(true, document.getElementById("rom-x-add"));
+      }
+      appendLog(`A importar ${n} ROM(s)…`, "info");
+      const result = await api.import_roms(
+        mount(),
+        paths,
+        layout,
+        useDest,
+        resolutions
       );
       if (result && result.success) {
         appendLog(result.message || "Importação concluída.", "success");
@@ -1389,6 +1508,146 @@ const RomExplorer = (() => {
     } finally {
       setBusy(false);
       fetchDrives();
+      await refresh();
+    }
+  }
+
+  async function openDupesSheet() {
+    if (!mount()) {
+      alert("Seleccione um cartão SD primeiro.");
+      return;
+    }
+    if (busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
+    ensureSheetBindings();
+    setBusy(true, document.getElementById("rom-x-dupes"));
+    try {
+      const api = getApi() || (await waitForApi());
+      const data = await api.find_duplicate_roms(mount());
+      if (!data || !data.success) {
+        appendLog(
+          `Erro: ${(data && data.error) || "falha ao procurar duplicatas"}`,
+          "error"
+        );
+        return;
+      }
+      const groups = data.groups || [];
+      if (!groups.length) {
+        appendLog("Não há jogos duplicados em /roms/.", "info");
+        alert("Não há jogos duplicados no cartão.");
+        return;
+      }
+      const list = document.getElementById("rom-x-dupes-list");
+      const count = document.getElementById("rom-x-dupes-count");
+      if (count) {
+        count.textContent = `${groups.length} grupo(s) — escolha qual manter ou manter ambos.`;
+      }
+      if (list) {
+        list.innerHTML = groups
+          .map((g, gi) => {
+            const label = escapeHtml(g.label || g.key || "Grupo");
+            const items = g.items || [];
+            const radios = items
+              .map((it, ii) => {
+                const rel = escapeHtml(it.rel_path || "");
+                const dn = escapeHtml(it.display_name || it.name || rel);
+                const checked = ii === 0 ? " checked" : "";
+                return (
+                  `<label><input type="radio" name="rom-x-dupe-${gi}" value="${rel}"${checked}>` +
+                  `<span>${dn}<br><code>/roms/${rel}</code>` +
+                  (it.size_label
+                    ? ` · ${escapeHtml(it.size_label)}`
+                    : "") +
+                  `</span></label>`
+                );
+              })
+              .join("");
+            return (
+              `<div class="rom-x-dupe-group" data-idx="${gi}">` +
+              `<p class="rom-x-dupe-group-title">${label}</p>` +
+              `<div class="rom-x-dupe-choices">` +
+              radios +
+              `<label><input type="radio" name="rom-x-dupe-${gi}" value="__keep_both__">` +
+              `<span><span class="choice-title">Manter ambos</span></span></label>` +
+              `</div></div>`
+            );
+          })
+          .join("");
+      }
+      openOverlay("rom-x-dupes-sheet");
+    } catch (err) {
+      appendLog(`Falha ao procurar duplicatas: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function closeDupesSheet() {
+    closeOverlay("rom-x-dupes-sheet");
+  }
+
+  async function confirmDupes() {
+    const list = document.getElementById("rom-x-dupes-list");
+    if (!list || !mount()) {
+      closeDupesSheet();
+      return;
+    }
+    const groups = list.querySelectorAll(".rom-x-dupe-group");
+    const toDelete = [];
+    groups.forEach((group) => {
+      const idx = group.getAttribute("data-idx");
+      if (idx == null) return;
+      const sel = group.querySelector(
+        `input[name="rom-x-dupe-${idx}"]:checked`
+      );
+      const keep = sel && sel.value;
+      if (!keep || keep === "__keep_both__") return;
+      group.querySelectorAll(`input[name="rom-x-dupe-${idx}"]`).forEach((inp) => {
+        if (inp.value && inp.value !== "__keep_both__" && inp.value !== keep) {
+          toDelete.push(inp.value);
+        }
+      });
+    });
+    closeDupesSheet();
+    if (!toDelete.length) {
+      appendLog("Nenhuma duplicata removida (manteve ambos).", "info");
+      return;
+    }
+    if (
+      !confirm(
+        `Apagar ${toDelete.length} ficheiro(s) duplicado(s) (e saves associados)?`
+      )
+    ) {
+      return;
+    }
+    setBusy(true, document.getElementById("rom-x-dupes"));
+    appendLog(`A remover ${toDelete.length} duplicata(s)…`, "info");
+    try {
+      const api = getApi() || (await waitForApi());
+      const result = await api.delete_roms(
+        mount(),
+        toDelete,
+        "delete",
+        "",
+        true
+      );
+      if (result && result.success) {
+        appendLog(result.message || "Duplicatas removidas.", "success");
+        selection.clear();
+      } else {
+        appendLog(
+          `Erro: ${(result && result.error) || "falha na remoção"}`,
+          "error"
+        );
+      }
+    } catch (err) {
+      appendLog(`Falha ao remover duplicatas: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+      fetchDrives();
+      invalidateCatalog();
       await refresh();
     }
   }
@@ -1459,11 +1718,20 @@ const RomExplorer = (() => {
     if (sheetBound) return;
     sheetBound = true;
     ensureGlobalBindings();
-    const sheet = document.getElementById("rom-x-delete-sheet");
-    if (!sheet) return;
-    sheet.addEventListener("click", (ev) => {
-      if (ev.target === sheet) closeDeleteSheet();
-    });
+    const bindDismiss = (id, closer) => {
+      const sheet = document.getElementById(id);
+      if (!sheet) return;
+      sheet.addEventListener("click", (ev) => {
+        if (ev.target === sheet) closer();
+      });
+    };
+    bindDismiss("rom-x-delete-sheet", closeDeleteSheet);
+    bindDismiss("rom-x-conflict-sheet", () => closeOverlay("rom-x-conflict-sheet"));
+    bindDismiss("rom-x-dupes-sheet", closeDupesSheet);
+    const dupesOk = document.getElementById("rom-x-dupes-ok");
+    const dupesCancel = document.getElementById("rom-x-dupes-cancel");
+    if (dupesOk) dupesOk.addEventListener("click", () => confirmDupes());
+    if (dupesCancel) dupesCancel.addEventListener("click", closeDupesSheet);
   }
 
   function openDeleteSheet() {
@@ -1566,6 +1834,9 @@ const RomExplorer = (() => {
     openDeleteSheet,
     closeDeleteSheet,
     confirmDelete,
+    openDupesSheet,
+    closeDupesSheet,
+    confirmDupes,
     onSearchInput,
     onSearchKeyDown,
     clearSearch,
