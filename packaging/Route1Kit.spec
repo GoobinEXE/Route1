@@ -16,9 +16,10 @@ ICON_ICO = os.path.join(STATIC, "assets", "app-icon.ico")
 datas = [
     (STATIC, "static"),
     (os.path.join(ROOT, "CHANGELOG.md"), "."),
+    (os.path.join(ROOT, "vendor", "GEiv4.2_EN"), os.path.join("vendor", "GEiv4.2_EN")),
 ]
 binaries = []
-hiddenimports = list(collect_submodules("core"))
+hiddenimports = list(collect_submodules("core")) + list(collect_submodules("services"))
 
 for pkg in ("webview", "py7zr"):
     try:
@@ -40,7 +41,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=["PySide6", "shiboken6", "PySide6.QtWebEngine", "PySide6.QtWebEngineCore"],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -90,8 +91,8 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Route 1 Kit",
             "CFBundleDisplayName": "Route 1 Kit",
-            "CFBundleShortVersionString": "1.0.3",
-            "CFBundleVersion": "1.0.3",
+            "CFBundleShortVersionString": "1.1.0",
+            "CFBundleVersion": "1.1.0",
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
         },

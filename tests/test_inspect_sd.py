@@ -42,6 +42,43 @@ def test_inspect_finds_dt_nand(tmp_path, monkeypatch):
     assert "path" not in res["nand_dumps"][0]
     assert res["nand_dumps"][0]["has_sha1"] is True
     assert res["has_dcim"] is False
+    assert res["has_hiya"] is False
+    assert res["has_dspico"] is False
+
+
+def test_inspect_hiya_and_dspico_flags(tmp_path, monkeypatch):
+    sd = tmp_path / "SD"
+    sd.mkdir()
+    (sd / "hiya.dsi").write_bytes(b"h")
+    (sd / "hiya").mkdir()
+    (sd / "_picoboot.nds").write_bytes(b"p")
+    pico = sd / "_pico"
+    pico.mkdir()
+    (pico / "picoLoader7.bin").write_bytes(b"7")
+    (pico / "picoLoader9.bin").write_bytes(b"9")
+
+    monkeypatch.setattr(inspect_sd, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(inspect_sd, "get_cluster_size_bytes", lambda p: 32768)
+    monkeypatch.setattr(
+        inspect_sd,
+        "get_mounted_drives",
+        lambda: [
+            {
+                "mount_path": str(sd),
+                "name": "SD",
+                "fs_type": "FAT32",
+                "total_size_gb": 8,
+                "free_size_gb": 4,
+                "is_removable": True,
+            }
+        ],
+    )
+    monkeypatch.setattr(inspect_sd, "_twilight_present", lambda p: False)
+
+    res = inspect_sd.inspect_sd_card(str(sd))
+    assert res["success"] is True
+    assert res["has_hiya"] is True
+    assert res["has_dspico"] is True
 
 
 def test_inspect_rejects_unsafe(monkeypatch):

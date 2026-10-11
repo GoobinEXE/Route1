@@ -251,5 +251,24 @@ const Theme = (() => {
     init();
   }
 
-  return { THEMES, set, current, toggleMenu, closeMenu, get preference() { return preference; } };
+  function list() {
+    return Object.keys(THEMES).map((id) => ({
+      id,
+      label: THEMES[id].label,
+      group: THEMES[id].group,
+      scheme: THEMES[id].scheme,
+    }));
+  }
+
+  return {
+    THEMES,
+    set,
+    current,
+    list,
+    toggleMenu,
+    closeMenu,
+    get preference() {
+      return preference;
+    },
+  };
 })();

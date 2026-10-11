@@ -1,0 +1,6 @@
+Platform icons in this folder are original stylized hardware silhouettes
+created for Route 1 Kit (not official console trademarks or third-party logo packs).
+
+Game boxarts / title screens downloaded by the app come from:
+- GameTDB (https://www.gametdb.com/) — Nintendo DS covers by game code
+- Libretro Thumbnails (https://thumbnails.libretro.com/) — Named_Boxarts / Named_Titles

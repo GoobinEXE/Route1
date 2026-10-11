@@ -7,7 +7,7 @@ let logPollTimer = null;
 let logPollInFlight = false;
 let activeActionBtn = null;
 let activeActionLabel = null;
-let appMode = "wizard"; // wizard | advanced | about
+let appMode = "wizard"; // wizard | advanced | about | dspico
 let aboutLoadInFlight = false;
 let advancedSection = "prepare"; // prepare | card | apps
 let homebrewCatalog = null;
@@ -21,6 +21,8 @@ const ACTION_MAP = {
   "setup-unlaunch": "setup_unlaunch",
   "setup-gei": "setup_gei",
   "setup-r4": "setup_r4",
+  "setup-dspico": "setup_dspico",
+  "setup-hiya": "setup_hiya",
   "organize-roms": "organize_roms",
   backup: "backup",
   "clean-sd": "clean_sd",
@@ -80,28 +82,46 @@ function waitForApi(timeoutMs = 10000) {
 
 document.addEventListener("DOMContentLoaded", async () => {
   const saved = sessionStorage.getItem(MODE_STORAGE_KEY);
-  if (saved === "advanced" || saved === "wizard" || saved === "about") {
+  if (
+    saved === "advanced" ||
+    saved === "wizard" ||
+    saved === "about" ||
+    saved === "dspico"
+  ) {
     appMode = saved;
   }
   const savedAdv = sessionStorage.getItem(ADV_SECTION_KEY);
   if (savedAdv === "prepare" || savedAdv === "card" || savedAdv === "apps") {
     advancedSection = savedAdv;
   }
-  applyAppMode(appMode, { silent: true });
-  applyAdvancedSection(advancedSection);
+  // Shell v2 gere a navegação; applyAppMode fica como compatibilidade.
+  if (!(window.R1K && R1K.shell)) {
+    applyAppMode(appMode, { silent: true });
+    applyAdvancedSection(advancedSection);
+  }
+
+  if (window.R1K && R1K.events) {
+    R1K.events.on("log", (p) => {
+      if (p && p.message) appendLog(p.message, p.level || "info");
+    });
+    R1K.events.on("busy", (p) => {
+      if (p && typeof p.busy === "boolean") setBusy(!!p.busy);
+    });
+  }
 
   try {
     await waitForApi();
     fetchDrives();
+    // Fallback curto; push via web_events substitui o polling contínuo.
     startLogPolling();
+    setTimeout(() => {
+      if (window.R1K && R1K.events && logPollTimer) {
+        clearInterval(logPollTimer);
+        logPollTimer = null;
+      }
+    }, 2500);
     if (typeof Wizard !== "undefined" && Wizard.init) {
       Wizard.init();
-    }
-    if (appMode === "about") {
-      loadAboutPage();
-    }
-    if (appMode === "advanced" && advancedSection === "apps") {
-      loadHomebrewCatalog();
     }
   } catch (err) {
     appendLog(`Falha ao iniciar bridge: ${err.message}`, "error");
@@ -119,6 +139,7 @@ function appendLog(msg, type = "info") {
   const containers = [
     document.getElementById("log-container"),
     document.getElementById("wizard-log"),
+    document.getElementById("dspico-log-container"),
   ].filter(Boolean);
 
   const clean = stripLogDecorators(msg);
@@ -152,11 +173,15 @@ function escapeHtml(text) {
 async function clearLogs() {
   const advanced = document.getElementById("log-container");
   const wizardLog = document.getElementById("wizard-log");
+  const dspicoLog = document.getElementById("dspico-log-container");
   if (advanced) {
     advanced.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
   }
   if (wizardLog) {
     wizardLog.innerHTML = '<div class="text-fg-mute">Atividade do assistente.</div>';
+  }
+  if (dspicoLog) {
+    dspicoLog.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
   }
   lastLogIndex = 0;
   try {
@@ -175,7 +200,7 @@ function setDriveStatus(hasDrive) {
 function actionButtons() {
   return Array.from(
     document.querySelectorAll(
-      "button.btn-primary, button.btn-secondary, button.util-btn, #btn-refresh, .wizard-cta, .mode-tab, .adv-tab, .hb-install-btn"
+      "button.btn-primary, button.btn-secondary, button.util-btn, button.action-row, #btn-refresh, .wizard-cta, .mode-tab, .adv-tab, .hb-install-btn"
     )
   );
 }
@@ -208,6 +233,9 @@ function setBusy(isBusy, sourceBtn) {
   }
 
   scheduleLogPolling();
+  if (typeof RomExplorer !== "undefined" && RomExplorer.updateRemoveBtn) {
+    RomExplorer.updateRemoveBtn();
+  }
   if (typeof Wizard !== "undefined" && Wizard.onBusyChange) {
     Wizard.onBusyChange(busy);
   }
@@ -217,6 +245,7 @@ function syncDriveSelects() {
   const selects = [
     document.getElementById("drive-select"),
     document.getElementById("wizard-drive-select"),
+    document.getElementById("dspico-drive-select"),
   ].filter(Boolean);
 
   selects.forEach((select) => {
@@ -279,15 +308,39 @@ async function fetchDrives() {
 }
 
 function onDriveSelected(fromWizard) {
-  const select = document.getElementById(
-    fromWizard ? "wizard-drive-select" : "drive-select"
-  );
+  let selectId = "drive-select";
+  if (fromWizard === true || fromWizard === "wizard") {
+    selectId = "wizard-drive-select";
+  } else if (fromWizard === "dspico") {
+    selectId = "dspico-drive-select";
+  }
+  const select = document.getElementById(selectId);
   if (!select) return;
   const path = select.value;
   selectedDrive = currentDrives.find((d) => d.mount_path === path) || null;
   syncDriveSelects();
   updateDriveBadge();
   setDriveStatus(!!selectedDrive);
+  if (window.R1K && R1K.shell) {
+    R1K.shell.refreshRoleBadge();
+    R1K.shell.updateHomeDrive();
+  }
+  const view = window.R1K && R1K.shell ? R1K.shell.current() : null;
+  if (
+    (advancedSection === "card" && appMode === "advanced") ||
+    view === "card"
+  ) {
+    if (typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
+      RomExplorer.refresh();
+    }
+  }
+  if (
+    (appMode === "dspico" || view === "dspico") &&
+    typeof Dspico !== "undefined" &&
+    Dspico.refresh
+  ) {
+    Dspico.refresh();
+  }
   if (typeof Wizard !== "undefined" && Wizard.onDriveSelected) {
     Wizard.onDriveSelected();
   }
@@ -308,6 +361,13 @@ function updateDriveBadge() {
       free: "wizard-info-free",
     },
   ];
+
+  badges.push({
+    badge: document.getElementById("dspico-drive-badge"),
+    fs: "dspico-info-fs",
+    size: "dspico-info-size",
+    free: "dspico-info-free",
+  });
 
   badges.forEach(({ badge, fs, size, free }) => {
     if (!badge) return;
@@ -354,7 +414,10 @@ function findActionButton(endpoint) {
  *   method: 'setup_nand_dump' | ...,
  *   hasFacebook?: boolean,
  *   sourceDir?: string,  // setup_r4
+ *   nandPath?: string,   // setup_hiya
+ *   updateOnly?: boolean,// setup_hiya
  *   confirmOrganize?: boolean,
+ *   layout?: "console"|"franchise"|"both", // organize_roms
  *   sourceBtn?: HTMLElement,
  *   mountPath?: string,
  * }
@@ -379,12 +442,49 @@ async function runMountOp(options = {}) {
   }
 
   if (methodName === "organize_roms" && options.confirmOrganize !== false) {
+    const layout = options.layout || "console";
+    let layoutLine;
+    if (layout === "franchise") {
+      layoutLine = "• mover jogos para /roms/<franquia>/ (ex. Pokemon, Mario)\n";
+    } else if (layout === "both") {
+      layoutLine =
+        "• mover jogos para /roms/<consola>/<franquia>/ (ex. /roms/nds/Pokemon/)\n";
+    } else {
+      layoutLine = "• mover jogos para /roms/<consola>/ (ex. /roms/nds/)\n";
+    }
     const conf = confirm(
       "Organizar jogos e apps irá:\n" +
-        "• mover jogos para /roms/nds/ (lista flat, acesso rápido)\n" +
+        layoutLine +
+        "• criar as pastas de destino em falta\n" +
         "• mover homebrew/apps para /roms/apps/\n" +
-        "• sincronizar saves\n" +
+        "• sincronizar saves e estados de emuladores (GameYob .sav/.yss, …)\n" +
+        "• remover pastas vazias sobrantes\n" +
         "• APAGAR .txt/.jpg/.nfo/.html etc. apenas dentro de /roms/\n\n" +
+        "Continuar?"
+    );
+    if (!conf) return { success: false, error: "cancelled" };
+  }
+
+  if (methodName === "organize_dspico" && options.confirmOrganize !== false) {
+    const layout = options.layout || "games";
+    let layoutLine;
+    if (layout === "franchise") {
+      layoutLine = "• jogos em Games/<franquia>/ (ex. Pokemon, Mario)\n";
+    } else if (layout === "platform") {
+      layoutLine = "• jogos em Games/nds/ ou Games/dsi/\n";
+    } else if (layout === "root") {
+      layoutLine =
+        "• jogos soltos na raiz, ao lado de _picoboot.nds\n";
+    } else {
+      layoutLine = "• jogos soltos em Games/\n";
+    }
+    const conf = confirm(
+      "Organizar pastas DSPico irá:\n" +
+        layoutLine +
+        "• sincronizar saves junto de cada jogo\n" +
+        "• REMOVER pastas/ficheiros de outros sistemas (_nds, roms, MoonShell, hiya, kernels R4/GEi, …)\n" +
+        "• manter apenas o necessário: _picoboot.nds, _pico/, Games/ e emunand (se existir)\n\n" +
+        "Esta acção é destrutiva para conteúdo que não seja DSPico.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };
@@ -401,11 +501,12 @@ async function runMountOp(options = {}) {
 
   if (methodName === "install_boxarts") {
     const conf = confirm(
-      "Instalar boxarts irá:\n" +
-        "• descarregar capas do GameTDB (requer internet)\n" +
+      "Instalar capas e ícones irá:\n" +
+        "• descarregar capas GameTDB para jogos NDS (por game code)\n" +
+        "• descarregar capas e ecrãs de título Libretro para outras consolas\n" +
         "• e/ou importar packs PNG/zip de Downloads/Desktop\n" +
-        "• gravar em /_nds/TWiLightMenu/boxart/\n\n" +
-        "No TWiLight, ative a visualização de capas nas definições.\n\n" +
+        "• gravar em /_nds/TWiLightMenu/boxart/ e icons/\n\n" +
+        "No TWiLight, ative capas/ícones personalizados nas definições.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };
@@ -432,8 +533,18 @@ async function runMountOp(options = {}) {
       result = await api.setup_nand_dump(mount, hasFacebook);
     } else if (methodName === "setup_r4") {
       result = await api.setup_r4(mount, options.sourceDir || "");
+    } else if (methodName === "setup_hiya") {
+      result = await api.setup_hiya(
+        mount,
+        options.nandPath || options.nandRelPath || "",
+        typeof options.updateOnly === "boolean" ? options.updateOnly : false
+      );
     } else if (methodName === "install_homebrew") {
       result = await api.install_homebrew(mount, options.appId || "");
+    } else if (methodName === "organize_roms") {
+      result = await api.organize_roms(mount, options.layout || "console");
+    } else if (methodName === "organize_dspico") {
+      result = await api.organize_dspico(mount, options.layout || "games");
     } else {
       result = await api[methodName](mount);
     }
@@ -450,6 +561,30 @@ async function runMountOp(options = {}) {
   } finally {
     setBusy(false);
     fetchDrives();
+    if (
+      methodName === "organize_roms" ||
+      methodName === "import_roms" ||
+      methodName === "delete_roms" ||
+      methodName === "move_roms"
+    ) {
+      RomExplorer.refresh();
+    }
+    if (
+      methodName === "setup_dspico" ||
+      methodName === "import_dspico_games" ||
+      methodName === "delete_dspico_games" ||
+      methodName === "move_dspico_games" ||
+      methodName === "mkdir_dspico_games" ||
+      methodName === "organize_dspico" ||
+      methodName === "ensure_dspico_emunand" ||
+      methodName === "import_dspico_bios" ||
+      methodName === "import_dspico_twl_font" ||
+      methodName === "set_dspico_settings"
+    ) {
+      if (typeof Dspico !== "undefined" && Dspico.refresh) {
+        Dspico.refresh();
+      }
+    }
   }
 }
 
@@ -465,12 +600,16 @@ async function runAction(endpoint) {
     "facebook";
   const hasFacebook = cameraVersion === "facebook";
   const sourceBtn = findActionButton(endpoint);
+  const organizeLayout =
+    document.querySelector('input[name="organize-layout"]:checked')?.value ||
+    "console";
 
   await runMountOp({
     method: methodName,
     hasFacebook,
     sourceBtn,
     confirmOrganize: true,
+    layout: organizeLayout,
   });
 }
 
@@ -497,15 +636,18 @@ async function confirmFormat() {
   const size =
     selectedDrive.total_size_gb != null ? `${selectedDrive.total_size_gb} GB` : "?";
   const fs = selectedDrive.fs_type || "?";
-  const conf = confirm(
+  const typed = prompt(
     `Formatar ${selectedDrive.name} em FAT32 (cluster 32 KB)?\n\n` +
       `Caminho: ${selectedDrive.mount_path}\n` +
       `Capacidade: ${size}\n` +
       `Sistema: ${fs}\n` +
       `Barramento: ${bus}\n\n` +
-      `Todos os dados do cartão serão apagados.`
+      `Todos os dados do cartão serão apagados.\n\n` +
+      `Escreva FORMATAR para confirmar:`
   );
-  if (!conf) return { success: false, error: "cancelled" };
+  if (!typed || String(typed).trim().toUpperCase() !== "FORMATAR") {
+    return { success: false, error: "cancelled" };
+  }
 
   return runMountOp({
     method: "format_sd",
@@ -514,44 +656,46 @@ async function confirmFormat() {
 }
 
 function applyAppMode(mode, { silent } = {}) {
+  // Shell v2: mapear modos legados → vistas.
+  if (window.R1K && R1K.shell && typeof R1K.shell.navigate === "function") {
+    const map = {
+      wizard: "softmod",
+      dspico: "dspico",
+      about: "settings",
+      advanced: "card",
+    };
+    const view = map[mode] || "home";
+    if (mode === "advanced") appMode = "advanced";
+    else if (mode === "about") appMode = "about";
+    else if (mode === "dspico") appMode = "dspico";
+    else appMode = "wizard";
+    try {
+      sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
+    } catch (e) {
+      /* ignore */
+    }
+    R1K.shell.navigate(view, { silent });
+    return;
+  }
+
   if (busy && !silent) {
     alert("Aguarde a operação em andamento terminar antes de mudar de modo.");
     return;
   }
   if (mode === "advanced") appMode = "advanced";
   else if (mode === "about") appMode = "about";
+  else if (mode === "dspico") appMode = "dspico";
   else appMode = "wizard";
   sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
 
   const wizard = document.getElementById("view-wizard");
   const advanced = document.getElementById("view-advanced");
+  const dspico = document.getElementById("view-dspico");
   const about = document.getElementById("view-about");
-  const btnWizard = document.getElementById("mode-wizard");
-  const btnAdvanced = document.getElementById("mode-advanced");
-  const btnAbout = document.getElementById("mode-about");
-  const btnId = document.getElementById("btn-id-guide");
-  const btnRefresh = document.getElementById("btn-refresh");
-
   if (wizard) wizard.classList.toggle("hidden", appMode !== "wizard");
   if (advanced) advanced.classList.toggle("hidden", appMode !== "advanced");
+  if (dspico) dspico.classList.toggle("hidden", appMode !== "dspico");
   if (about) about.classList.toggle("hidden", appMode !== "about");
-  if (btnWizard) {
-    const on = appMode === "wizard";
-    btnWizard.classList.toggle("mode-tab--active", on);
-    btnWizard.setAttribute("aria-selected", on ? "true" : "false");
-  }
-  if (btnAdvanced) {
-    const on = appMode === "advanced";
-    btnAdvanced.classList.toggle("mode-tab--active", on);
-    btnAdvanced.setAttribute("aria-selected", on ? "true" : "false");
-  }
-  if (btnAbout) {
-    const on = appMode === "about";
-    btnAbout.classList.toggle("mode-tab--active", on);
-    btnAbout.setAttribute("aria-selected", on ? "true" : "false");
-  }
-  if (btnId) btnId.classList.toggle("hidden", appMode !== "advanced");
-  if (btnRefresh) btnRefresh.classList.toggle("hidden", appMode === "about");
 
   if (appMode === "wizard" && typeof Wizard !== "undefined" && Wizard.render) {
     Wizard.render();
@@ -564,6 +708,9 @@ function applyAppMode(mode, { silent } = {}) {
     if (advancedSection === "apps") {
       loadHomebrewCatalog();
     }
+  }
+  if (appMode === "dspico" && typeof Dspico !== "undefined" && Dspico.enter) {
+    Dspico.enter();
   }
 }
 
@@ -606,6 +753,9 @@ function setAdvancedSection(section) {
   applyAdvancedSection(section);
   if (advancedSection === "apps") {
     loadHomebrewCatalog();
+  }
+  if (advancedSection === "card") {
+    RomExplorer.refresh();
   }
 }
 

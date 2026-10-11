@@ -127,6 +127,50 @@ def copy_verified(
         raise
 
 
+def copy_fast(
+    src: str,
+    dst: str,
+    log_callback=None,
+    chunk_size: int = 8 * 1024 * 1024,
+) -> int:
+    """
+    Cópia rápida atómica (.partial → replace) com verificação de tamanho.
+    Preferível a copy_verified para ROMs grandes (sem SHA-256 completo).
+    Retorna o tamanho em bytes.
+    """
+    if not os.path.isfile(src):
+        raise FileNotFoundError(f"Origem inexistente: {src}")
+
+    src_size = os.path.getsize(src)
+    parent = os.path.dirname(dst) or "."
+    os.makedirs(parent, exist_ok=True)
+    partial = f"{dst}.partial"
+    try:
+        with open(src, "rb") as fin, open(partial, "wb") as fout:
+            while True:
+                chunk = fin.read(chunk_size)
+                if not chunk:
+                    break
+                fout.write(chunk)
+            fout.flush()
+            os.fsync(fout.fileno())
+        partial_size = os.path.getsize(partial)
+        if partial_size != src_size:
+            raise RuntimeError(
+                f"Tamanho pós-cópia não coincide em {os.path.basename(dst)}: "
+                f"esperado {src_size}, obtido {partial_size}"
+            )
+        os.replace(partial, dst)
+        return src_size
+    except Exception:
+        if os.path.exists(partial):
+            try:
+                os.remove(partial)
+            except OSError:
+                pass  # best-effort cleanup do parcial
+        raise
+
+
 def copytree_verified(src_dir: str, dst_dir: str, log_callback=None) -> int:
     """Copia árvore de arquivos com verificação SHA-256 por arquivo. Retorna contagem."""
     count = 0

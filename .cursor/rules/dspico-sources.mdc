@@ -1,0 +1,37 @@
+---
+description: Fontes oficiais DSPico (LNH + manual ChiScart) — consultar antes de inventar layout/fluxo
+globs: core/dspico*.py,core/pico_*.py,core/updates.py,static/dspico.js,static/js/*.js,tests/test_dspico*.py,tests/test_pico_*.py,tests/test_updates.py
+alwaysApply: false
+---
+
+# Fontes oficiais DSPico (obrigatório para agents)
+
+Ao implementar, corrigir ou documentar o modo DSPico, **consultar estas fontes** em vez de inventar estrutura do SD, nomes de ficheiros, fluxo de firmware ou FAQ. Espelho em código: `DSPICO_OFFICIAL_LINKS` / `DSPICO_USER_MANUAL_URL` em `core/dspico.py`.
+
+## Manual e guias (começar aqui)
+
+| Fonte | URL | Usar para |
+|-------|-----|-----------|
+| Manual utilizador ChiScart (PDF) | https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf | Quick start: format SD, `_picoboot.nds`, `_pico/`, jogos, BOOTSEL/UF2, FAQ (`picoLoader`, mount SD) |
+| GUIDE LNH | https://github.com/LNH-team/dspico/blob/develop/GUIDE.md | Guia oficial do projecto DSPico |
+| Usage Pico Launcher | https://github.com/LNH-team/pico-launcher/blob/develop/docs/Usage.md | `settings.json`, layouts, opções do launcher |
+
+## Repositórios LNH-team (pacote / firmware / hardware)
+
+| Repo | URL | Usar para |
+|------|-----|-----------|
+| pico-launcher | https://github.com/LNH-team/pico-launcher | Launcher NDS, pasta `_pico`, rename → `_picoboot.nds` |
+| pico-loader | https://github.com/LNH-team/pico-loader | `picoLoader7/9.bin`, `aplist.bin`, `savelist.bin` (asset DSPICO) |
+| dspico-firmware | https://github.com/LNH-team/dspico-firmware | UF2 / releases oficiais (só pin LNH) |
+| dspico-hardware | https://github.com/LNH-team/dspico-hardware | Hardware open-source |
+| dspico | https://github.com/LNH-team/dspico | Meta / GUIDE |
+
+Emuladores Pico (secundário): guia Sanrax + pins `DSPICO_EMU_CACHE_KEYS` — ver `core/dspico_emulators.py`.
+
+## Como trabalhar
+
+1. **Antes** de mudar layout do microSD, nomes de markers, fluxo «Preparar SD» ou firmware RPI-RP2: alinhar com o manual + GUIDE/Usage (WebFetch / docs do repo).
+2. Downloads de pacote/firmware: **só** `DSPICO_CACHE_KEYS` / `github.com/LNH-team/` — nunca mirrors de terceiros nem BIOS proprietária.
+3. Textos de ajuda na UI e logs: coerentes com o manual (ex. `_picoboot.nds` na raiz, loaders em `/_pico/`, jogos em `Games/`, UF2 via BOOTSEL).
+4. Em conflito entre código local e fonte oficial recente: preferir a fonte LNH/manual e actualizar o app + pins com evidência — não «adivinhar».
+5. Manter `DSPICO_OFFICIAL_LINKS` e a allowlist em `core/about.py` sincronizados com estas URLs.

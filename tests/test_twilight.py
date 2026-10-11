@@ -55,6 +55,63 @@ def test_valid_extract_generates_manifest(tmp_path, fake_cache, monkeypatch):
     assert os.path.isfile(os.path.join(result, ".route_1_kit_manifest"))
 
 
+def test_extract_vc_addon_requires_gameyob(tmp_path, fake_cache, monkeypatch):
+    from tests.conftest import make_nds
+
+    monkeypatch.setattr("core.twilight.CACHE_DIR", str(fake_cache))
+    staging = tmp_path / "vc"
+    emu = staging / "_nds" / "TWiLightMenu" / "emulators"
+    emu.mkdir(parents=True)
+    make_nds(emu / "gameyob.nds")
+    (staging / "roms" / "gb").mkdir(parents=True)
+    (staging / "roms" / "gb" / "Place GB here").write_text("x")
+
+    archive = tmp_path / "vc.7z"
+    with py7zr.SevenZipFile(archive, "w") as z:
+        for root, _dirs, files in os.walk(staging):
+            for f in files:
+                full = os.path.join(root, f)
+                rel = os.path.relpath(full, staging)
+                z.write(full, rel)
+
+    out = fake_cache / "TWiLightMenu-VC"
+    result = twilight._extract_twilight_vc_7z(str(archive), str(out))
+    assert os.path.isfile(
+        os.path.join(result, "_nds", "TWiLightMenu", "emulators", "gameyob.nds")
+    )
+    assert os.path.isfile(os.path.join(result, ".route_1_kit_manifest"))
+
+
+def test_install_twilight_virtual_console(tmp_path, fake_cache, monkeypatch):
+    from tests.conftest import make_nds
+
+    monkeypatch.setattr("core.twilight.CACHE_DIR", str(fake_cache))
+    monkeypatch.setattr("core.twilight.sync_volume", lambda *a, **k: None)
+
+    vc = fake_cache / "TWiLightMenu-VC"
+    emu = vc / "_nds" / "TWiLightMenu" / "emulators"
+    emu.mkdir(parents=True)
+    make_nds(emu / "gameyob.nds")
+    (vc / "roms" / "gb").mkdir(parents=True)
+    (vc / "roms" / "gb" / "Place ROMs").write_text("ok")
+    (vc / ".route_1_kit_manifest").write_text("dummy\n")
+    (vc / "snemul.cfg").write_text("cfg\n")
+
+    mount = tmp_path / "SD"
+    (mount / "_nds" / "TWiLightMenu").mkdir(parents=True)
+
+    ok, msg = twilight.install_twilight_virtual_console(str(mount))
+    assert ok is True, msg
+    assert (mount / "_nds" / "TWiLightMenu" / "emulators" / "gameyob.nds").is_file()
+    assert (mount / "roms" / "gb").is_dir()
+    assert (mount / "roms" / "gbc").is_dir()
+    assert (mount / "roms" / "nes").is_dir()
+    assert (mount / "roms" / "snes").is_dir()
+    assert (mount / "roms" / "tg16").is_dir()
+    assert (mount / "roms" / "cpc").is_dir()
+    assert (mount / "snemul.cfg").is_file()
+
+
 def test_is_gei_kernel_dir(tmp_path):
     gei = tmp_path / "GEiv4.2_EN"
     gei.mkdir()
@@ -66,6 +123,74 @@ def test_is_gei_kernel_dir(tmp_path):
     r4.mkdir()
     (r4 / "_DS_MENU.DAT").write_bytes(b"x")
     assert twilight.is_gei_kernel_dir(str(r4)) is False
+
+
+def test_find_gei_source_prefers_complete_downloads(tmp_path, monkeypatch):
+    """Downloads completa sobrescreve o vendor; incompleta cai no bundled."""
+    root = tmp_path / "app"
+    vendor = root / "vendor" / "GEiv4.2_EN"
+    vendor.mkdir(parents=True)
+    (vendor / "_DS_MENU.DAT").write_bytes(b"bundled-menu")
+    (vendor / "_DS_MSHL.NDS").write_bytes(b"bundled-mshl")
+
+    downloads = tmp_path / "Downloads"
+    complete = downloads / "GEiv4.2_EN"
+    complete.mkdir(parents=True)
+    (complete / "_DS_MENU.DAT").write_bytes(b"dl-menu")
+    (complete / "_DS_MSHL.NDS").write_bytes(b"dl-mshl")
+
+    monkeypatch.setattr(twilight, "_app_root", lambda: str(root))
+    monkeypatch.setattr(
+        twilight.os.path,
+        "expanduser",
+        lambda p: str(complete) if "GEiv4.2_EN" in p else os.path.expanduser(p),
+    )
+    monkeypatch.setattr(twilight, "CACHE_DIR", str(tmp_path / "cache"))
+
+    found = twilight.find_gei_source()
+    assert found == str(complete)
+    assert twilight.is_bundled_gei_path(found) is False
+
+    # Sem _DS_MSHL.NDS em Downloads → usa vendor
+    (complete / "_DS_MSHL.NDS").unlink()
+    found = twilight.find_gei_source()
+    assert found == str(vendor)
+    assert twilight.is_bundled_gei_path(found) is True
+
+
+def test_find_gei_source_skips_incomplete_downloads(tmp_path, monkeypatch):
+    downloads = tmp_path / "Downloads"
+    downloads.mkdir()
+    incomplete = downloads / "GEiv4.2_EN"
+    incomplete.mkdir()
+    (incomplete / "_DS_MENU.DAT").write_bytes(b"only-menu")
+
+    monkeypatch.setattr(twilight, "bundled_gei_dir", lambda: None)
+    monkeypatch.setattr(
+        twilight.os.path,
+        "expanduser",
+        lambda p: str(incomplete) if "GEiv4.2_EN" in p else os.path.expanduser(p),
+    )
+    monkeypatch.setattr(twilight, "CACHE_DIR", str(tmp_path / "cache"))
+
+    assert twilight.find_gei_source() is None
+
+
+def test_probe_kernels_marks_bundled(tmp_path, monkeypatch):
+    root = tmp_path / "app"
+    vendor = root / "vendor" / "GEiv4.2_EN"
+    vendor.mkdir(parents=True)
+    (vendor / "_DS_MENU.DAT").write_bytes(b"m")
+    (vendor / "_DS_MSHL.NDS").write_bytes(b"n")
+
+    monkeypatch.setattr(twilight, "_app_root", lambda: str(root))
+    monkeypatch.setattr(twilight, "find_r4_candidates", lambda: [])
+    monkeypatch.setattr(twilight, "CACHE_DIR", str(tmp_path / "cache"))
+
+    res = twilight.probe_kernels()
+    assert res["success"] is True
+    assert res["gei"]["bundled"] is True
+    assert res["gei"]["path"] == "vendor/GEiv4.2_EN"
 
 
 def test_find_r4_candidates_skips_gei_and_roms(tmp_path, monkeypatch):

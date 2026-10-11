@@ -88,7 +88,7 @@ def test_build_about_payload_user_facing_latest():
     assert data["version"] == __version__
     release = data["latest_release"]
     assert release is not None
-    assert release["version"] == "1.0.3"
+    assert release["version"] == "1.1.0"
     titles = [s["title"] for s in release["sections"]]
     assert "Desenvolvimento" not in titles
     assert "Correções" in titles

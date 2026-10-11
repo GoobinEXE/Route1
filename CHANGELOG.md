@@ -10,6 +10,63 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-10-11
+
+### Alterado
+
+- **UI redesenhada (pywebview + Tailwind)**: sidebar com DSPico e Softmod em destaque; GEi/R4 despromovidos; shell em `static/` + `services/FilePickerPort` / `web_events`
+
+### Adicionado
+
+- **Verificar Atualizações** (ecossistema DSPico): canal pinado e opt-in «mais recente» LNH com verificação por digest
+- Área **Utilidades**: Emuladores, Apps (incl. DSPico USB), Capas/Ícones, Temas Pico Launcher
+
+### Adicionado
+
+- **Capas e ícones no DSPico**: pesquisa online (GameTDB + Libretro), opções semelhantes / campo de pesquisa, escolha manual PNG/BMP; grava BMP Pico Launcher em `/_pico/covers/` e `/_pico/icons/`
+- Modo de topo **DSPico**: estado do microSD, instalar pacote oficial LNH, jogos em `Games/`, emunand, `settings.json` e firmware UF2 (só releases `LNH-team`)
+- **Emuladores** no modo DSPico: selecção múltipla (GBARunner3/2, GameYob, nesDS, Atari, Sega, NGP, TurboGrafx, Coleco, Intellivision, SNEmulDS, jEnesisDS, NeoDS); instala em `/_pico/emulators/` ou `/Emulators/`, cria `/ROMs/…` e configura `fileAssociations` (SHA-256 pinado; sem BIOS proprietária)
+- **Organizar pastas** no modo DSPico: remove conteúdo de outros sistemas e organiza jogos por franquia, plataforma (`nds`/`dsi`), soltos em `Games/` ou soltos na raiz ao lado do launcher; preserva `/ROMs/`, `_gba/`, `Emulators/` e `data/`
+- Kit TWiLight inclui o add-on **Virtual Console** (GameYob para GB/GBC e outros emuladores retro)
+- Organização de jogos sincroniza saves/estados dos emuladores (GameYob `.sav`/`.yss`/`.ysN`, cheats `.cht`, S8DS `.gg.sav`/`.sms.sav`) e cria todas as pastas `/roms/` do Virtual Console (nes, snes, tg16, cpc, …)
+- Pacote base **GEi v4.2 EN** incluído em `vendor/GEiv4.2_EN` (kernel + `_SYSTEM_` + MoonShell) — instalação sem pasta em Downloads
+- Instalação automatizada de **hiyaCFW** (SDNAND a partir do `nand.bin`, tools TWLMagician pinados)
+- Instalação do pacote **DSPico** (Pico Launcher + Loader oficiais) no microSD
+- Passos no Assistente e cards no Modo avançado para hiyaCFW e DSPico
+- Organização de jogos com escolha de layout: **por consola**, **por franquia**, ou **consola + franquia** (`/roms/nds/Pokemon/`)
+- **Gestor de jogos** no cartão: adicionar/remover ROMs no app (cópia rápida), com opções de save ao apagar (apagar / backup no PC / manter no SD)
+- **Explorador visual** de `/roms/` (árvore + grelha): arrastar entre pastas e soltar ficheiros do computador; remoção com painel de opções de save
+- Explorador: **tooltip** ao pairar 3s e **gaveta de detalhes** (capa, como corre, saves) com troca de capa/ícone TWiLight
+- Capas/ícones multi-consola: GameTDB (NDS) + Libretro Thumbnails (GBA, NES, SNES, …); botão «Buscar capa e ícone» na gaveta; ícones de plataforma SVG (sem placeholders genéricos)
+
+### Corrigido
+
+- hiyaCFW no macOS: tools (`twltool` / `7za`) passam a vir de `Darwin/` pinado (o zip do release é só o GUI)
+- hiyaCFW: extracção da SDNAND via `fatcat` (offset TWLN), porque o `7za` Darwin não abre `.img` de NAND
+- Organizar jogos: cria as pastas do layout escolhido e remove pastas vazias (em «por franquia» limpa pastas de consola vazias que ficavam para trás)
+
+### Alterado
+
+- Modo DSPico: botão **Manual DSPico** (PDF ChiScart) junto dos links GitHub oficiais LNH
+- Agents: fontes oficiais DSPico (manual ChiScart + repos LNH) em `AGENTS.md` e `.cursor/rules/dspico-sources.mdc`
+- UX/UI das telas de configuração do SD: opções com propósito, “o que escreve” e risco; Assistente e Avançado separam **SD do DSi** vs **MicroSD do cartucho**
+- Explorador de jogos: chrome unificado, árvore com hierarquia, grelha refinada, barra de estado e remoção em overlay
+- Explorador: ícones SVG por plataforma (NDS, GBA, GB, NES, …) em vez de caixas CSS genéricas; listagem usa ícone TWiLight custom quando existir
+- Explorador: pesquisa por nome em todo `/roms/` (campo na barra, Escape limpa)
+- Organizar jogos: em layout **por franquia** só garante `apps`/`saves`/`bios` (não recria dezenas de pastas de consola vazias)
+
+### Desenvolvimento
+
+- `core/pico_artwork.py` + `core/pico_bmp.py`: pesquisa/aplicação de arte DSPico (BMP 8/4 bpp); API `search_dspico_artwork` / `apply_dspico_artwork_url` / `set_dspico_artwork`
+- `core/artwork.py`: pipeline multi-consola; `core/boxart.py` passa a reexportar
+- Ícones de plataforma em `static/assets/platforms/` (silhuetas originais; ver NOTICE.txt)
+- `vendor/GEiv4.2_EN` bundled; `find_gei_source` prioriza vendor e exige `_DS_MSHL.NDS`
+- `core/hiya.py`, `core/dspico.py` (inspect/Games/emunand/settings/RP2), pins `DSPICO_CACHE_KEYS` em `core/cache.py`, flags `has_hiya` / `has_dspico` em `inspect_sd`
+- UI `static/dspico.js` + tab `mode-dspico`; UF2 só quando `dspico_firmware_uf2_ready()` (asset oficial LNH)
+- Componentes UI `.opt-card`, `.path-badge`, `.action-row`, glossário inline em `static/`
+- `organize_roms_directory(..., layout=)` + `detect_franchise`; API `organize_roms(mount, layout)`
+- `core/rom_manager.py` + `copy_fast` em `sdio`; API `list_roms` / `import_roms` / `delete_roms` / diálogos de ficheiro
+- Explorador: `list_rom_dir` / `list_rom_tree` / `move_roms` / `mkdir_rom_dir`; drop nativo pywebview; UI `rom_explorer.js`
 ## [1.0.3] — 2026-09-14
 
 ### Adicionado

@@ -4,13 +4,13 @@ Licensed under the GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 
 **Route 1 Kit** é um aplicativo desktop para **macOS, Windows e Linux** que prepara cartões SD para o **Nintendo DSi** e para flashcards (**GEi / AceKard / R4**).
 
-A interface abre numa **janela nativa** (via [pywebview](https://pywebview.flowrl.com/)) — sem navegador externo e sem servidor HTTP. Tudo o que precisa para usar o app fica offline na pasta do projeto.
+A interface é uma **janela nativa pywebview** com UI HTML/CSS/JS offline em `static/` (Tailwind local, sem CDN e sem servidor HTTP). A lógica de cartão continua em Python (`core/`).
 
 > A pasta ou o repositório podem ainda chamar-se `DSi-SD-Studio`; o nome do produto é **Route 1 Kit**.
 
 ---
 
-## Descarregar (release 1.0.3)
+## Descarregar (release 1.1.0)
 
 Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releases).
 
@@ -32,7 +32,7 @@ Se preferir correr a partir do código-fonte, use a secção [Como abrir o aplic
 - Você quer **criar ou atualizar** o MicroSD de um flashcard GEi ou R4.
 - Você já tem jogos no cartão e quer **organizar ROMs e saves**, instalar capas, cheats ou utilitários — com menos risco de apagar o volume errado.
 
-Se é a primeira vez: comece pelo **Assistente**. O **Modo avançado** fica para quem já conhece o fluxo.
+Se é a primeira vez: comece pelo **Assistente**. O **Modo avançado** fica para quem já conhece o fluxo. Para o cartucho **DSPico**, use o separador dedicado **DSPico** (pacote oficial LNH, jogos em `Games/`, emunand e firmware).
 
 ---
 
@@ -117,7 +117,7 @@ Para um MicroSD novo (ou a limpar) no cartucho Slot-1:
 2. Formate em FAT32 se for preciso (o app usa cluster adequado; a formatação **apaga tudo**).
 3. Instale o kernel e a estrutura de pastas.
 
-Clones “R4” são muitos: o kernel tem de ser o **do seu** modelo. Kernel errado = cartucho não inicia.
+O **GEi** usa o pacote base incluído em `vendor/GEiv4.2_EN` (pode sobrescrever com `~/Downloads/GEiv4.2_EN` completa). Clones “R4” são muitos: o kernel tem de ser o **do seu** modelo. Kernel errado = cartucho não inicia.
 
 ### 4. Atualizar flashcard
 
@@ -136,6 +136,18 @@ Faz backup preventivo (quando aplicável) e atualiza o kernel GEi ou R4.
 
 ---
 
+## Modo DSPico
+
+Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-hardware) (LNH-team). Referências: [manual do utilizador](https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf) (ChiScart), [GUIDE](https://github.com/LNH-team/dspico/blob/develop/GUIDE.md) e repos [pico-launcher](https://github.com/LNH-team/pico-launcher) / [pico-loader](https://github.com/LNH-team/pico-loader) / [dspico-firmware](https://github.com/LNH-team/dspico-firmware).
+
+1. **Estado** — checklist do microSD (`_picoboot.nds`, `_pico/`, `Games/`, bios/emunand, emuladores).
+2. **Preparar SD** — descarrega e escreve **Pico Launcher** + **Pico Loader DSPICO** oficiais (SHA-256 pinado; só `github.com/LNH-team/`).
+3. **Jogos** — importar/remover ROMs em `Games/`; **Organizar pastas** limpa outros sistemas e coloca os jogos por franquia, plataforma, soltos em `Games/` ou na raiz ao lado do launcher (preserva `/ROMs/`, `_gba/`, `Emulators/`, `data/` dos emuladores). Clique num jogo para **capa/ícone** Pico Launcher (pesquisa GameTDB + Libretro, opções semelhantes, ficheiro manual → BMP em `/_pico/covers/` e `/_pico/icons/`).
+4. **Emuladores** — seleccionar e instalar emuladores do guia [Pico-Launcher](https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/) (GBARunner, GameYob, nesDS, Atari, Sega, etc.): NDS em `/_pico/emulators/` (ou `/Emulators/` se só manual), pastas `/ROMs/…` e `fileAssociations` no `settings.json`. BIOS proprietária **não** é descarregada.
+5. **Emunand** — pastas oficiais + importar o *seu* `biosnds7.rom` / `TWLFontTable.dat` (sem download de BIOS).
+6. **Definições** — editar `/_pico/settings.json` (chaves documentadas no Usage do Launcher).
+7. **Firmware** — detectar volume `RPI-RP2` e gravar `.uf2` **apenas** se existir asset pinado em [dspico-firmware](https://github.com/LNH-team/dspico-firmware/releases). Enquanto as releases LNH não publicarem o UF2, o botão fica desactivado (o GUIDE oficial manda compilar); builds de terceiros não são aceites.
+
 ## Modo avançado (visão geral)
 
 No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Preparar**, **Cartão** e **Apps**:
@@ -143,7 +155,7 @@ No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Prepa
 | Área | O que faz |
 |------|-----------|
 | **Preparar** | Passo 1 (Memory Pit + dumpTool), Passo 2 (TWiLight + Unlaunch), kernel GEi |
-| **Cartão** | Organizar ROMs, cheats, boxarts, relatório, backup, limpeza, formatação, DCIM, cópia NAND |
+| **Cartão** | Organizar ROMs, cheats, capas/ícones (GameTDB + Libretro), relatório, backup, limpeza, formatação, DCIM, cópia NAND |
 | **Apps** | Catálogo homebrew: download + SHA-256, pastas/configs das guias GameBrew, instalação em `/roms/apps/` |
 
 Use o Assistente se ainda não tiver o hábito do fluxo completo; o modo avançado não “segura a mão” nas etapas críticas da mesma forma.
@@ -232,12 +244,12 @@ Secção destinada a desenvolvedores, mantenedores e utilizadores avançados. Li
 
 | Camada | Papel |
 |--------|--------|
-| **Shell** | Python 3.9+ + pywebview (janela nativa; sem HTTP server) |
-| **UI** | `static/` — HTML/CSS/JS offline; Tailwind compilado localmente; fontes embutidas |
-| **Bridge** | Classe `Api` em `app.py` exposta ao JS via `js_api` (JSON) |
+| **Shell** | Python 3.10+ + pywebview (janela nativa; sem servidor HTTP) |
+| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar DSPico / Softmod / Utilidades |
+| **Bridge** | `Api` em `app.py` (`js_api`) + `services/FilePickerPort` / `web_events` |
 | **Core** | Módulos em `core/` (discos, exploits, TWiLight, ROMs, cache, sdio, validate, …) |
 
-Cada chamada `js_api` corre numa **thread não-daemon**. Escritas no SD passam por `_run_mount_op` + `OP_LOCK` (`blocking=False`); o **preflight** corre **dentro** do lock. Fecho da janela: se `OP_LOCK.locked()`, o close é bloqueado.
+Escritas no SD: `_run_mount_op` + `OP_LOCK` (`blocking=False`); o **preflight** corre **dentro** do lock. Fecho da janela: se `OP_LOCK.locked()`, o close é bloqueado.
 
 Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths (`core.privacy`).
 
@@ -245,23 +257,26 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 
 | Caminho | Papel |
 |---------|--------|
-| `app.py` | Entrada, `Api`, `OP_LOCK` / logs, preflight + ops de montagem |
+| `app.py` | Entrada pywebview, `Api`, `OP_LOCK` / logs, preflight + ops de montagem |
+| `services/` | FilePickerPort, wizard_flow, web_events |
+| `static/` | Interface HTML/CSS/JS |
 | `core/disks.py` | Listagem e formatação de volumes removíveis |
 | `core/sdio.py` | Pré-voo de escrita, `copy_verified`, sync, `UndoStack` |
 | `core/exploits.py` | Passo 1 (Memory Pit + dumpTool) e Passo 2 (Unlaunch) |
 | `core/twilight.py` | TWiLight Menu++, kernels GEi / R4 |
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
-| `core/boxart.py` | Capas GameTDB por Game Code / região |
+| `core/artwork.py` | Capas/ícones: GameTDB (NDS) + Libretro Thumbnails (multi-consola) |
+| `core/boxart.py` | Compat: reexporta `core.artwork` |
 | `core/sd_utils.py` | Homebrew do catálogo, cheats, relatório de cluster, cópia de `nand.bin` |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |
-| `core/cache.py` | Downloads oficiais + **SHA-256 pinados** |
+| `core/cache.py` | Downloads oficiais + **SHA-256 pinados** (`DSPICO_CACHE_KEYS`) |
+| `core/dspico.py` | DSPico: pacote LNH, `Games/`, emunand, settings, flash RPI-RP2 |
+| `core/pico_artwork.py` | Capas/ícones Pico Launcher (pesquisa + BMP) |
+| `core/dspico_emulators.py` | Emuladores Pico-Launcher (`/_pico/emulators/`, `/ROMs/`, `fileAssociations`) |
 | `core/homebrew_catalog.py` | Catálogo de apps instaláveis (releases GitHub) |
 | `core/validate.py` | Validação NDS / integridade |
 | `core/inspect_sd.py` | Inspeção do cartão (wizard), sob `OP_LOCK` |
 | `core/privacy.py` | Redação de paths / PII em logs e respostas |
-| `static/app.js` | Modo avançado, poll de logs, `runMountOp` / `busy` |
-| `static/wizard.js` | Assistente (`renderGen`) |
-| `static/theme.js` + `themes.css` | Temas (tokens `--c-*`) |
 | `packaging/` | Spec PyInstaller + Inno Setup (Windows) |
 | `tools/build_*_release.sh` | Empacotar portátil / instalável por SO |
 | `tests/` | pytest |
@@ -275,7 +290,7 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 - Validação de cabeçalho NDS (CRC) antes de gravar bootloaders.
 - Etapas 1/2 (e kernels) transacionais com `UndoStack` + sync após rollback.
 - Formatação só em volumes removíveis/USB/SD reconhecidos (`is_safe_mount_path`).
-- UI offline (sem CDN); CSP restritiva; sem telemetria remota.
+- UI offline (sem CDN); sem telemetria remota.
 
 Atualizar pins após release upstream:
 
@@ -286,9 +301,9 @@ python tools/update_pins.py --check
 
 ### Requisitos
 
-- Python 3.9+
+- Python 3.10+
 - Dependências pinadas: `pywebview==6.2.1`, `py7zr==1.1.3` (ver `requirements.txt` / `requirements.lock.txt`)
-- UI 100% offline (Tailwind e fontes em `static/`)
+- UI offline em `static/`
 
 | SO | Notas |
 |----|--------|
@@ -346,18 +361,14 @@ O símbolo é uma **placa de rota** com o número **1**, silhueta de cartão SD 
 | `static/assets/logo.svg` | Marca completa |
 | `static/assets/logo-small.svg` | Favicon / 16–48 px |
 | `static/assets/app-icon*.png` | 1024 / 512 / 256 / 128 px |
-| `static/assets/favicon*.png` | 64 / 32 / 16 px |
 | `static/assets/app-icon.icns` / `.ico` | Ícone macOS / Windows |
 
 ```bash
 # Regenerar rasters após editar SVGs (requer Chrome/Chromium)
 python tools/build_icons.py
-
-# Regenerar CSS Tailwind após alterar classes na UI
-npx --yes tailwindcss@3.4.17 -i ./static/tailwind.input.css -o ./static/tailwind.css --minify
 ```
 
-Temas: tokens semânticos em `static/themes.css` (`--c-bg`, `--c-surface`, …); `style.css` / Tailwind consomem só esses tokens. Preferência: `localStorage` (`route_1_kit_theme`), aplicada antes do primeiro paint por `static/theme.js`. Novo tema = bloco `html[data-theme="…"]` + entrada em `THEMES` no `theme.js`.
+Temas da app: tokens em `static/themes.css` + `static/theme.js` (7 temas). Temas Pico Launcher: `/_pico/themes/` via Utilidades.
 
 ### Invariantes (não negociáveis)
 

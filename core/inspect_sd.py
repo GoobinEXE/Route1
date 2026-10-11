@@ -74,6 +74,8 @@ def _find_nand_dumps(mount_path: str) -> list[dict[str, Any]]:
 
 
 def _count_roms(mount_path: str) -> int:
+    from core.rom_cleaner import PLATFORM_BY_EXT, is_companion_ext
+
     roms_root = os.path.join(mount_path, "roms")
     if not os.path.isdir(roms_root):
         return 0
@@ -82,8 +84,14 @@ def _count_roms(mount_path: str) -> int:
         for root, dirs, files in os.walk(roms_root):
             dirs[:] = [d for d in dirs if not d.startswith(".")]
             for f in files:
-                low = f.lower()
-                if low.endswith((".nds", ".dsi", ".gba", ".ids")):
+                if f.startswith("._") or f == ".DS_Store" or f.endswith(".partial"):
+                    continue
+                ext = os.path.splitext(f)[1].lower()
+                if is_companion_ext(ext):
+                    continue
+                if PLATFORM_BY_EXT.get(ext):
+                    count += 1
+                elif ext in (".ids", ".app", ".srl"):
                     count += 1
     except OSError:
         return count
@@ -165,6 +173,11 @@ def inspect_sd_card(mount_path: str) -> dict[str, Any]:
         "has_nand_dump": has_plausible_nand,
         "gei_markers": gei_markers,
         "r4_markers": r4_markers,
+        "has_hiya": os.path.isfile(os.path.join(mount_path, "hiya.dsi"))
+        and os.path.isdir(os.path.join(mount_path, "hiya")),
+        "has_dspico": os.path.isfile(os.path.join(mount_path, "_picoboot.nds"))
+        and os.path.isfile(os.path.join(mount_path, "_pico", "picoLoader7.bin"))
+        and os.path.isfile(os.path.join(mount_path, "_pico", "picoLoader9.bin")),
         "roms_count": _count_roms(mount_path),
     }
 

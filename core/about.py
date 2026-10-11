@@ -32,6 +32,16 @@ EXTERNAL_URL_ALLOWLIST = frozenset(
         f"{REPO_URL}/blob/main/CHANGELOG.md",
         f"{REPO_URL}/blob/main/LICENSE",
         "https://www.gamebrew.org/wiki/List_of_DS_homebrew_applications",
+        # DSPico — repositórios oficiais LNH-team + manual de referência
+        "https://github.com/LNH-team/pico-launcher",
+        "https://github.com/LNH-team/pico-loader",
+        "https://github.com/LNH-team/dspico-firmware",
+        "https://github.com/LNH-team/dspico-hardware",
+        "https://github.com/LNH-team/dspico",
+        "https://github.com/LNH-team/dspico/blob/develop/GUIDE.md",
+        "https://github.com/LNH-team/pico-launcher/blob/develop/docs/Usage.md",
+        # Manual de referência ChiScart (espelha DSPICO_USER_MANUAL_URL)
+        "https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf",
     }
 )
 
@@ -82,10 +92,44 @@ def is_allowed_external_url(url: str) -> bool:
     repo_m = _GITHUB_REPO_RE.fullmatch(cleaned.rstrip("/"))
     if repo_m:
         repo = f"{repo_m.group(1)}/{repo_m.group(2)}"
-        return repo in _pinned_github_repos()
+        if repo in _pinned_github_repos():
+            return True
+        # Org LNH-team (DSPico) — só repos oficiais conhecidos
+        if repo_m.group(1) == "LNH-team" and repo_m.group(2) in {
+            "pico-launcher",
+            "pico-loader",
+            "dspico-firmware",
+            "dspico-hardware",
+            "dspico",
+            "dspico-bootloader",
+            "dspico-dldi",
+        }:
+            return True
 
     if _GITHUB_RELEASE_TAG_RE.fullmatch(cleaned):
-        return cleaned in _pinned_github_release_pages()
+        if cleaned in _pinned_github_release_pages():
+            return True
+        # Releases LNH pinadas / oficiais DSPico
+        tag_m = _GITHUB_RELEASE_TAG_RE.fullmatch(cleaned)
+        if tag_m and tag_m.group(1) == "LNH-team":
+            return True
+
+    # Paths blob/tree em repos LNH-team (GUIDE, Usage, etc.)
+    if cleaned.startswith("https://github.com/LNH-team/"):
+        rest = cleaned[len("https://github.com/LNH-team/") :]
+        if ".." in rest or "\\" in rest:
+            return False
+        parts = rest.split("/")
+        if parts and parts[0] in {
+            "pico-launcher",
+            "pico-loader",
+            "dspico-firmware",
+            "dspico-hardware",
+            "dspico",
+            "dspico-bootloader",
+            "dspico-dldi",
+        }:
+            return True
 
     return False
 
@@ -296,8 +340,8 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             "tagline": "Prepare e organize o cartão do Nintendo DSi",
             "blurb": (
                 "App desktop (macOS, Windows e Linux) que prepara o SD para "
-                "desbloqueio SD-direct (TWiLight + Unlaunch) e flashcards GEi / R4 — "
-                "sem montar pastas à mão."
+                "desbloqueio SD-direct (TWiLight + Unlaunch + hiyaCFW) e flashcards "
+                "GEi / R4 / DSPico — sem montar pastas à mão."
             ),
             "goals": [
                 "Guiar iniciantes pelo Assistente, passo a passo",
@@ -313,7 +357,11 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             },
             {
                 "title": "Backup da NAND",
-                "text": "Não salte o nand.bin. Guarde a pasta DT… no computador antes de instalar o Unlaunch.",
+                "text": "Não salte o nand.bin. Guarde a pasta DT… no computador antes de instalar o Unlaunch ou o hiyaCFW.",
+            },
+            {
+                "title": "hiyaCFW",
+                "text": "A SDNAND usa o seu dump; o app não grava na SysNAND. Configure Unlaunch (NO BUTTON → hiyaCFW) e não faça system update.",
             },
             {
                 "title": "Formatação",

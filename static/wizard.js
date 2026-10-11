@@ -5,7 +5,7 @@
 const Wizard = (() => {
   const state = {
     goal: null, // flash-update | flash-new | sd-new | sd-update
-    brand: null, // gei | r4
+    brand: null, // gei | r4 | dspico
     stepIndex: 0,
     hasFacebook: null,
     r4Source: null,
@@ -60,10 +60,35 @@ const Wizard = (() => {
       {
         "flash-update": "Atualizar flashcard",
         "flash-new": "Criar flashcard do zero",
-        "sd-new": "Instalar SD-direct",
-        "sd-update": "Atualizar SD-direct",
+        "sd-new": "Instalar softmod no SD do DSi",
+        "sd-update": "Atualizar SD do DSi",
       }[goal] || "Assistente"
     );
+  }
+
+  function pathBadge(kind) {
+    if (kind === "dsi") {
+      return `<span class="path-badge path-badge--dsi">SD do DSi</span>`;
+    }
+    return `<span class="path-badge path-badge--flash">MicroSD do cartucho</span>`;
+  }
+
+  function glossBlock(term, body) {
+    return `
+      <details class="gloss">
+        <summary>O que é ${term}?</summary>
+        <div class="gloss-body">${body}</div>
+      </details>`;
+  }
+
+  function writesList(items) {
+    return `
+      <div>
+        <span class="opt-writes-label">Vai escrever no cartão</span>
+        <ul class="opt-writes">
+          ${items.map((i) => `<li>${i}</li>`).join("")}
+        </ul>
+      </div>`;
   }
 
   function buildSteps() {
@@ -75,7 +100,8 @@ const Wizard = (() => {
   }
 
   function buildFlashSteps(fromScratch) {
-    const brandLabel = state.brand === "gei" ? "GEi" : "R4";
+    const brandLabel =
+      state.brand === "gei" ? "GEi" : state.brand === "dspico" ? "DSPico" : "R4";
     const list = [
       {
         id: "brand",
@@ -121,33 +147,50 @@ const Wizard = (() => {
 
     list.push({
       id: "kernel-prep",
-      title: `Preparar kernel ${brandLabel}`,
+      title:
+        state.brand === "dspico"
+          ? "Preparar pacote DSPico"
+          : `Preparar kernel ${brandLabel}`,
       where: "PC",
       render: renderKernelPrep,
     });
     list.push({
       id: "kernel-install",
-      title: `Instalar kernel ${brandLabel}`,
+      title:
+        state.brand === "dspico"
+          ? "Instalar pacote DSPico"
+          : `Instalar kernel ${brandLabel}`,
       where: "PC",
       render: renderKernelInstall,
     });
     list.push({
       id: "roms-opt",
-      title: "Organizar jogos (opcional)",
+      title:
+        state.brand === "dspico"
+          ? "Adicionar jogos a Games/ (opcional)"
+          : "Organizar jogos (opcional)",
       where: "PC",
-      render: renderRomsOptional,
+      render:
+        state.brand === "dspico" ? renderDspicoGamesOptional : renderRomsOptional,
     });
+    const doneLines =
+      state.brand === "dspico"
+        ? [
+            "Ejete o MicroSD com segurança no sistema operativo.",
+            "Insira-o no cartucho DSPico e o cartucho no DSi/DS.",
+            "O microSD já tem Pico Launcher + Loader oficiais LNH.",
+            "Para firmware UF2, emunand e mais jogos, use o separador <strong>DSPico</strong> na app.",
+          ]
+        : [
+            "Ejete o MicroSD com segurança no sistema operativo.",
+            `Coloque-o no cartucho ${brandLabel} e ligue o DSi/DS.`,
+            "Se o menu não abrir, confirme que o kernel é do clone exato do cartucho.",
+          ];
     list.push({
       id: "done-flash",
       title: "Pronto",
       where: "PC",
-      render: renderDone({
-        lines: [
-          "Ejete o MicroSD com segurança no sistema operativo.",
-          `Coloque-o no cartucho ${brandLabel} e ligue o DSi/DS.`,
-          "Se o menu não abrir, confirme que o kernel é do clone exato do cartucho.",
-        ],
-      }),
+      render: renderDone({ lines: doneLines }),
     });
     return list;
   }
@@ -162,7 +205,7 @@ const Wizard = (() => {
       },
       {
         id: "camera",
-        title: "Câmera: com ou sem Facebook?",
+        title: "Qual versão da app Câmera?",
         where: "PC",
         render: renderCameraPick,
       },
@@ -184,31 +227,31 @@ const Wizard = (() => {
       },
       {
         id: "stage1",
-        title: "Passo 1 no PC — Memory Pit e dumpTool",
+        title: "Passo 1 — preparar exploit e dumpTool",
         where: "PC",
         render: renderStage1,
       },
       {
         id: "exploit",
-        title: "No DSi — abrir o Memory Pit",
+        title: "No DSi — abrir o exploit da Câmera",
         where: "DSi",
         render: renderExploitDsi,
       },
       {
         id: "nand-dump",
-        title: "No DSi — backup da NAND (dumpTool)",
+        title: "No DSi — guardar cópia da memória interna",
         where: "DSi",
         render: renderNandDumpDsi,
       },
       {
         id: "reinsert-nand",
-        title: "Voltar o SD ao PC e verificar o dump",
+        title: "No PC — verificar a cópia (nand.bin)",
         where: "PC",
         render: renderNandVerify,
       },
       {
         id: "stage2",
-        title: "Passo 2 no PC — TWiLight e Unlaunch",
+        title: "Passo 2 — menu e instalador Unlaunch",
         where: "PC",
         render: renderStage2,
       },
@@ -220,9 +263,15 @@ const Wizard = (() => {
       },
       {
         id: "unlaunch-opts",
-        title: "Configurar boot no TWiLight",
+        title: "No DSi — arranque automático no menu",
         where: "DSi",
         render: renderUnlaunchOpts,
+      },
+      {
+        id: "hiya-install",
+        title: "hiyaCFW — sistema no cartão (recomendado)",
+        where: "PC",
+        render: renderHiyaInstall,
       },
       {
         id: "roms-opt",
@@ -238,8 +287,8 @@ const Wizard = (() => {
           lines: [
             "Ejete o SD com segurança.",
             "Insira-o no slot lateral do DSi e ligue a console.",
-            "Deve arrancar diretamente no TWiLight Menu++.",
-            "Se aparecer o Filemenu do Unlaunch, volte um passo e configure NO BUTTON → TWiLight.",
+            "Se instalou hiyaCFW: Unlaunch A+B → OPTIONS → NO BUTTON → hiyaCFW. Não faça system update.",
+            "Sem hiya: deve arrancar no TWiLight (NO BUTTON → BOOT.NDS).",
           ],
         }),
       },
@@ -283,6 +332,12 @@ const Wizard = (() => {
         render: renderUpdateTwilight,
       },
       {
+        id: "hiya-install",
+        title: "hiyaCFW (instalar ou atualizar)",
+        where: "PC",
+        render: renderHiyaInstall,
+      },
+      {
         id: "roms-opt",
         title: "Organizar jogos / limpar (opcional)",
         where: "PC",
@@ -296,6 +351,7 @@ const Wizard = (() => {
           lines: [
             "Ejete o SD com segurança e volte a colocá-lo no DSi.",
             "Não é necessário reinstalar o Unlaunch se a console já arranca no menu.",
+            "Se instalou/atualizou hiyaCFW: NO BUTTON → hiyaCFW; não faça system update.",
           ],
         }),
       },
@@ -457,54 +513,87 @@ const Wizard = (() => {
 
   function renderGoalPicker() {
     return `
-      <div class="space-y-5">
+      <div class="space-y-6">
         <div>
           <h2 class="text-[17px] font-semibold text-fg">O que você quer fazer?</h2>
           <p class="text-[12px] text-fg-mute mt-1.5 leading-relaxed max-w-2xl">
-            O assistente guia cada etapa com calma — no PC e no DSi — para evitar erros comuns de quem está a começar.
+            Escolha o <strong>tipo de cartão</strong> primeiro. O assistente guia cada etapa no PC e no DSi.
           </p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          ${goalCard(
-            "flash-update",
-            "Atualizar flashcard",
-            "O MicroSD do cartucho Slot-1 (GEi ou R4) já tem kernel e quer atualizar.",
-            "Não formata o cartão."
-          )}
-          ${goalCard(
-            "flash-new",
-            "Instalar / criar flashcard do zero",
-            "MicroSD vazio ou a limpar + kernel do cartucho GEi ou R4.",
-            "Formata em FAT32 (apaga tudo)."
-          )}
-          ${goalCard(
-            "sd-new",
-            "Instalar e usar só o cartão SD",
-            "Slot lateral do DSi com TWiLight Menu++ e Unlaunch — jogos sem flashcard.",
-            "Inclui backup da NAND e instalação no consol."
-          )}
-          ${goalCard(
-            "sd-update",
-            "Atualizar o SD-direct",
-            "Já tem Unlaunch/TWiLight e quer atualizar o menu ou organizar jogos.",
-            "Não reinstala o Unlaunch."
-          )}
-        </div>
+
+        <section class="goal-section">
+          <div class="goal-section-head">
+            ${pathBadge("flash")}
+            <h3 class="goal-section-title">MicroSD do cartucho (flashcard)</h3>
+            <p class="goal-section-sub">
+              Cartucho Slot-1 (GEi, R4 ou DSPico). O microSD fica <em>dentro</em> do cartucho — não é o SD lateral do DSi.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${goalCard(
+              "flash-update",
+              "Atualizar kernel ou pacote",
+              "O microSD já tem kernel/pacote e quer actualizar GEi, R4 ou DSPico.",
+              "Não formata o cartão."
+            )}
+            ${goalCard(
+              "flash-new",
+              "Criar flashcard do zero",
+              "MicroSD vazio ou a limpar: formata em FAT32 e instala o kernel/pacote do cartucho.",
+              "Formata o cartão (apaga tudo)."
+            )}
+          </div>
+        </section>
+
+        <section class="goal-section">
+          <div class="goal-section-head">
+            ${pathBadge("dsi")}
+            <h3 class="goal-section-title">SD do DSi (slot lateral)</h3>
+            <p class="goal-section-sub">
+              Softmod no cartão do slot lateral: exploit da Câmera, cópia de segurança, menu TWiLight e Unlaunch.
+              DS / DS Lite / 3DS não usam este caminho.
+            </p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${goalCard(
+              "sd-new",
+              "Instalar softmod completo",
+              "Primeira vez: Memory Pit → cópia da memória interna → Unlaunch → hiyaCFW (opcional) → TWiLight.",
+              "Inclui escrita na memória interna da consola (Unlaunch)."
+            )}
+            ${goalCard(
+              "sd-update",
+              "Atualizar menu / hiyaCFW",
+              "Já tem Unlaunch e TWiLight: actualizar o menu, hiyaCFW ou organizar jogos.",
+              "Não reinstala o Unlaunch."
+            )}
+          </div>
+        </section>
+
         <p class="text-[11px] text-fg-mute leading-relaxed">
-          Flashcard (Slot-1) ≠ SD lateral do DSi.
-          DS / DS Lite / 3DS <strong>não</strong> usam este softmod.
-          Preferir o <button type="button" class="text-accent-fg font-medium" onclick="setAppMode('advanced')">Modo avançado</button> se já souber o que fazer.
+          Preferir o
+          <button type="button" class="text-accent-fg font-medium" onclick="setAppMode('advanced')">Modo avançado</button>
+          se já souber exactamente o que gravar.
         </p>
       </div>
     `;
   }
 
-  function goalCard(id, title, when, not) {
+  function goalCard(id, title, does, note) {
+    const isFlash = id.startsWith("flash");
+    const risk =
+      id === "flash-new" || id === "sd-new"
+        ? `<span class="risk-chip mt-2 inline-flex">${id === "flash-new" ? "Apaga o cartão" : "Risco Unlaunch"}</span>`
+        : "";
     return `
-      <button type="button" class="wizard-goal text-left" onclick="Wizard.startGoal('${id}')">
-        <h3 class="text-[14px] font-semibold text-fg">${title}</h3>
-        <p class="text-[12px] text-fg-mute mt-2 leading-relaxed">${when}</p>
-        <p class="text-[11px] text-fg-soft mt-2"><span class="font-medium">Nota:</span> ${not}</p>
+      <button type="button" class="wizard-goal" onclick="Wizard.startGoal('${id}')">
+        <div class="flex items-center gap-2 flex-wrap">
+          ${pathBadge(isFlash ? "flash" : "dsi")}
+          <h3 class="text-[14px] font-semibold text-fg">${title}</h3>
+        </div>
+        <p class="opt-does">${does}</p>
+        <p class="opt-when"><span class="font-medium text-fg-soft">Nota:</span> ${note}</p>
+        ${risk}
       </button>
     `;
   }
@@ -513,21 +602,31 @@ const Wizard = (() => {
 
   function renderBrandPick(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Confirme o nome no plástico ou na PCB do cartucho. Clones “R4” exigem o kernel <strong>daquele</strong> clone — o kernel errado não inicia.
-      </p>
+      <div class="flex items-center gap-2 flex-wrap mb-3">
+        ${pathBadge("flash")}
+        <p class="text-[12px] text-fg-mute leading-relaxed flex-1 min-w-[12rem]">
+          Confirme o nome no plástico ou na PCB. Clones “R4” exigem o kernel <strong>daquele</strong> clone — o errado não inicia.
+        </p>
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button type="button" class="wizard-goal" onclick="Wizard.chooseBrand('gei')">
           <h3 class="text-[14px] font-semibold">Galaxy Eagle i (GEi)</h3>
-          <p class="text-[11px] text-fg-mute mt-1">Escrito Galaxy Eagle i / GEi. Kernel v4.2 EN.</p>
+          <p class="opt-does">Kernel oficial v4.2 EN (<code>_DS_MENU.DAT</code> + <code>_DS_MSHL.NDS</code>).</p>
+          <p class="opt-when">Quando usar: está escrito Galaxy Eagle i / GEi no cartucho.</p>
         </button>
         <button type="button" class="wizard-goal" onclick="Wizard.chooseBrand('r4')">
           <h3 class="text-[14px] font-semibold">R4 / clone R4</h3>
-          <p class="text-[11px] text-fg-mute mt-1">Nome no cartucho (R4, R4i, etc.). Extraia o firmware oficial do modelo exato para Downloads.</p>
+          <p class="opt-does">Copia o firmware do modelo exacto a partir de uma pasta em Downloads.</p>
+          <p class="opt-when">Quando usar: R4, R4i, etc. Extraia o zip oficial do clone para Downloads.</p>
+        </button>
+        <button type="button" class="wizard-goal sm:col-span-2" onclick="Wizard.chooseBrand('dspico')">
+          <h3 class="text-[14px] font-semibold">DSPico</h3>
+          <p class="opt-does">Pico Launcher + Loader oficiais no microSD (<code>_picoboot.nds</code>, <code>_pico/</code>).</p>
+          <p class="opt-when">Quando usar: cartucho RP2040 (LNH Team). O <code>.uf2</code> do cartucho deve <strong>já</strong> estar gravado fora deste app.</p>
         </button>
       </div>
-      <div class="note note--warn">
-        AceKard e outros cartuchos não suportados neste assistente — use o Modo avançado ou o firmware do fabricante.
+      <div class="note note--warn mt-3">
+        AceKard e outros cartuchos não suportados neste assistente — use o firmware do fabricante.
       </div>
     `;
   }
@@ -599,17 +698,28 @@ const Wizard = (() => {
 
   function renderFormatWarn(el) {
     el.innerHTML = `
-      <div class="note note--warn">
-        <strong>Atenção:</strong> formatar apaga <em>todos</em> os dados do MicroSD.
-        No Windows pode ser necessário executar o app como Administrador.
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        ${pathBadge("flash")}
+        <span class="risk-chip">Apaga tudo</span>
+      </div>
+      <p class="opt-does">
+        Formata o MicroSD em <strong>FAT32</strong> (MBR, cluster 32&nbsp;KB), o formato esperado por flashcards e pela Câmera do DSi.
+      </p>
+      ${glossBlock(
+        "FAT32",
+        "Sistema de ficheiros do cartão. A Câmera do DSi e a maioria dos flashcards só funcionam bem em FAT32 (não exFAT)."
+      )}
+      <div class="note note--warn mt-3">
+        <strong>Atenção:</strong> formatar apaga <em>todos</em> os dados do volume seleccionado.
+        Confirme que é o MicroSD do cartucho — não o disco do sistema. No Windows pode ser necessário Administrador.
       </div>
       ${drivePanelHtml()}
       <ol class="guide-list list-decimal">
-        <li>Confirme que selecionou o MicroSD do cartucho (não o disco do sistema).</li>
+        <li>Confirme o volume seleccionado abaixo.</li>
         <li>Clique em Formatar FAT32 e confirme o diálogo.</li>
-        <li>Aguarde terminar — a seguir terá de re-selecionar a unidade.</li>
+        <li>Aguarde terminar — a seguir terá de re-seleccionar a unidade.</li>
       </ol>
-      <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-format">Formatar FAT32</button>
+      <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-format">Formatar FAT32 (apaga o cartão)</button>
     `;
     bindDrivePanel();
     document.getElementById("wiz-format").onclick = async () => {
@@ -638,14 +748,14 @@ const Wizard = (() => {
 
   function renderBackupOptional(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Recomendamos um backup do cartão para o Ambiente de Trabalho antes de gravar.
-        Pode saltar se o cartão estiver vazio ou se já tiver cópia.
+      <p class="opt-does">
+        Copia o conteúdo do cartão para o Ambiente de Trabalho antes de gravar. Recomendado se já tiver jogos ou saves.
       </p>
+      <p class="opt-when">Pode saltar se o cartão estiver vazio ou se já tiver cópia noutro sítio.</p>
       ${drivePanelHtml()}
       <div class="flex flex-col sm:flex-row gap-2">
-        <button type="button" class="btn-primary wizard-cta" id="wiz-backup">Fazer backup</button>
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-backup-skip">Saltar</button>
+        <button type="button" class="btn-primary wizard-cta" id="wiz-backup">Fazer backup para o Desktop</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-backup-skip">Saltar backup</button>
       </div>
     `;
     bindDrivePanel();
@@ -658,18 +768,45 @@ const Wizard = (() => {
 
   function renderKernelPrep(el) {
     const isGei = state.brand === "gei";
+    const isDspico = state.brand === "dspico";
+
+    if (isDspico) {
+      el.innerHTML = `
+        <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("flash")}</div>
+        <p class="opt-does">
+          O app descarrega automaticamente o <strong>Pico Launcher</strong> e o <strong>Pico Loader DSPICO</strong>
+          oficiais (SHA-256 pinado) e monta <code>_picoboot.nds</code> + <code>_pico/</code> no microSD.
+        </p>
+        <div class="note note--warn">
+          O firmware <code>.uf2</code> do cartucho deve já estar gravado (fora deste assistente). Este passo só prepara o microSD.
+        </div>
+        <ol class="guide-list list-decimal">
+          <li>Confirme que selecionou o MicroSD do cartucho DSPico.</li>
+          <li>Continue para escrever o pacote no cartão.</li>
+        </ol>
+        <button type="button" class="btn-primary wizard-cta" id="wiz-kernel-next">Continuar para instalar</button>
+      `;
+      document.getElementById("wiz-kernel-next").onclick = () => goNext();
+      return;
+    }
+
     el.innerHTML = `
-      <div class="note">
-        O app <strong>não descarrega</strong> o kernel automaticamente (risco de firmware errado).
-        Extraia o zip oficial do seu modelo para a pasta <code>Downloads</code>.
-      </div>
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("flash")}</div>
       ${
         isGei
-          ? `<ol class="guide-list list-decimal">
-              <li>Extraia a pasta <code>GEiv4.2_EN</code> para Downloads (deve conter <code>_DS_MENU.DAT</code> e <code>_DS_MSHL.NDS</code>).</li>
-              <li>Clique em Procurar.</li>
+          ? `<div class="note">
+              O kernel <strong>GEi v4.2 EN</strong> vem incluído no app (<code>vendor/GEiv4.2_EN</code>).
+              Pode sobrescrever com uma pasta <code>GEiv4.2_EN</code> completa em Downloads se precisar de outra build.
+            </div>
+            <ol class="guide-list list-decimal">
+              <li>Confirme que o cartucho é Galaxy Eagle i / GEi.</li>
+              <li>Clique em Verificar pacote.</li>
             </ol>`
-          : `<ol class="guide-list list-decimal">
+          : `<div class="note">
+              O app <strong>não descarrega</strong> o kernel R4 automaticamente (risco de firmware errado).
+              Extraia o zip oficial do seu clone para a pasta <code>Downloads</code>.
+            </div>
+            <ol class="guide-list list-decimal">
               <li>Extraia o firmware <strong>exato</strong> do seu clone R4 para Downloads.</li>
               <li>A pasta deve ter arquivos como <code>_DS_MENU.DAT</code>, <code>R4.dat</code> ou semelhantes — sem jogos.</li>
               <li>Clique em Procurar e escolha a pasta correcta se houver várias.</li>
@@ -677,7 +814,9 @@ const Wizard = (() => {
       }
       <div id="wiz-kernel-status" class="text-[12px] text-fg-mute">Ainda não procurado.</div>
       <div class="flex flex-col sm:flex-row gap-2">
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-probe">Procurar em Downloads</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-probe">${
+          isGei ? "Verificar pacote GEi" : "Procurar em Downloads"
+        }</button>
         <button type="button" class="btn-primary wizard-cta" id="wiz-kernel-next" disabled>Continuar</button>
       </div>
     `;
@@ -690,11 +829,14 @@ const Wizard = (() => {
       if (gen !== renderGen || !res || !status.isConnected) return;
       if (isGei) {
         if (res.gei) {
-          status.innerHTML = `<span class="text-ok">GEi encontrado: ${escapeHtml(res.gei.path)}</span>`;
+          const where = res.gei.bundled
+            ? "incluído no app"
+            : escapeHtml(res.gei.path || "");
+          status.innerHTML = `<span class="text-ok">GEi pronto (${where}).</span>`;
           next.disabled = false;
         } else {
           status.innerHTML =
-            '<span class="text-warn">Pasta GEiv4.2_EN não encontrada em Downloads.</span>';
+            '<span class="text-warn">Pacote GEi incompleto (faltam <code>_DS_MENU.DAT</code> / <code>_DS_MSHL.NDS</code>).</span>';
           next.disabled = true;
         }
       } else {
@@ -746,28 +888,68 @@ const Wizard = (() => {
 
   function renderKernelInstall(el) {
     const isGei = state.brand === "gei";
+    const isDspico = state.brand === "dspico";
+    const writes = isDspico
+      ? [
+          "<code>_picoboot.nds</code> e pasta <code>_pico/</code> (Pico Launcher + Loader)",
+          "Pasta <code>Games/</code> para ROMs (se ainda não existir)",
+        ]
+      : isGei
+        ? [
+            "<code>_DS_MENU.DAT</code> e <code>_DS_MSHL.NDS</code> (kernel GEi v4.2 EN)",
+            "Ficheiros auxiliares do pacote oficial na raiz do microSD",
+          ]
+        : [
+            "Ficheiros do kernel R4 da pasta escolhida (marcadores do clone)",
+            "Não copia pastas <code>roms/</code> da origem",
+          ];
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Vai copiar e verificar os arquivos do kernel para o MicroSD selecionado.
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("flash")}</div>
+      <p class="opt-does">
+        ${
+          isDspico
+            ? "Descarrega (se necessário), verifica e copia o pacote DSPico oficial para o MicroSD do cartucho."
+            : "Copia e verifica os arquivos do kernel para o MicroSD seleccionado."
+        }
       </p>
+      ${writesList(writes)}
+      ${
+        isDspico
+          ? `<div class="note note--warn">O firmware <code>.uf2</code> do cartucho não é gravado aqui — só o conteúdo do microSD.</div>`
+          : ""
+      }
       ${drivePanelHtml()}
       ${
-        !isGei
+        !isGei && !isDspico
           ? `<div class="note">Origem: <code>${escapeHtml(state.r4Source || "—")}</code></div>`
           : ""
       }
-      <button type="button" class="btn-primary wizard-cta" id="wiz-install-k">Instalar kernel</button>
+      <button type="button" class="btn-primary wizard-cta" id="wiz-install-k">
+        ${
+          isDspico
+            ? "Escrever pacote DSPico no microSD"
+            : isGei
+              ? "Escrever kernel GEi no microSD"
+              : "Escrever kernel R4 no microSD"
+        }
+      </button>
     `;
     bindDrivePanel();
     document.getElementById("wiz-install-k").onclick = async () => {
       let res;
-      if (isGei) {
+      if (isDspico) {
+        res = await runMountOp({ method: "setup_dspico" });
+      } else if (isGei) {
         res = await runMountOp({ method: "setup_gei" });
       } else {
         res = await runMountOp({ method: "setup_r4", sourceDir: state.r4Source });
       }
       if (res.success) {
-        alert("Kernel instalado. Ejetar o cartão com segurança quando terminar as etapas seguintes.");
+        alert(
+          isDspico
+            ? "MicroSD DSPico pronto. Ejecte com segurança e coloque-o no cartucho."
+            : "Kernel instalado. Ejetar o cartão com segurança quando terminar as etapas seguintes."
+        );
         goNext();
       } else {
         state.lastError = res.error || "Falha na instalação.";
@@ -776,22 +958,136 @@ const Wizard = (() => {
     };
   }
 
+  function renderHiyaInstall(el) {
+    el.innerHTML = `
+      <div class="note">A inspecionar o cartão…</div>
+    `;
+    (async () => {
+      const gen = renderGen;
+      await refreshInspect();
+      if (gen !== renderGen || !el.isConnected) return;
+
+      const hasHiya = !!(state.inspect && state.inspect.has_hiya);
+      const dumps = (state.inspect && state.inspect.nand_dumps) || [];
+      const plausible = dumps.filter((d) => d && d.plausible);
+      const nandHint = plausible.length
+        ? `Cópia no cartão: <code>${escapeHtml(plausible[0].rel_path)}</code> (${escapeHtml(String(plausible[0].size_mb))} MiB)`
+        : "Sem <code>DT*/nand.bin</code> no cartão — copie o dump para o SD ou volte a fazer o dump no DSi.";
+
+      el.innerHTML = `
+        <div class="flex items-center gap-2 flex-wrap mb-2">
+          ${pathBadge("dsi")}
+          <span class="opt-tech">hiyaCFW · SDNAND</span>
+        </div>
+        <p class="opt-does">
+          Monta uma cópia do sistema do DSi <strong>no cartão</strong> a partir do <code>nand.bin</code>.
+          O app <strong>não</strong> grava na memória interna da consola.
+        </p>
+        <p class="opt-when">Quando usar: depois do Unlaunch, com dump válido e ~512&nbsp;MB livres. Pode demorar vários minutos.</p>
+        ${glossBlock(
+          "hiyaCFW",
+          "Permite correr o menu do sistema a partir do SD (SDNAND), em vez de só da memória interna. Requer Unlaunch e o dump que fez com o dumpTool."
+        )}
+        ${glossBlock(
+          "NAND",
+          "Memória interna do DSi. O ficheiro <code>nand.bin</code> é a cópia de segurança (~240&nbsp;MiB) feita pelo dumpTool."
+        )}
+        ${writesList([
+          "Árvore SDNAND e <code>hiya.dsi</code> (pipeline TWLMagician pinado)",
+          "Não altera a SysNAND / Unlaunch já instalado",
+        ])}
+        <p class="text-[12px] text-fg-mute leading-relaxed">${nandHint}</p>
+        ${drivePanelHtml()}
+        <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
+          <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-hiya" ${
+            plausible.length || hasHiya ? "" : "disabled"
+          }>
+            ${hasHiya && !plausible.length ? "Atualizar hiyaCFW no SD" : "Escrever hiyaCFW no SD"}
+          </button>
+          <button type="button" class="btn-secondary wizard-cta" id="wiz-hiya-skip">Saltar hiyaCFW</button>
+        </div>
+        <div class="note note--ok mt-3">
+          Depois no DSi: Unlaunch <strong>A+B</strong> → OPTIONS → <strong>NO BUTTON</strong> → hiyaCFW.
+          Não faça system update.
+        </div>
+      `;
+      bindDrivePanel();
+      document.getElementById("wiz-hiya-skip").onclick = () => goNext();
+      document.getElementById("wiz-hiya").onclick = async () => {
+        const nandRel = plausible.length ? plausible[0].rel_path : "";
+        const res = await runMountOp({
+          method: "setup_hiya",
+          nandRelPath: nandRel,
+          updateOnly: hasHiya && !plausible.length,
+        });
+        if (res && res.success) {
+          alert(
+            "hiyaCFW no SD. Configure Unlaunch: NO BUTTON → hiyaCFW. Não atualize o sistema."
+          );
+          goNext();
+        } else if (res && res.error !== "cancelled") {
+          state.lastError = (res && res.error) || "Falha na instalação hiyaCFW.";
+          render();
+        }
+      };
+    })();
+  }
+
+  function organizeLayoutChoicesHtml(namePrefix) {
+    const name = namePrefix || "wiz-organize-layout";
+    return `
+      <p class="text-[11px] font-medium text-fg-soft mb-2">Como organizar</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+        <label class="choice">
+          <input type="radio" name="${name}" value="console" checked>
+          <span>
+            <span class="choice-title">Por consola</span>
+            <span class="choice-sub"><code>/roms/nds/</code></span>
+          </span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="${name}" value="franchise">
+          <span>
+            <span class="choice-title">Por franquia</span>
+            <span class="choice-sub"><code>/roms/Pokemon/</code>…</span>
+          </span>
+        </label>
+        <label class="choice">
+          <input type="radio" name="${name}" value="both">
+          <span>
+            <span class="choice-title">Consola + franquia</span>
+            <span class="choice-sub"><code>/roms/nds/Pokemon/</code></span>
+          </span>
+        </label>
+      </div>`;
+  }
+
+  function selectedOrganizeLayout(namePrefix) {
+    const name = namePrefix || "wiz-organize-layout";
+    return (
+      document.querySelector(`input[name="${name}"]:checked`)?.value || "console"
+    );
+  }
+
   function renderRomsOptional(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Se já copiou jogos para o cartão, pode organizá-los agora: jogos em
-        <code>/roms/nds/</code> (lista flat) e apps em <code>/roms/apps/</code>.
-        Caso contrário, salte e copie os jogos depois.
+      <p class="opt-does">
+        Se já copiou jogos para o cartão, organiza-os conforme a opção abaixo (cria pastas e remove as vazias). Saves e estados GameYob vão com o jogo. Apps em <code>/roms/apps/</code>.
       </p>
+      <p class="opt-when">Pode saltar e copiar os jogos depois — esta etapa é opcional.</p>
       ${drivePanelHtml()}
+      ${organizeLayoutChoicesHtml("wiz-organize-layout")}
       <div class="flex flex-col sm:flex-row gap-2">
-        <button type="button" class="btn-primary wizard-cta" id="wiz-roms">Organizar jogos</button>
+        <button type="button" class="btn-primary wizard-cta" id="wiz-roms">Organizar jogos no cartão</button>
         <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Saltar</button>
       </div>
     `;
     bindDrivePanel();
     document.getElementById("wiz-roms").onclick = async () => {
-      const res = await runMountOp({ method: "organize_roms" });
+      const res = await runMountOp({
+        method: "organize_roms",
+        layout: selectedOrganizeLayout("wiz-organize-layout"),
+      });
       if (res.success || res.error === "cancelled") {
         if (res.success) goNext();
       }
@@ -799,19 +1095,76 @@ const Wizard = (() => {
     document.getElementById("wiz-roms-skip").onclick = () => goNext();
   }
 
+  function renderDspicoGamesOptional(el) {
+    el.innerHTML = `
+      <p class="opt-does">
+        O Pico Launcher navega o cartão como browser de ficheiros. O kit usa a pasta
+        <code>Games/</code> na raiz do microSD (recomendado pelo GUIDE LNH).
+      </p>
+      <p class="opt-when">Opcional — pode saltar e usar o separador <strong>DSPico</strong> depois.</p>
+      ${drivePanelHtml()}
+      <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
+        <button type="button" class="btn-primary wizard-cta" id="wiz-dspico-games">Adicionar jogos a Games/</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Saltar</button>
+        <button type="button" class="btn-ghost wizard-cta" id="wiz-open-dspico">Abrir área DSPico</button>
+      </div>
+    `;
+    bindDrivePanel();
+    document.getElementById("wiz-dspico-games").onclick = async () => {
+      try {
+        const api = getApi() || (await waitForApi());
+        const picked = await api.pick_dspico_rom_files();
+        if (!(picked && picked.success) || picked.cancelled) return;
+        const paths = picked.paths || [];
+        if (!paths.length) return;
+        setBusy(true);
+        try {
+          const mount =
+            (typeof selectedDrive !== "undefined" &&
+              selectedDrive &&
+              selectedDrive.mount_path) ||
+            null;
+          if (!mount) {
+            alert("Seleccione o microSD primeiro.");
+            return;
+          }
+          const res = await api.import_dspico_games(mount, paths, "");
+          if (res && res.success) {
+            appendLog(res.message || "Jogos importados.", "success");
+            goNext();
+          } else {
+            appendLog((res && res.error) || "Falha ao importar.", "error");
+          }
+        } finally {
+          setBusy(false);
+        }
+      } catch (e) {
+        appendLog(e.message || String(e), "error");
+      }
+    };
+    document.getElementById("wiz-roms-skip").onclick = () => goNext();
+    document.getElementById("wiz-open-dspico").onclick = () => {
+      if (typeof setAppMode === "function") setAppMode("dspico");
+    };
+  }
+
   function renderRomsAndCleanOptional(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">Opcional: organizar ROMs ou limpar metadados do sistema.</p>
+      <p class="opt-does">Opcional: organizar ROMs ou limpar ficheiros lixo do macOS (<code>._*</code>, <code>.DS_Store</code>).</p>
       ${drivePanelHtml()}
+      ${organizeLayoutChoicesHtml("wiz-organize-layout-clean")}
       <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button type="button" class="btn-primary wizard-cta" id="wiz-roms">Organizar jogos</button>
         <button type="button" class="btn-secondary wizard-cta" id="wiz-clean">Limpar metadados</button>
-        <button type="button" class="btn-ghost wizard-cta" id="wiz-roms-skip">Continuar</button>
+        <button type="button" class="btn-ghost wizard-cta" id="wiz-roms-skip">Continuar sem alterar</button>
       </div>
     `;
     bindDrivePanel();
     document.getElementById("wiz-roms").onclick = async () => {
-      await runMountOp({ method: "organize_roms" });
+      await runMountOp({
+        method: "organize_roms",
+        layout: selectedOrganizeLayout("wiz-organize-layout-clean"),
+      });
     };
     document.getElementById("wiz-clean").onclick = async () => {
       await runMountOp({ method: "clean_sd" });
@@ -835,8 +1188,9 @@ const Wizard = (() => {
 
   function renderModelCheck(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Este softmod (Memory Pit + Unlaunch) só funciona em <strong>Nintendo DSi</strong> ou <strong>DSi XL / LL</strong>
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
+      <p class="opt-does">
+        Este softmod (exploit da Câmera + Unlaunch) só funciona em <strong>Nintendo DSi</strong> ou <strong>DSi XL / LL</strong>
         (etiqueta <code>TWL-001</code> ou <code>UTL-001</code>).
       </p>
       <div class="note note--warn">
@@ -859,11 +1213,16 @@ const Wizard = (() => {
 
   function renderCameraPick(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        No DSi, abra a <strong>Câmera Nintendo DSi</strong> e veja se aparece o ícone do Facebook na barra inferior.
-        O Memory Pit errado impede o exploit de abrir.
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
+      <p class="opt-does">
+        Isto escolhe o ficheiro do exploit (<strong>Memory Pit</strong>) — <em>não</em> é sobre rede social.
+        No DSi, abra a Câmera e veja se aparece o ícone do Facebook na barra inferior.
       </p>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      ${glossBlock(
+        "Memory Pit",
+        "Exploit que abre ao ver o Álbum da Câmera com o cartão SD. O ficheiro <code>pit.bin</code> tem de corresponder à versão da app Câmera (com ou sem Facebook)."
+      )}
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
         <label class="choice">
           <input type="radio" name="wiz-cam" value="facebook">
           <span>
@@ -879,7 +1238,7 @@ const Wizard = (() => {
           </span>
         </label>
       </div>
-      <button type="button" class="btn-primary wizard-cta mt-2" id="wiz-cam-next">Continuar</button>
+      <button type="button" class="btn-primary wizard-cta mt-2" id="wiz-cam-next">Continuar com esta versão</button>
     `;
     document.getElementById("wiz-cam-next").onclick = () => {
       const v = document.querySelector('input[name="wiz-cam"]:checked')?.value;
@@ -894,17 +1253,18 @@ const Wizard = (() => {
 
   function renderDcimFat(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        A Câmera do DSi precisa de <strong>FAT32</strong>. A pasta <code>DCIM</code> na raiz impede o Memory Pit —
-        o assistente pode renomeá-la (as fotos não são apagadas).
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
+      <p class="opt-does">
+        A Câmera precisa de <strong>FAT32</strong>. A pasta <code>DCIM</code> na raiz bloqueia o exploit —
+        o assistente pode renomeá-la (as fotos <strong>não</strong> são apagadas).
       </p>
       ${drivePanelHtml()}
       <div id="wiz-dcim-status" class="text-[12px] text-fg-mute">Clique em Verificar.</div>
       <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button type="button" class="btn-secondary wizard-cta" id="wiz-check">Verificar cartão</button>
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-dcim" disabled>Mover DCIM</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-dcim" disabled>Mover pasta DCIM</button>
         <button type="button" class="btn-secondary wizard-cta" id="wiz-fmt" disabled>Formatar FAT32</button>
-        <button type="button" class="btn-primary wizard-cta" id="wiz-dcim-next" disabled>Continuar</button>
+        <button type="button" class="btn-primary wizard-cta" id="wiz-dcim-next" disabled>Cartão pronto — continuar</button>
       </div>
     `;
     bindDrivePanel();
@@ -962,12 +1322,25 @@ const Wizard = (() => {
           ? "Sem Facebook"
           : "?";
     el.innerHTML = `
-      <div class="note">
-        Vai descarregar (1ª vez, precisa de Internet) e gravar Memory Pit (${fb}), dumpTool como <code>boot.nds</code>
-        e o instalador Unlaunch. Não avance se a rede falhar.
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        ${pathBadge("dsi")}
+        <span class="chip chip--accent">Passo 1</span>
       </div>
+      <p class="opt-does">
+        Prepara o SD para o exploit da Câmera e o programa que guarda a cópia da memória interna (dumpTool).
+        Na 1ª vez precisa de Internet (downloads pinados).
+      </p>
+      ${glossBlock(
+        "Memory Pit",
+        "O ficheiro <code>pit.bin</code> escolhido pela versão da Câmera (${fb}). Pit errado = Álbum normal, sem exploit."
+      )}
+      ${writesList([
+        `<code>pit.bin</code> do Memory Pit (${fb})`,
+        "<code>boot.nds</code> — dumpTool",
+        "<code>unlaunch-installer.dsi</code> (preparado para o Passo 2)",
+      ])}
       ${drivePanelHtml()}
-      <button type="button" class="btn-primary wizard-cta" id="wiz-s1">Configurar Passo 1 no SD</button>
+      <button type="button" class="btn-primary wizard-cta" id="wiz-s1">Escrever Passo 1 no SD</button>
     `;
     bindDrivePanel();
     document.getElementById("wiz-s1").onclick = async () => {
@@ -1000,7 +1373,7 @@ const Wizard = (() => {
         <li>Abra o <strong>Álbum</strong> com o botão grande à direita.</li>
       </ol>
       <div class="space-y-2">
-        <div class="note note--ok"><strong>Tela magenta</strong> — Memory Pit correto; deve aparecer o dumpTool.</div>
+        <div class="note note--ok"><strong>Tela magenta</strong> — exploit correcto; deve aparecer o dumpTool.</div>
         <div class="note note--warn"><strong>Tela verde</strong> — falta <code>boot.nds</code>. Volte ao PC e refaça o Passo 1.</div>
         <div class="note"><strong>Álbum normal</strong> — pit errado (Facebook) ou ainda existe pasta <code>DCIM</code>.</div>
       </div>
@@ -1011,13 +1384,20 @@ const Wizard = (() => {
 
   function renderNandDumpDsi(el) {
     el.innerHTML = `
+      <p class="opt-does">
+        O dumpTool grava uma cópia da memória interna (~240&nbsp;MiB) numa pasta <code>DT…</code> no SD.
+        Guarde-a depois noutro sítio — é a sua rede de segurança antes do Unlaunch.
+      </p>
+      ${glossBlock(
+        "NAND",
+        "Memória interna do DSi. O Unlaunch grava nesta memória; o dump (<code>nand.bin</code>) permite recuperar ou instalar hiyaCFW."
+      )}
       <ol class="guide-list list-decimal">
         <li>No dumpTool, carregue em <strong>A</strong> para iniciar o backup (~7 minutos).</li>
         <li><strong>Não desligue</strong> a console nem retire o SD.</li>
         <li>Quando terminar, carregue em <strong>START</strong> e desligue o DSi.</li>
-        <li>O dump fica numa pasta <code>DT…</code> na raiz do SD (com <code>nand.bin</code>).</li>
       </ol>
-      <div class="note note--warn">Guarde depois a pasta DT… noutro sítio (Desktop). É a sua rede de segurança se algo correr mal com o Unlaunch.</div>
+      <div class="note note--warn">Copie a pasta DT… para o Desktop no próximo passo, se ainda não o fez.</div>
       <button type="button" class="btn-primary wizard-cta" id="wiz-nand-next">Já terminei o dump — vou ao PC</button>
     `;
     document.getElementById("wiz-nand-next").onclick = () => goNext();
@@ -1025,8 +1405,8 @@ const Wizard = (() => {
 
   function renderNandVerify(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
-        Volte a inserir o SD no PC, atualize a lista e verifique se existe <code>DT…/nand.bin</code> (~240 MB).
+      <p class="opt-does">
+        Volte a inserir o SD no PC e confirme que existe <code>DT…/nand.bin</code> (~240&nbsp;MB) antes de continuar.
       </p>
       ${drivePanelHtml()}
       <div id="wiz-nand-status" class="text-[12px] text-fg-mute">Ainda não verificado.</div>
@@ -1038,7 +1418,7 @@ const Wizard = (() => {
         </span>
       </label>
       <div class="flex flex-col sm:flex-row gap-2 mt-2">
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-nand-check">Verificar dump</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-nand-check">Verificar dump no SD</button>
         <button type="button" class="btn-primary wizard-cta" id="wiz-nand-go" disabled>Continuar</button>
       </div>
     `;
@@ -1084,15 +1464,28 @@ const Wizard = (() => {
 
   function renderStage2(el) {
     el.innerHTML = `
-      <div class="note">
-        Instala/restaura o TWiLight Menu++ e coloca <code>unlaunch-installer.dsi</code> na raiz.
-        Precisa de Internet na primeira vez (download pinado).
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        ${pathBadge("dsi")}
+        <span class="chip chip--ok">Passo 2</span>
       </div>
+      <p class="opt-does">
+        Coloca o menu de jogos (TWiLight Menu++) e o instalador seguro do Unlaunch no SD.
+        Na 1ª vez precisa de Internet.
+      </p>
+      ${glossBlock(
+        "Unlaunch",
+        "Bootloader permanente na memória interna do DSi. É a <strong>única</strong> etapa deste kit que grava na consola — há um risco pequeno de brick; só avance com o dump feito."
+      )}
+      ${writesList([
+        "TWiLight Menu++ (<code>BOOT.NDS</code>, pasta <code>_nds/</code>, …)",
+        "<code>unlaunch-installer.dsi</code> na raiz",
+        "dumpTool movido para <code>dumptool.nds</code> (se existir)",
+      ])}
       <div class="note note--warn">
         Se o firmware do DSi for exactamente <strong>1.4.2</strong>, o guia oficial recomenda atualizar o sistema nas Definições antes do Unlaunch. Não automatizamos esse passo.
       </div>
       ${drivePanelHtml()}
-      <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-s2">Configurar Passo 2 no SD</button>
+      <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-s2">Escrever Passo 2 no SD</button>
     `;
     bindDrivePanel();
     document.getElementById("wiz-s2").onclick = async () => {
@@ -1109,9 +1502,12 @@ const Wizard = (() => {
 
   function renderUnlaunchDsi(el) {
     el.innerHTML = `
+      <div class="flex items-center gap-2 flex-wrap mb-2">
+        <span class="risk-chip">Memória interna</span>
+      </div>
       <div class="note note--warn">
-        <strong>Atenção:</strong> o Unlaunch grava na NAND da console. Há um risco pequeno de brick.
-        Só continue se tiver o backup da NAND. Use o instalador seguro v2.6 preparado pelo app.
+        <strong>Atenção:</strong> o Unlaunch grava na NAND da console — é a <strong>única escrita na memória interna</strong> deste fluxo.
+        Há um risco pequeno de brick. Só continue se tiver o backup da NAND. Use o instalador seguro v2.6 preparado pelo app.
       </div>
       <ol class="guide-list list-decimal">
         <li>No DSi: Câmera → ícone SD → Álbum (agora deve abrir o TWiLight Menu++).</li>
@@ -1128,7 +1524,7 @@ const Wizard = (() => {
 
   function renderUnlaunchOpts(el) {
     el.innerHTML = `
-      <p class="text-[12px] text-fg-mute leading-relaxed">
+      <p class="opt-does">
         Se ao ligar aparecer o Filemenu do Unlaunch (lista de arquivos), configure o arranque automático no TWiLight.
         Sem isto, parece que “o menu não instalou”.
       </p>
@@ -1146,10 +1542,17 @@ const Wizard = (() => {
 
   function renderUpdateTwilight(el) {
     el.innerHTML = `
+      <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
+      <p class="opt-does">
+        Actualiza o TWiLight Menu++ no cartão. <strong>Não</strong> reinstala o Unlaunch na consola.
+      </p>
       <div class="note note--warn">
-        Isto actualiza o TWiLight Menu++ no cartão.
         <strong>Não</strong> abra o instalador Unlaunch no DSi se a console já arranca no menu ou no Filemenu.
       </div>
+      ${writesList([
+        "Ficheiros do TWiLight Menu++ actualizados",
+        "Pode colocar de novo <code>unlaunch-installer.dsi</code> — ignore-o no DSi",
+      ])}
       ${drivePanelHtml()}
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-upd">Atualizar TWiLight no SD</button>
     `;

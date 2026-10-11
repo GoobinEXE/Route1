@@ -132,7 +132,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           chmod +x tools/build_linux_release.sh
-          # pywebview em headless: build do binário não precisa de display
+          # Qt offscreen no CI: build do binário não precisa de display
           ./tools/build_linux_release.sh
 
       - name: Upload artefacts
