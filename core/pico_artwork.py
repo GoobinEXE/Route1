@@ -21,7 +21,15 @@ from core.artwork import (
 )
 from core.cache import USER_AGENT
 from core.disks import is_safe_mount_path
-from core.dspico import GAME_EXTS, GAMES_DIRNAME, _resolve_under_games
+from core.dspico import (
+    GAME_EXTS,
+    GAMES_DIRNAME,
+    RETRO_EXTS,
+    ROMS_DIRNAME,
+    _RETRO_PLATFORM,
+    _resolve_under_games,
+    _resolve_under_roms_folder,
+)
 from core.logging_util import emit_log
 from core.pico_bmp import (
     bmp_to_preview_png,
@@ -95,12 +103,20 @@ def _pico_asset_dir(mount_path: str, kind: str, bucket: str) -> str:
 
 
 def _dest_paths(
-    mount_path: str, basename: str, tid: Optional[str], kind: str
+    mount_path: str,
+    basename: str,
+    tid: Optional[str],
+    kind: str,
+    *,
+    code_bucket: str = "nds",
 ) -> list[str]:
-    """Destinos preferidos: TID (nds/) depois user/ por nome."""
+    """Destinos: TID em nds|gba/ depois user/ por nome do ficheiro (Customization.md)."""
     out: list[str] = []
     if tid:
-        out.append(os.path.join(_pico_asset_dir(mount_path, kind, "nds"), f"{tid}.bmp"))
+        bucket = code_bucket if code_bucket in ("nds", "gba") else "nds"
+        out.append(
+            os.path.join(_pico_asset_dir(mount_path, kind, bucket), f"{tid}.bmp")
+        )
     out.append(
         os.path.join(_pico_asset_dir(mount_path, kind, "user"), f"{basename}.bmp")
     )
@@ -110,15 +126,35 @@ def _dest_paths(
 def resolve_existing_art(
     mount_path: str, basename: str, tid: Optional[str], kind: str
 ) -> Optional[str]:
-    """Prioridade Pico: user > nds (TID)."""
+    """Prioridade Pico: user > código (nds/ ou gba/)."""
     user = os.path.join(_pico_asset_dir(mount_path, kind, "user"), f"{basename}.bmp")
     if os.path.isfile(user) and os.path.getsize(user) > 64:
         return user
     if tid:
-        by_tid = os.path.join(_pico_asset_dir(mount_path, kind, "nds"), f"{tid}.bmp")
-        if os.path.isfile(by_tid) and os.path.getsize(by_tid) > 64:
-            return by_tid
+        for bucket in ("nds", "gba"):
+            by_tid = os.path.join(
+                _pico_asset_dir(mount_path, kind, bucket), f"{tid}.bmp"
+            )
+            if os.path.isfile(by_tid) and os.path.getsize(by_tid) > 64:
+                return by_tid
     return None
+
+
+def _gba_game_code(path: str) -> Optional[str]:
+    """Lê o game code interno GBA (offset 0xAC), se válido."""
+    try:
+        with open(path, "rb") as f:
+            f.seek(0xAC)
+            raw = f.read(4)
+    except OSError:
+        return None
+    if len(raw) != 4:
+        return None
+    try:
+        code = raw.decode("ascii")
+    except UnicodeDecodeError:
+        return None
+    return _valid_tid(code)
 
 
 def _png_data_url(png: bytes) -> str:
@@ -249,29 +285,69 @@ def _search_name_variants(query: str, basename: str = "") -> list[str]:
 def _resolve_game(
     mount_path: str, rel_path: str
 ) -> tuple[Optional[str], Optional[dict[str, Any]]]:
-    """Devolve (erro, meta) para um jogo em Games/."""
+    """Devolve (erro, meta) para um jogo em Games/ ou ROM retro em ROMs/."""
     if not is_safe_mount_path(mount_path):
         return "Unidade não reconhecida como volume removível/USB/SD.", None
     rel = (rel_path or "").replace("\\", "/").lstrip("/")
     if not rel or ".." in rel.split("/"):
         return "Caminho de jogo inválido.", None
-    full = _resolve_under_games(mount_path, rel)
+
+    full: Optional[str] = None
+    area = "games"
+    if rel == ROMS_DIRNAME or rel.startswith(f"{ROMS_DIRNAME}/"):
+        full = _resolve_under_roms_folder(mount_path, rel)
+        area = "roms"
+    elif rel == GAMES_DIRNAME or rel.startswith(f"{GAMES_DIRNAME}/"):
+        under = rel[len(GAMES_DIRNAME) :].lstrip("/")
+        full = _resolve_under_games(mount_path, under)
+        rel = under or rel
+    else:
+        full = _resolve_under_games(mount_path, rel)
+
     if not full or not os.path.isfile(full):
+        if area == "roms":
+            return f"ROM inexistente sob {ROMS_DIRNAME}/.", None
         return f"Jogo inexistente sob {GAMES_DIRNAME}/.", None
+
     basename = os.path.basename(full)
     ext = os.path.splitext(basename)[1].lower()
+    display = os.path.splitext(basename)[0]
+
+    if area == "roms" or ext in RETRO_EXTS:
+        if ext not in RETRO_EXTS:
+            return "Extensão retro não suportada.", None
+        platform = _RETRO_PLATFORM.get(ext, "retro")
+        tid = _gba_game_code(full) if platform == "gba" else None
+        try:
+            show_rel = os.path.relpath(full, mount_path).replace("\\", "/")
+        except ValueError:
+            show_rel = f"{ROMS_DIRNAME}/{basename}"
+        return None, {
+            "full": full,
+            "rel_path": show_rel,
+            "basename": basename,
+            "display_name": display,
+            "title": display,
+            "game_code": tid,
+            "platform": platform,
+            "area": "roms",
+            "code_bucket": "gba" if platform == "gba" else "nds",
+        }
+
     if ext not in GAME_EXTS:
-        return "Só jogos .nds / .dsi / .ids são suportados.", None
+        return "Só jogos NDS/DSi ou ROMs retro (GB/GBC/GBA/SNES) são suportados.", None
     title, code, _unit, _maker = get_nds_header_info(full)
     tid = _valid_tid(code)
     return None, {
         "full": full,
         "rel_path": rel,
         "basename": basename,
-        "display_name": os.path.splitext(basename)[0],
+        "display_name": display,
         "title": (title or "").strip() or None,
         "game_code": tid,
-        "platform": "nds",
+        "platform": "dsi" if ext == ".dsi" else "nds",
+        "area": "games",
+        "code_bucket": "nds",
     }
 
 
@@ -287,20 +363,33 @@ def enrich_dspico_game_entry(
     entry["has_icon"] = False
     if not rel or ".." in rel.split("/"):
         return entry
-    full = _resolve_under_games(mount_path, rel)
+
+    area = (entry.get("area") or "").strip().lower()
+    if area == "roms" or rel.startswith(f"{ROMS_DIRNAME}/"):
+        full = _resolve_under_roms_folder(mount_path, rel)
+    else:
+        full = _resolve_under_games(mount_path, rel)
     if not full or not os.path.isfile(full):
         return entry
+
     basename = os.path.basename(full)
     ext = os.path.splitext(basename)[1].lower()
-    if ext not in GAME_EXTS:
+    tid: Optional[str] = None
+    if ext in GAME_EXTS:
+        _title, code, _unit, _maker = get_nds_header_info(full)
+        tid = _valid_tid(code)
+    elif ext in RETRO_EXTS:
+        if _RETRO_PLATFORM.get(ext) == "gba":
+            tid = _gba_game_code(full)
+    else:
         return entry
-    _title, code, _unit, _maker = get_nds_header_info(full)
-    tid = _valid_tid(code)
+
     cover = resolve_existing_art(mount_path, basename, tid, "cover")
     icon = resolve_existing_art(mount_path, basename, tid, "icon")
     entry["has_cover"] = bool(cover)
     entry["has_icon"] = bool(icon)
-    entry["game_code"] = tid
+    if tid:
+        entry["game_code"] = tid
     if not with_preview:
         return entry
     entry["cover"] = None
@@ -571,7 +660,19 @@ def _write_pico_bmp(
     note: str,
     defer_sync: bool = False,
 ) -> tuple[bool, str, dict[str, Any]]:
-    dests = _dest_paths(mount_path, meta["basename"], meta["game_code"], kind)
+    # Retro sem código → só user/{ficheiro}.bmp (Customization.md).
+    # GBA com código → gba/{TID}.bmp; NDS → nds/{TID}.bmp.
+    code_bucket = meta.get("code_bucket") or "nds"
+    if meta.get("area") == "roms" and not meta.get("game_code"):
+        dests = _dest_paths(mount_path, meta["basename"], None, kind)
+    else:
+        dests = _dest_paths(
+            mount_path,
+            meta["basename"],
+            meta.get("game_code"),
+            kind,
+            code_bucket=code_bucket,
+        )
     if not dests:
         return False, "Sem destino de arte.", stats
 
@@ -703,14 +804,26 @@ def get_dspico_game_artwork(
         "icon": None,
         "has_cover": False,
         "has_icon": False,
+        "platform": meta.get("platform"),
+        "area": meta.get("area") or "games",
         "hints": {
             "cover": (
-                "Pesquisa GameTDB (por código) e Libretro Thumbnails (por nome). "
-                "Pode pesquisar outro título ou escolher um PNG/BMP no PC."
+                "Libretro Thumbnails por nome → /_pico/covers/user/{ficheiro}.bmp "
+                "(Pico Launcher). Pode escolher um PNG/BMP no PC."
+                if meta.get("area") == "roms"
+                else (
+                    "Pesquisa GameTDB (por código) e Libretro Thumbnails (por nome). "
+                    "Pode pesquisar outro título ou escolher um PNG/BMP no PC."
+                )
             ),
             "icon": (
-                "Pesquisa Libretro Named_Titles / escolha manual. "
-                "No DS o ícone do banner é o padrão se não houver custom."
+                "Libretro Named_Titles → /_pico/icons/user/{ficheiro}.bmp "
+                "(Pico Launcher). Pode escolher um PNG/BMP no PC."
+                if meta.get("area") == "roms"
+                else (
+                    "Pesquisa Libretro Named_Titles / escolha manual. "
+                    "No DS o ícone do banner é o padrão se não houver custom."
+                )
             ),
         },
     }
@@ -756,29 +869,49 @@ def generate_dspico_artwork_batch(
             "missing": [],
         }
 
-    games_root = os.path.join(mount_path, "Games")
-    if not os.path.isdir(games_root):
+    games_root = os.path.join(mount_path, GAMES_DIRNAME)
+    roms_root = os.path.join(mount_path, ROMS_DIRNAME)
+    if not os.path.isdir(games_root) and not os.path.isdir(roms_root):
         return {
             "success": False,
-            "error": "Pasta Games/ inexistente.",
+            "error": "Pastas Games/ e ROMs/ inexistentes.",
             "written": 0,
             "missing": [],
         }
 
     roms: list[str] = []
-    for root, _dirs, files in os.walk(games_root):
-        for name in files:
-            low = name.lower()
-            if low.endswith((".nds", ".dsi", ".ids")):
+    if os.path.isdir(games_root):
+        for root, _dirs, files in os.walk(games_root):
+            for name in files:
+                low = name.lower()
+                if low.endswith((".nds", ".dsi", ".ids")):
+                    full = os.path.join(root, name)
+                    rel = os.path.relpath(full, games_root).replace("\\", "/")
+                    if ".." in rel.split("/"):
+                        continue
+                    roms.append(rel)
+                    if len(roms) >= max_n:
+                        break
+            if len(roms) >= max_n:
+                break
+    if len(roms) < max_n and os.path.isdir(roms_root):
+        for root, _dirs, files in os.walk(roms_root):
+            for name in files:
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in RETRO_EXTS:
+                    continue
                 full = os.path.join(root, name)
-                rel = os.path.relpath(full, games_root).replace("\\", "/")
+                try:
+                    rel = os.path.relpath(full, mount_path).replace("\\", "/")
+                except ValueError:
+                    continue
                 if ".." in rel.split("/"):
                     continue
                 roms.append(rel)
                 if len(roms) >= max_n:
                     break
-        if len(roms) >= max_n:
-            break
+            if len(roms) >= max_n:
+                break
 
     written = 0
     skipped = 0

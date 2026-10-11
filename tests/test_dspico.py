@@ -124,8 +124,14 @@ def test_browse_import_delete_games(tmp_path):
     )
     assert ok, msg
     assert stats.get("copied") == 1
-    browse = dspico.browse_dspico_games(str(tmp_path), "")
+    root = dspico.browse_dspico_games(str(tmp_path), "")
+    assert root["success"]
+    assert root.get("area") == "root"
+    assert {d.get("name") for d in root.get("dirs") or []} >= {"Games", "ROMs"}
+
+    browse = dspico.browse_dspico_games(str(tmp_path), "Games")
     assert browse["success"]
+    assert browse.get("area") == "games"
     assert any(f.get("name") == "Kart.nds" for f in browse.get("files") or [])
 
     ok, msg, stats = dspico.delete_dspico_games(
@@ -133,6 +139,31 @@ def test_browse_import_delete_games(tmp_path):
     )
     assert ok, msg
     assert stats.get("removed") == 1
+
+
+def test_browse_lists_retro_roms(tmp_path):
+    _minimal_dspico_sd(tmp_path)
+    gb = tmp_path / "ROMs" / "GB"
+    gb.mkdir(parents=True)
+    (gb / "Tetris.gb").write_bytes(b"GBROM")
+    (tmp_path / "ROMs" / "GBA").mkdir(parents=True)
+    (tmp_path / "ROMs" / "GBA" / "Zelda.gba").write_bytes(b"GBAROM")
+
+    roms = dspico.browse_dspico_games(str(tmp_path), "ROMs")
+    assert roms["success"]
+    assert roms.get("area") == "roms"
+    dir_names = {d.get("name") for d in roms.get("dirs") or []}
+    assert "GB" in dir_names
+    assert "GBA" in dir_names
+
+    gb_list = dspico.browse_dspico_games(str(tmp_path), "ROMs/GB")
+    assert gb_list["success"]
+    files = gb_list.get("files") or []
+    assert any(f.get("name") == "Tetris.gb" for f in files)
+    tetris = next(f for f in files if f.get("name") == "Tetris.gb")
+    assert tetris.get("area") == "roms"
+    assert tetris.get("rel_path") == "ROMs/GB/Tetris.gb"
+    assert tetris.get("platform") == "gb"
 
 
 def test_mkdir_and_move_games(tmp_path):
@@ -303,6 +334,30 @@ def test_organize_dspico_platform_layout(tmp_path):
     assert any((tmp_path / "Games" / "nds").glob("*.nds"))
     assert (tmp_path / "Games" / "dsi").is_dir()
     assert any((tmp_path / "Games" / "dsi").glob("*.dsi"))
+
+
+def test_organize_dspico_collects_retro_from_anywhere(tmp_path):
+    _minimal_dspico_sd(tmp_path)
+    # Retro fora de ROMs/ (e um já no sítio certo)
+    (tmp_path / "Downloads").mkdir()
+    (tmp_path / "Downloads" / "Tetris.gb").write_bytes(b"GBROM")
+    (tmp_path / "Downloads" / "Tetris.sav").write_bytes(b"SAVE")
+    (tmp_path / "Games" / "Zelda.gba").write_bytes(b"GBAROM")
+    (tmp_path / "misc").mkdir()
+    (tmp_path / "misc" / "Mario.sfc").write_bytes(b"SNESROM")
+    already = tmp_path / "ROMs" / "GB"
+    already.mkdir(parents=True)
+    (already / "Kirby.gb").write_bytes(b"KIRBY")
+
+    ok, msg, stats = dspico.organize_dspico_sd(str(tmp_path), layout="games")
+    assert ok, msg
+    assert (tmp_path / "ROMs" / "GB" / "Tetris.gb").is_file()
+    assert (tmp_path / "ROMs" / "GB" / "Tetris.sav").is_file()
+    assert (tmp_path / "ROMs" / "GBA" / "Zelda.gba").is_file()
+    assert (tmp_path / "ROMs" / "SNES" / "Mario.sfc").is_file()
+    assert (tmp_path / "ROMs" / "GB" / "Kirby.gb").is_file()
+    assert not (tmp_path / "Games" / "Zelda.gba").exists()
+    assert stats.get("retro", 0) >= 3
 
 
 def test_find_duplicate_dspico_games(tmp_path):

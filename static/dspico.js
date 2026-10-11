@@ -26,6 +26,22 @@ const Dspico = (() => {
     return (typeof selectedDrive !== "undefined" && selectedDrive && selectedDrive.mount_path) || null;
   }
 
+  /** Destino relativo a Games/ para import/mkdir (cwd pode ser Games/… ou ROMs/…). */
+  function gamesDestRel(cwd) {
+    const c = String(cwd || "");
+    if (!c || c === "Games") return "";
+    if (c.startsWith("Games/")) return c.slice("Games/".length);
+    return "";
+  }
+
+  function libraryArea(cwd) {
+    const c = String(cwd || "");
+    if (!c) return "root";
+    if (c === "ROMs" || c.startsWith("ROMs/")) return "roms";
+    if (c === "Games" || c.startsWith("Games/")) return "games";
+    return "games";
+  }
+
   function setSection(name) {
     if (typeof busy !== "undefined" && busy) {
       alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
@@ -249,7 +265,7 @@ const Dspico = (() => {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A listar Games/…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A listar jogos…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.browse_dspico_games(m, gamesCwd);
@@ -262,8 +278,10 @@ const Dspico = (() => {
       }
       const dirs = data.dirs || [];
       const files = data.files || [];
-      const crumb = gamesCwd
-        ? gamesCwd
+      const area = data.area || libraryArea(gamesCwd);
+      const nav = data.nav != null ? data.nav : gamesCwd;
+      const crumb = nav
+        ? nav
             .split("/")
             .filter(Boolean)
             .map((p, i, arr) => {
@@ -274,6 +292,8 @@ const Dspico = (() => {
             })
             .join(" <span class=\"text-fg-mute\">/</span> ")
         : "";
+      const canMkdir = area === "games";
+      const showArtBadges = area === "games" || area === "roms";
 
       el.innerHTML = `
         <section class="panel p-5 space-y-3">
@@ -320,7 +340,8 @@ const Dspico = (() => {
           <button type="button" class="btn-primary" id="dspico-btn-organize">Organizar pastas</button>
           <p class="text-[11px] text-fg-mute">
             Esta acção apaga pastas de outros sistemas. Saves vão com cada jogo.
-            O explorador abaixo lista só <code>Games/</code>.
+            NDS/DSi seguem o layout acima; ROMs retro em qualquer pasta vão para
+            <code>ROMs/GB</code>, <code>GBA</code>, <code>SNES</code>…
           </p>
         </section>
         <section class="panel p-5 space-y-3 relative" id="dspico-games-panel">
@@ -329,20 +350,22 @@ const Dspico = (() => {
               <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" ${
                 gamesCwd ? "" : "disabled"
               }>↑</button>
-              <code>Games/</code>${crumb ? " / " + crumb : ""}
+              <code>SD/</code>${crumb ? " " + crumb : " <span class=\"text-fg-mute\">biblioteca</span>"}
             </div>
             <div class="flex flex-wrap gap-2">
               <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-batch-art">Buscar capas e ícones</button>
               <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-add">Adicionar jogos</button>
               <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-dupes">Apagar duplicatas</button>
-              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-mkdir">Nova pasta</button>
+              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-mkdir" ${
+                canMkdir ? "" : "disabled"
+              }>Nova pasta</button>
               <button type="button" class="btn-ghost !text-[11px] text-danger" id="dspico-games-del" disabled>Remover</button>
             </div>
           </div>
           <p class="text-[11px] text-fg-mute">
-            Adicionar ou arrastar vários ficheiros: NDS/DSi → <code>Games/</code>;
+            Adicionar ou arrastar: NDS/DSi → <code>Games/</code>;
             GB/GBC/GBA/SNES → <code>ROMs/</code>; também arquivos (.zip / .7z / .rar).
-            Clique num jogo NDS para capa e ícone (Pico Launcher).
+            Clique num jogo (NDS ou retro) para capa e ícone do Pico Launcher.
           </p>
           <div id="dspico-batch-missing" class="hidden space-y-2"></div>
           <div id="dspico-games-drop" class="border border-dashed border-line rounded-lg p-3 min-h-[160px] space-y-1 relative">
@@ -367,30 +390,46 @@ const Dspico = (() => {
               .join("")}
             ${files
               .map((f) => {
+                const fArea = f.area || area;
                 const hasC = !!f.has_cover;
                 const hasI = !!f.has_icon;
                 const thumb = f.cover
                   ? `<img class="dspico-game-thumb" src="${f.cover}" alt="" draggable="false">`
-                  : `<div class="dspico-game-thumb-ph">capa</div>`;
-                return `<div class="dspico-game-row">
-                    <input type="checkbox" class="dspico-game-cb shrink-0" value="${escapeHtml(
-                      f.rel_path
-                    )}" ${selectedRels.has(f.rel_path) ? "checked" : ""}>
-                    <button type="button" class="dspico-game-open flex items-center gap-2 min-w-0 flex-1 text-left" data-rel="${escapeHtml(
-                      f.rel_path
-                    )}">
-                      ${thumb}
-                      <span class="text-[13px] flex-1 truncate">${escapeHtml(
-                        f.display_name || f.name
-                      )}</span>
-                      <span class="dspico-game-badges">
+                  : `<div class="dspico-game-thumb-ph">${escapeHtml(
+                      fArea === "roms"
+                        ? (f.platform || f.ext || "?").replace(/^\./, "")
+                        : "capa"
+                    )}</div>`;
+                const platBadge =
+                  fArea === "roms"
+                    ? `<span class="text-[11px] text-fg-mute shrink-0">${escapeHtml(
+                        (f.platform || "").toUpperCase()
+                      )}</span>`
+                    : "";
+                const badges = showArtBadges
+                  ? `<span class="dspico-game-badges">
                         <span class="dspico-game-badge ${
                           hasC ? "dspico-game-badge--ok" : ""
                         }">capa</span>
                         <span class="dspico-game-badge ${
                           hasI ? "dspico-game-badge--ok" : ""
                         }">ícone</span>
-                      </span>
+                      </span>${platBadge}`
+                  : platBadge;
+                return `<div class="dspico-game-row">
+                    <input type="checkbox" class="dspico-game-cb shrink-0" data-area="${escapeHtml(
+                      fArea
+                    )}" value="${escapeHtml(
+                      f.rel_path
+                    )}" ${selectedRels.has(f.rel_path) ? "checked" : ""}>
+                    <button type="button" class="dspico-game-open flex items-center gap-2 min-w-0 flex-1 text-left" data-rel="${escapeHtml(
+                      f.rel_path
+                    )}" data-area="${escapeHtml(fArea)}">
+                      ${thumb}
+                      <span class="text-[13px] flex-1 truncate">${escapeHtml(
+                        f.display_name || f.name
+                      )}</span>
+                      ${badges}
                       <span class="text-[11px] text-fg-mute shrink-0">${escapeHtml(
                         f.size_label || ""
                       )}</span>
@@ -497,12 +536,17 @@ const Dspico = (() => {
       const mkdirBtn = document.getElementById("dspico-games-mkdir");
       if (mkdirBtn) {
         mkdirBtn.onclick = async () => {
+          if (libraryArea(gamesCwd) !== "games") return;
           const name = prompt("Nome da pasta em Games/:");
           if (!name) return;
           setBusy(true);
           try {
             const api2 = getApi() || (await waitForApi());
-            const res = await api2.mkdir_dspico_games(m, gamesCwd, name);
+            const res = await api2.mkdir_dspico_games(
+              m,
+              gamesDestRel(gamesCwd),
+              name
+            );
             if (res && res.success) appendLog(res.message || "Pasta criada.", "success");
             else appendLog((res && res.error) || "Falha", "error");
           } finally {
@@ -515,15 +559,33 @@ const Dspico = (() => {
       if (delBtn) {
         delBtn.onclick = async () => {
           if (!selectedRels.size) return;
-          if (!confirm(`Remover ${selectedRels.size} ficheiro(s) de Games/?`)) return;
+          if (!confirm(`Remover ${selectedRels.size} ficheiro(s)?`)) return;
           setBusy(true);
           try {
             const api2 = getApi() || (await waitForApi());
-            const res = await api2.delete_dspico_games(m, Array.from(selectedRels));
-            if (res && res.success) {
-              appendLog(res.message || "Removido.", "success");
-              selectedRels.clear();
-            } else appendLog((res && res.error) || "Falha", "error");
+            const gamesPaths = [];
+            const retroPaths = [];
+            el.querySelectorAll(".dspico-game-cb:checked").forEach((cb) => {
+              const a = cb.getAttribute("data-area") || "games";
+              if (a === "roms") retroPaths.push(cb.value);
+              else gamesPaths.push(cb.value);
+            });
+            let okAny = false;
+            if (gamesPaths.length) {
+              const res = await api2.delete_dspico_games(m, gamesPaths);
+              if (res && res.success) {
+                appendLog(res.message || "Removido.", "success");
+                okAny = true;
+              } else appendLog((res && res.error) || "Falha", "error");
+            }
+            if (retroPaths.length) {
+              const resR = await api2.delete_dspico_retro_roms(m, retroPaths);
+              if (resR && resR.success) {
+                appendLog(resR.message || "Removido.", "success");
+                okAny = true;
+              } else appendLog((resR && resR.error) || "Falha", "error");
+            }
+            if (okAny) selectedRels.clear();
           } finally {
             setBusy(false);
             refresh();
@@ -1156,7 +1218,8 @@ const Dspico = (() => {
     let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
-      const check = await api.check_dspico_import_conflicts(m, list, gamesCwd);
+      const destRel = gamesDestRel(gamesCwd);
+      const check = await api.check_dspico_import_conflicts(m, list, destRel);
       if (!check || !check.success) {
         appendLog(
           (check && check.error) || "Falha na verificação de duplicatas.",
@@ -1181,7 +1244,7 @@ const Dspico = (() => {
       const res = await api.import_dspico_games(
         m,
         list,
-        gamesCwd,
+        destRel,
         resolutions
       );
       if (res && res.success) appendLog(res.message || "Importado.", "success");

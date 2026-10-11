@@ -157,11 +157,42 @@ def test_browse_marks_cover(fake_sd):
     w, h, rgba = pico_bmp.decode_png_rgba(png)
     (cover_dir / "AMCE.bmp").write_bytes(pico_bmp.rgba_to_cover_bmp(w, h, rgba))
 
-    data = dspico.browse_dspico_games(str(fake_sd), "")
+    data = dspico.browse_dspico_games(str(fake_sd), "Games")
     assert data["success"] is True
     files = data["files"]
     assert files
     assert files[0]["has_cover"] is True
+
+
+def test_retro_artwork_user_bucket(fake_sd, monkeypatch, tmp_path):
+    from core import dspico
+
+    gb = fake_sd / "ROMs" / "GB"
+    gb.mkdir(parents=True)
+    (gb / "Tetris.gb").write_bytes(b"GBROM")
+
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+
+    meta = pico_artwork.get_dspico_game_artwork(str(fake_sd), "ROMs/GB/Tetris.gb")
+    assert meta["success"] is True
+    assert meta["area"] == "roms"
+    assert meta["platform"] == "gb"
+    assert meta["has_cover"] is False
+
+    src = tmp_path / "cover.png"
+    src.write_bytes(_solid_png(80, 60))
+    ok, msg, stats = pico_artwork.set_dspico_artwork_file(
+        str(fake_sd), "ROMs/GB/Tetris.gb", "cover", str(src)
+    )
+    assert ok is True, msg
+    dest = fake_sd / "_pico" / "covers" / "user" / "Tetris.gb.bmp"
+    assert dest.is_file(), stats
+
+    browse = dspico.browse_dspico_games(str(fake_sd), "ROMs/GB")
+    assert browse["success"]
+    entry = next(f for f in browse["files"] if f["name"] == "Tetris.gb")
+    assert entry["has_cover"] is True
 
 
 def test_collect_candidates_include_jsdelivr(fake_sd, monkeypatch):
