@@ -32,7 +32,8 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/dspico_emulators.py` | Catálogo + instalação de emuladores Pico-Launcher (pins `DSPICO_EMU_CACHE_KEYS`) |
 | `core/updates.py` | Verificar / instalar actualizações do ecossistema DSPico (pinned + latest LNH) |
 | `core/pico_themes.py` | Temas Pico Launcher (`/_pico/themes/`) |
-| `core/artwork.py` | Capas/ícones GameTDB + Libretro → TWiLight `boxart/` / `icons/` |
+| `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB + Libretro → TWiLight `boxart/` / `icons/` |
+| `core/steamgriddb.py` | Cliente API SteamGridDB (chave em prefs / `STEAMGRIDDB_API_KEY`) |
 | `core/pico_artwork.py` | Capas/ícones Pico Launcher (pesquisa + BMP em `/_pico/covers|icons/`) |
 | `core/pico_bmp.py` | Conversão PNG/BMP → capa 128×96 8 bpp / ícone 32×32 4 bpp |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |

@@ -260,6 +260,10 @@ def test_set_rom_artwork_boxart_and_icon(fake_sd, tmp_path):
     dest = fake_sd / "_nds" / "TWiLightMenu" / "boxart" / "AMCE.png"
     assert dest.is_file()
     assert stats.get("preview")
+    from core.pico_bmp import decode_png_rgba
+
+    bw, bh, _ = decode_png_rgba(dest.read_bytes())
+    assert (bw, bh) == (128, 115)
 
     ok, msg, stats = rom_manager.set_rom_artwork(
         str(fake_sd), "nds/Kart.nds", "icon", str(png)
@@ -267,6 +271,8 @@ def test_set_rom_artwork_boxart_and_icon(fake_sd, tmp_path):
     assert ok, msg
     icon = fake_sd / "_nds" / "TWiLightMenu" / "icons" / "Kart.nds.png"
     assert icon.is_file()
+    iw, ih, _ = decode_png_rgba(icon.read_bytes())
+    assert (iw, ih) == (32, 32)
 
     details = rom_manager.rom_details(str(fake_sd), "nds/Kart.nds")
     assert details["custom_icon"]
@@ -283,7 +289,33 @@ def test_set_rom_artwork_rejects_non_png(fake_sd, tmp_path):
         str(fake_sd), "nds/Kart.nds", "boxart", str(bad)
     )
     assert not ok
-    assert "PNG" in msg
+    assert "PNG" in msg or "BMP" in msg
+
+
+def test_set_rom_artwork_accepts_bmp(fake_sd, tmp_path):
+    import struct
+
+    nds = fake_sd / "roms" / "nds"
+    nds.mkdir(parents=True)
+    make_nds(nds / "Kart.nds", title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    bmp = tmp_path / "art.bmp"
+    w, h = 2, 2
+    row = b"\x00\x80\xff" * w + b"\x00\x00"  # BGR + pad
+    pixels = row * h
+    off = 54
+    size = off + len(pixels)
+    bmp.write_bytes(
+        struct.pack("<2sIHHI", b"BM", size, 0, 0, off)
+        + struct.pack("<IiiHHIIiiII", 40, w, h, 1, 24, 0, len(pixels), 0, 0, 0, 0)
+        + pixels
+    )
+    ok, msg, _ = rom_manager.set_rom_artwork(
+        str(fake_sd), "nds/Kart.nds", "boxart", str(bmp)
+    )
+    assert ok, msg
+    dest = fake_sd / "_nds" / "TWiLightMenu" / "boxart" / "AMCE.png"
+    assert dest.is_file()
+    assert dest.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 def test_set_rom_artwork_rejects_traversal(fake_sd, tmp_path):

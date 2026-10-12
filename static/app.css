@@ -125,7 +125,8 @@ body {
   align-items: center;
   gap: 10px;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  max-width: 48%;
 }
 
 .topbar-select {
@@ -299,13 +300,13 @@ body {
 }
 
 .r1k-op-progress {
-  flex: 1 1 180px;
-  min-width: 140px;
-  max-width: 320px;
+  flex: 1 1 220px;
+  min-width: 160px;
+  max-width: 420px;
   margin: 0 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .r1k-op-progress.hidden {
@@ -317,13 +318,55 @@ body {
   align-items: baseline;
   gap: 8px;
   min-width: 0;
+  flex-wrap: wrap;
 }
 
-.r1k-op-progress-count {
+.r1k-op-progress-title {
   font-size: 11px;
   font-weight: 600;
   color: var(--c-fg);
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.r1k-op-progress-metrics {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-fg);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.r1k-op-progress-cancel {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface, transparent);
+  color: var(--c-fg);
+  cursor: pointer;
+}
+
+.r1k-op-progress-cancel:hover {
+  border-color: var(--c-danger, #c44);
+  color: var(--c-danger, #c44);
+}
+
+.r1k-op-progress-cancel.hidden {
+  display: none;
+}
+
+.r1k-op-progress-cancel:disabled {
+  opacity: 0.55;
+  cursor: wait;
+  pointer-events: none;
 }
 
 .r1k-op-progress-label {
@@ -348,7 +391,29 @@ body {
   height: 100%;
   background: var(--c-accent);
   border-radius: 999px;
-  transition: width 0.2s ease;
+  transition: width 0.2s var(--ease, ease);
+}
+
+.r1k-op-progress-track .wizard-progress-bar.r1k-op-progress-bar--indeterminate {
+  width: 36% !important;
+  animation: r1k-op-progress-indeterminate 1.1s var(--ease, ease) infinite;
+}
+
+@keyframes r1k-op-progress-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .r1k-op-progress-track .wizard-progress-bar.r1k-op-progress-bar--indeterminate {
+    animation: none;
+    width: 40% !important;
+    opacity: 0.85;
+  }
 }
 
 .activity-drawer {

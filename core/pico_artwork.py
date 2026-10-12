@@ -11,11 +11,15 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Optional
 
+from concurrent.futures import ThreadPoolExecutor
+
 from core.artwork import (
-    LIBRETRO_SYSTEMS,
+    _fetch_first_ok,
     boxart_urls_for_tid,
+    is_nds_family_platform,
     jsdelivr_libretro_urls,
     libretro_name_candidates,
+    libretro_platform_key,
     libretro_sanitize_name,
     libretro_urls,
 )
@@ -48,9 +52,11 @@ _ALLOWED_HOSTS = frozenset(
 )
 _DOWNLOAD_TIMEOUT = 25
 _PROBE_TIMEOUT = 12
-_MAX_CANDIDATES = 16
+_MAX_CANDIDATES = 24
+_MAX_PROBE_ATTEMPTS = 48
 _BATCH_MAX_CANDIDATES = 8
-_BATCH_DOWNLOAD_TIMEOUT = 10
+_BATCH_DOWNLOAD_TIMEOUT = 8
+_BATCH_HTTP_WORKERS = 3
 _INTER_DELAY = 0.08
 # Capas/ícones são imagens pequenas; sem teto um redirect/stream pode encher o disco.
 _MAX_DOWNLOAD_BYTES = 2 * 1024 * 1024
@@ -59,12 +65,9 @@ _MAX_PROBE_BYTES = 256
 
 def _emit_batch_progress(payload: dict[str, Any]) -> None:
     """Push best-effort para a UI (não bloqueia o lote)."""
-    try:
-        from services import web_events
+    from core.progress import emit_progress
 
-        web_events.emit("progress", payload)
-    except Exception:
-        pass
+    emit_progress(payload)
 
 _REGION_SUFFIXES = (
     "",
@@ -168,7 +171,11 @@ def _url_allowed(url: str) -> bool:
         return False
     if parts.scheme != "https" or not parts.hostname:
         return False
-    return parts.hostname.lower() in _ALLOWED_HOSTS
+    if parts.hostname.lower() in _ALLOWED_HOSTS:
+        return True
+    from core.steamgriddb import is_asset_url
+
+    return is_asset_url(url)
 
 
 def _content_length_ok(resp, *, max_bytes: int) -> bool:
@@ -253,10 +260,15 @@ def _http_exists(url: str) -> bool:
             return False
 
 
-def _search_name_variants(query: str, basename: str = "") -> list[str]:
+def _search_name_variants(
+    query: str, basename: str = "", *, fake_ext: str = ".nds"
+) -> list[str]:
     """Candidatos de nome para Libretro a partir da query / ficheiro."""
     out: list[str] = []
     seen: set[str] = set()
+    ext = (fake_ext or ".nds").lower()
+    if not ext.startswith("."):
+        ext = "." + ext
 
     def _add(raw: str) -> None:
         s = libretro_sanitize_name((raw or "").strip())
@@ -264,16 +276,25 @@ def _search_name_variants(query: str, basename: str = "") -> list[str]:
             seen.add(s)
             out.append(s)
 
-    for base in (query, os.path.splitext(basename)[0]):
-        if not base or not str(base).strip():
+    # Preferir basename real (com extensão) para strip No-Intro correcto.
+    bases: list[str] = []
+    if basename and str(basename).strip():
+        bases.append(str(basename).strip())
+    if query and str(query).strip():
+        q = str(query).strip()
+        bases.append(q if "." in os.path.basename(q) else q + ext)
+
+    for base in bases:
+        if not base:
             continue
-        for name in libretro_name_candidates(str(base) + ".nds"):
+        # libretro_name_candidates usa só o stem; extensão só serve de contexto.
+        name_src = base if "." in os.path.basename(base) else base + ext
+        for name in libretro_name_candidates(name_src):
             _add(name)
-        stem = libretro_sanitize_name(os.path.splitext(str(base))[0])
+        stem = libretro_sanitize_name(os.path.splitext(os.path.basename(base))[0])
         if stem:
             for suf in _REGION_SUFFIXES:
                 _add(stem + suf)
-            # Truncar palavras (similares)
             words = stem.split()
             for n in range(len(words), 0, -1):
                 _add(" ".join(words[:n]))
@@ -357,6 +378,7 @@ def enrich_dspico_game_entry(
     """Adiciona flags (e opcionalmente previews) de arte a um item de browse.
 
     Não exige is_safe_mount_path — o caller (browse) já opera sobre a montagem.
+    Reutiliza ``game_code`` do entry quando válido (evita 2.ª leitura do header NDS).
     """
     rel = (entry.get("rel_path") or "").replace("\\", "/").lstrip("/")
     entry["has_cover"] = False
@@ -376,8 +398,12 @@ def enrich_dspico_game_entry(
     ext = os.path.splitext(basename)[1].lower()
     tid: Optional[str] = None
     if ext in GAME_EXTS:
-        _title, code, _unit, _maker = get_nds_header_info(full)
-        tid = _valid_tid(code)
+        existing = entry.get("game_code")
+        if isinstance(existing, str) and existing:
+            tid = _valid_tid(existing)
+        if not tid:
+            _title, code, _unit, _maker = get_nds_header_info(full)
+            tid = _valid_tid(code)
     elif ext in RETRO_EXTS:
         if _RETRO_PLATFORM.get(ext) == "gba":
             tid = _gba_game_code(full)
@@ -409,6 +435,61 @@ def enrich_dspico_game_entry(
     return entry
 
 
+def get_dspico_game_previews(
+    mount_path: str,
+    rel_paths: list,
+    *,
+    max_items: int = 24,
+) -> dict[str, Any]:
+    """Pré-visualizações BMP→PNG (data-URL) para um subconjunto de jogos.
+
+    Destinado a preenchimento lazy na UI após browse sem ``with_preview``.
+    """
+    if not isinstance(mount_path, str) or not mount_path.strip():
+        return {"success": False, "error": "Caminho do cartão inválido.", "previews": {}}
+    if not os.path.isdir(mount_path):
+        return {"success": False, "error": "Cartão inexistente.", "previews": {}}
+    try:
+        limit = int(max_items)
+    except (TypeError, ValueError):
+        limit = 24
+    if limit < 1:
+        limit = 1
+    if limit > 48:
+        limit = 48
+
+    paths: list[str] = []
+    if isinstance(rel_paths, list):
+        for raw in rel_paths:
+            if not isinstance(raw, str) or not raw or "\x00" in raw:
+                continue
+            rel = raw.replace("\\", "/").lstrip("/")
+            if not rel or ".." in rel.split("/"):
+                continue
+            paths.append(rel)
+            if len(paths) >= limit:
+                break
+
+    previews: dict[str, Any] = {}
+    for rel in paths:
+        area = "roms" if rel.startswith(f"{ROMS_DIRNAME}/") else "games"
+        entry: dict[str, Any] = {"rel_path": rel, "area": area}
+        try:
+            enrich_dspico_game_entry(mount_path, entry, with_preview=True)
+        except Exception:
+            continue
+        if not entry.get("cover") and not entry.get("icon"):
+            if not entry.get("has_cover") and not entry.get("has_icon"):
+                continue
+        previews[rel] = {
+            "cover": entry.get("cover"),
+            "icon": entry.get("icon"),
+            "has_cover": bool(entry.get("has_cover")),
+            "has_icon": bool(entry.get("has_icon")),
+        }
+    return {"success": True, "previews": previews}
+
+
 def _collect_candidate_urls(
     *,
     kind: str,
@@ -422,38 +503,58 @@ def _collect_candidate_urls(
     items: list[dict[str, str]] = []
     seen: set[str] = set()
 
-    def _push(url: str, label: str, source: str) -> None:
+    def _push(
+        url: str, label: str, source: str, *, preview: Optional[str] = None
+    ) -> None:
         if not url or url in seen or not _url_allowed(url):
             return
         seen.add(url)
-        items.append({"url": url, "label": label, "source": source})
+        entry = {"url": url, "label": label, "source": source}
+        if preview and _url_allowed(preview):
+            entry["preview"] = preview
+        items.append(entry)
+
+    from core.steamgriddb import candidate_assets, has_api_key, search_term_from_rom
 
     lr_kind = "boxart" if kind == "cover" else "icon"
+    lr_key = libretro_platform_key(platform)
+    nds_family = is_nds_family_platform(platform)
+    fake_ext = os.path.splitext(basename or "")[1] or ".nds"
+    q = (query or "").strip()
 
-    if kind == "cover" and tid:
+    # 1.ª fonte: SteamGridDB (API → CDN).
+    if has_api_key():
+        term = search_term_from_rom(basename, title=title, query=q)
+        if term:
+            for a in candidate_assets(term, kind, game_name=term, limit=12):
+                _push(
+                    a["url"],
+                    str(a.get("label") or f"SteamGridDB · {term}"),
+                    "steamgriddb",
+                    preview=str(a.get("preview") or a.get("thumb") or ""),
+                )
+
+    # GameTDB só para NDS/DSi (URLs /ds/coverS/).
+    if kind == "cover" and tid and nds_family:
         for url in boxart_urls_for_tid(tid):
             _push(url, f"GameTDB · {tid}", "gametdb")
 
-    # Query explícita (TID de 4 letras)
-    q = (query or "").strip()
-    if q and _TID_RE.match(q) and kind == "cover":
+    if q and _TID_RE.match(q) and kind == "cover" and nds_family:
         for url in boxart_urls_for_tid(q.upper()):
             _push(url, f"GameTDB · {q.upper()}", "gametdb")
 
-    names = _search_name_variants(q, basename)
+    names = _search_name_variants(q, basename, fake_ext=fake_ext)
     if title:
-        for n in _search_name_variants(title, ""):
+        for n in _search_name_variants(title, "", fake_ext=fake_ext):
             if n not in names:
                 names.append(n)
 
-    if platform not in LIBRETRO_SYSTEMS:
-        platform = "nds"
-
-    for name in names:
-        for url in libretro_urls(platform, name, kind=lr_kind):
-            _push(url, name, "libretro")
-        for url in jsdelivr_libretro_urls(platform, name, kind=lr_kind):
-            _push(url, name, "jsdelivr")
+    if lr_key:
+        for name in names:
+            for url in libretro_urls(lr_key, name, kind=lr_kind):
+                _push(url, name, "libretro")
+            for url in jsdelivr_libretro_urls(lr_key, name, kind=lr_kind):
+                _push(url, name, "jsdelivr")
 
     return items
 
@@ -509,31 +610,61 @@ def search_dspico_artwork(
     )
     log(
         f"A listar opções de {'capa' if kind_n == 'cover' else 'ícone'} "
-        f"para {meta['display_name']} (sem descarregar)…"
+        f"para {meta['display_name']}…"
     )
 
+    from core.steamgriddb import has_api_key
+
     candidates: list[dict[str, Any]] = []
+    probed = 0
     for item in probes:
         if len(candidates) >= _MAX_CANDIDATES:
+            break
+        if probed >= _MAX_PROBE_ATTEMPTS:
             break
         url = item.get("url")
         if not isinstance(url, str) or not _url_allowed(url):
             continue
-        # preview = URL remota (a WebView carrega; o Python não grava no disco do PC)
+        probed += 1
+        source = item.get("source") or ""
+        # SteamGridDB: URLs vindas da API — sem HEAD; restantes fontes: sondar.
+        if source != "steamgriddb" and not _http_exists(url):
+            continue
+        preview = item.get("preview") or url
+        if isinstance(preview, str) and not _url_allowed(preview):
+            preview = url
         candidates.append(
             {
                 "url": url,
-                "label": item.get("label") or item.get("source") or "opção",
-                "source": item.get("source") or "",
-                "preview": url,
+                "label": item.get("label") or source or "opção",
+                "source": source,
+                "preview": preview,
             }
         )
 
-    msg = (
-        f"{len(candidates)} opção(ões) — escolha uma para gravar no cartão."
-        if candidates
-        else "Nenhuma URL candidata — tente outro nome ou TID na pesquisa."
-    )
+    lr_key = libretro_platform_key(meta.get("platform") or "")
+    sgdb_on = has_api_key()
+    if candidates:
+        msg = (
+            f"{len(candidates)} opção(ões) — escolha uma para gravar no cartão."
+        )
+    elif not sgdb_on and not is_nds_family_platform(meta.get("platform")):
+        # Retro sem SGDB: Libretro quase nunca acerta nomes BR — pedir chave.
+        msg = (
+            "Sem chave SteamGridDB — em Definições (barra lateral) → "
+            "secção SteamGridDB, cole a chave e Guarde. "
+            "Ou escolha um ficheiro PNG/BMP."
+        )
+    elif not lr_key and not is_nds_family_platform(meta.get("platform")) and not sgdb_on:
+        msg = (
+            "Sem fonte online para esta plataforma — "
+            "configure SteamGridDB em Definições ou escolha um ficheiro PNG/BMP."
+        )
+    else:
+        msg = (
+            "Nenhuma imagem encontrada — tente outro nome/TID "
+            "ou escolha um ficheiro PNG/BMP."
+        )
     if candidates:
         log(f"✅ {msg}")
     else:
@@ -546,17 +677,19 @@ def search_dspico_artwork(
         "rel_path": meta["rel_path"],
         "display_name": meta["display_name"],
         "game_code": meta["game_code"],
+        "platform": meta.get("platform"),
+        "area": meta.get("area") or "games",
         "query": q,
         "current": current_preview,
         "candidates": candidates,
         "hints": {
             "cover": (
-                "Pico Launcher: BMP 128×96 8-bit em /_pico/covers/nds/{TID}.bmp "
-                "ou /_pico/covers/user/{ficheiro}.bmp."
+                "Qualquer PNG/BMP é convertido para BMP 128×96 8-bit "
+                "(área útil 106×96) em /_pico/covers/…"
             ),
             "icon": (
-                "Pico Launcher: BMP 32×32 4-bit em /_pico/icons/nds/{TID}.bmp "
-                "ou /_pico/icons/user/{ficheiro}.bmp (cor 0 = transparente)."
+                "Qualquer PNG/BMP é convertido para BMP 32×32 4-bit "
+                "(cor 0 transparente) em /_pico/icons/…"
             ),
         },
     }
@@ -587,14 +720,14 @@ def apply_dspico_artwork_url(
     if err or not meta:
         return False, err or "Jogo inválido.", stats
 
-    log("A descarregar a capa escolhida directamente para o cartão…")
+    log("A descarregar e converter a imagem para o formato Pico…")
     raw = _http_get(url)
     if not raw:
         return False, "Falha ao descarregar a imagem.", stats
     try:
         bmp = image_bytes_to_pico_bmp(raw, kind_n)
     except ValueError as e:
-        return False, f"Imagem inválida: {e}", stats
+        return False, f"Imagem inválida (conversão): {e}", stats
     # Libertar o PNG/JPEG original antes da escrita no SD.
     del raw
 
@@ -676,25 +809,32 @@ def _write_pico_bmp(
     if not dests:
         return False, "Sem destino de arte.", stats
 
-    # Preferir TID quando existe; gravar só o primeiro destino canónico
-    dest = dests[0]
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-    partial = dest + ".partial"
-    try:
-        with open(partial, "wb") as f:
-            f.write(bmp)
-            f.flush()
-            os.fsync(f.fileno())
-        if len(bmp) < 64:
-            raise OSError("BMP gerado demasiado pequeno.")
-        os.replace(partial, dest)
-    except OSError as e:
+    # Gravar em todos os destinos canónicos (TID + user) para compatibilidade
+    # com modos de lookup diferentes do launcher.
+    written: list[str] = []
+    seen: set[str] = set()
+    for dest in dests:
+        if not dest or dest in seen:
+            continue
+        seen.add(dest)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        partial = dest + ".partial"
         try:
-            if os.path.exists(partial):
-                os.remove(partial)
-        except OSError:
-            pass
-        return False, f"Falha ao gravar arte: {e}", stats
+            with open(partial, "wb") as f:
+                f.write(bmp)
+                f.flush()
+                os.fsync(f.fileno())
+            if len(bmp) < 64:
+                raise OSError("BMP gerado demasiado pequeno.")
+            os.replace(partial, dest)
+            written.append(dest)
+        except OSError as e:
+            try:
+                if os.path.exists(partial):
+                    os.remove(partial)
+            except OSError:
+                pass
+            return False, f"Falha ao gravar arte: {e}", stats
 
     if not defer_sync:
         try:
@@ -703,10 +843,25 @@ def _write_pico_bmp(
             pass
 
     label = "capa" if kind == "cover" else "ícone"
-    rel_dest = os.path.relpath(dest, mount_path).replace("\\", "/")
-    log(f"✅ {label.capitalize()} gravada: /{rel_dest} ({note})")
+    rel_paths = [
+        os.path.relpath(path, mount_path).replace("\\", "/") for path in written
+    ]
+    rel_dest = rel_paths[0] if rel_paths else ""
+    if rel_paths:
+        log(
+            f"✅ {label.capitalize()} gravada: "
+            + ", ".join(f"/{p}" for p in rel_paths)
+            + f" ({note})"
+        )
     stats["path"] = rel_dest
+    stats["paths"] = rel_paths
     stats["kind"] = kind
+    if len(rel_paths) > 1:
+        return (
+            True,
+            f"{label.capitalize()} actualizada em {len(rel_paths)} destino(s).",
+            stats,
+        )
     return True, f"{label.capitalize()} actualizada em /{rel_dest}.", stats
 
 
@@ -719,9 +874,11 @@ def _batch_candidate_urls(
     title: Optional[str],
 ) -> list[str]:
     """
-    Lista curta para lote: GameTDB → Libretro (sem sufixos região) → jsDelivr.
+    Lista curta para lote: SteamGridDB → GameTDB → Libretro → jsDelivr.
     Sem HEAD — o caller faz GET directo na 1.ª que converter.
     """
+    from core.steamgriddb import candidate_assets, has_api_key, search_term_from_rom
+
     urls: list[str] = []
     seen: set[str] = set()
 
@@ -732,9 +889,19 @@ def _batch_candidate_urls(
         urls.append(url)
 
     lr_kind = "boxart" if kind == "cover" else "icon"
-    plat = platform if platform in LIBRETRO_SYSTEMS else "nds"
+    plat = libretro_platform_key(platform)
+    nds_family = is_nds_family_platform(platform)
+    fake_ext = os.path.splitext(basename or "")[1] or ".nds"
 
-    if kind == "cover" and tid:
+    if has_api_key():
+        term = search_term_from_rom(basename, title=title)
+        if term:
+            for a in candidate_assets(term, kind, limit=4):
+                _push(a["url"])
+                if len(urls) >= _BATCH_MAX_CANDIDATES:
+                    return urls[:_BATCH_MAX_CANDIDATES]
+
+    if kind == "cover" and tid and nds_family:
         for url in boxart_urls_for_tid(tid)[:3]:
             _push(url)
 
@@ -742,19 +909,21 @@ def _batch_candidate_urls(
     for raw in (basename, title or ""):
         if not raw:
             continue
-        for n in libretro_name_candidates(raw if "." in raw else f"{raw}.nds"):
+        src = raw if "." in os.path.basename(str(raw)) else f"{raw}{fake_ext}"
+        for n in libretro_name_candidates(src):
             if n not in names:
                 names.append(n)
         if len(names) >= 3:
             break
 
-    for name in names[:3]:
-        for url in libretro_urls(plat, name, kind=lr_kind):
-            _push(url)
-        for url in jsdelivr_libretro_urls(plat, name, kind=lr_kind):
-            _push(url)
-        if len(urls) >= _BATCH_MAX_CANDIDATES:
-            break
+    if plat:
+        for name in names[:3]:
+            for url in libretro_urls(plat, name, kind=lr_kind):
+                _push(url)
+            for url in jsdelivr_libretro_urls(plat, name, kind=lr_kind):
+                _push(url)
+            if len(urls) >= _BATCH_MAX_CANDIDATES:
+                break
 
     return urls[:_BATCH_MAX_CANDIDATES]
 
@@ -808,22 +977,12 @@ def get_dspico_game_artwork(
         "area": meta.get("area") or "games",
         "hints": {
             "cover": (
-                "Libretro Thumbnails por nome → /_pico/covers/user/{ficheiro}.bmp "
-                "(Pico Launcher). Pode escolher um PNG/BMP no PC."
-                if meta.get("area") == "roms"
-                else (
-                    "Pesquisa GameTDB (por código) e Libretro Thumbnails (por nome). "
-                    "Pode pesquisar outro título ou escolher um PNG/BMP no PC."
-                )
+                "Imagens online ou do PC são convertidas para BMP 128×96 8-bit "
+                "em /_pico/covers/…"
             ),
             "icon": (
-                "Libretro Named_Titles → /_pico/icons/user/{ficheiro}.bmp "
-                "(Pico Launcher). Pode escolher um PNG/BMP no PC."
-                if meta.get("area") == "roms"
-                else (
-                    "Pesquisa Libretro Named_Titles / escolha manual. "
-                    "No DS o ícone do banner é o padrão se não houver custom."
-                )
+                "Imagens online ou do PC são convertidas para BMP 32×32 4-bit "
+                "(transparência) em /_pico/icons/…"
             ),
         },
     }
@@ -849,8 +1008,10 @@ def generate_dspico_artwork_batch(
     """
     Gera capas e ícones Pico (BMP) em lote — 1.ª URL válida por kind.
     Não sobrescreve arte já existente. Retorna missing[] para falhas.
-    Optimizado: poucos candidatos, GET directo (sem HEAD), sync no fim.
+    HTTP first-hit paralelo; BMP no SD na thread da op; sync no fim.
     """
+    from core.progress import OperationCancelled, ProgressTracker, check_cancelled
+
     log = lambda msg: emit_log(log_callback, msg)
     try:
         max_n = int(max_games)
@@ -883,15 +1044,16 @@ def generate_dspico_artwork_batch(
     if os.path.isdir(games_root):
         for root, _dirs, files in os.walk(games_root):
             for name in files:
-                low = name.lower()
-                if low.endswith((".nds", ".dsi", ".ids")):
-                    full = os.path.join(root, name)
-                    rel = os.path.relpath(full, games_root).replace("\\", "/")
-                    if ".." in rel.split("/"):
-                        continue
-                    roms.append(rel)
-                    if len(roms) >= max_n:
-                        break
+                ext = os.path.splitext(name)[1].lower()
+                if ext not in GAME_EXTS and ext not in RETRO_EXTS:
+                    continue
+                full = os.path.join(root, name)
+                rel = os.path.relpath(full, games_root).replace("\\", "/")
+                if ".." in rel.split("/"):
+                    continue
+                roms.append(rel)
+                if len(roms) >= max_n:
+                    break
             if len(roms) >= max_n:
                 break
     if len(roms) < max_n and os.path.isdir(roms_root):
@@ -917,34 +1079,54 @@ def generate_dspico_artwork_batch(
     skipped = 0
     failed = 0
     missing: list[dict[str, Any]] = []
-    total = len(roms)
-    log(f"=== Capas e ícones DSPico em lote: {total} jogo(s) ===")
+    scanned = len(roms)
 
-    def _progress(
-        current: int, label: str, *, done: bool = False
-    ) -> None:
-        _emit_batch_progress(
+    # Pré-resolver + skip jogos já completos.
+    work: list[dict[str, Any]] = []
+    for rel in roms:
+        err, meta = _resolve_game(mount_path, rel)
+        if err or not meta:
+            work.append({"rel": rel, "meta": None, "err": err})
+            continue
+        has_cover = bool(
+            resolve_existing_art(
+                mount_path, meta["basename"], meta.get("game_code"), "cover"
+            )
+        )
+        has_icon = bool(
+            resolve_existing_art(
+                mount_path, meta["basename"], meta.get("game_code"), "icon"
+            )
+        )
+        if has_cover and has_icon:
+            skipped += 2
+            continue
+        work.append(
             {
-                "op": "dspico_artwork_batch",
-                "current": current,
-                "total": total,
-                "written": written,
-                "skipped": skipped,
-                "failed": failed,
-                "label": label,
-                "done": done,
+                "rel": rel,
+                "meta": meta,
+                "err": None,
+                "has_cover": has_cover,
+                "has_icon": has_icon,
             }
         )
 
-    def _try_kind(meta: dict[str, Any], kind: str) -> str:
-        """Retorna 'written' | 'skipped' | 'failed'. Sem HEAD; GET curto."""
-        nonlocal written, skipped
-        existing = resolve_existing_art(
-            mount_path, meta["basename"], meta.get("game_code"), kind
-        )
-        if existing:
-            skipped += 1
-            return "skipped"
+    total = len(work)
+    log(
+        f"=== Capas e ícones DSPico em lote: {scanned} jogo(s), "
+        f"{total} por processar ==="
+    )
+
+    tracker = ProgressTracker(
+        "dspico_artwork_batch",
+        label="A iniciar…",
+        total_items=total,
+        emit_fn=_emit_batch_progress,
+    )
+    tracker.cancellable = True
+    tracker.skipped = skipped
+
+    def _fetch_kind_bytes(meta: dict[str, Any], kind: str) -> Optional[bytes]:
         probes = _batch_candidate_urls(
             kind=kind,
             platform=meta.get("platform") or "nds",
@@ -952,74 +1134,160 @@ def generate_dspico_artwork_batch(
             tid=meta.get("game_code"),
             title=meta.get("title"),
         )
-        for url in probes:
-            raw = _http_get(url, timeout=_BATCH_DOWNLOAD_TIMEOUT)
-            if not raw:
-                time.sleep(_INTER_DELAY)
-                continue
-            if _apply_bytes_to_meta(
-                mount_path, meta, kind, raw, log=log, defer_sync=True
-            ):
-                written += 1
-                return "written"
-            time.sleep(_INTER_DELAY)
-        return "failed"
+        if not probes:
+            return None
+        return _fetch_first_ok(
+            probes,
+            max_urls=_BATCH_MAX_CANDIDATES,
+            timeout=_BATCH_DOWNLOAD_TIMEOUT,
+            workers=_BATCH_HTTP_WORKERS,
+        )
 
-    _progress(0, "A iniciar…")
-    for idx, rel in enumerate(roms, start=1):
-        err, meta = _resolve_game(mount_path, rel)
-        if err or not meta:
-            failed += 1
-            missing.append(
-                {
-                    "rel_path": rel,
-                    "display_name": os.path.basename(rel),
-                    "game_code": None,
-                    "missing_cover": True,
-                    "missing_icon": True,
-                }
-            )
-            _progress(idx, os.path.basename(rel))
-            continue
-        display = meta.get("display_name") or meta.get("basename") or rel
-        _progress(idx, f"{display} — capa")
-        cover_st = _try_kind(meta, "cover")
-        _progress(idx, f"{display} — ícone")
-        icon_st = _try_kind(meta, "icon")
-        miss_cover = cover_st == "failed"
-        miss_icon = icon_st == "failed"
-        if miss_cover or miss_icon:
-            failed += int(miss_cover) + int(miss_icon)
-            missing.append(
-                {
-                    "rel_path": rel,
-                    "display_name": meta.get("basename") or os.path.basename(rel),
-                    "game_code": meta.get("game_code"),
-                    "missing_cover": miss_cover,
-                    "missing_icon": miss_icon,
-                }
-            )
+    def _finish_ok(message: str) -> dict[str, Any]:
+        try:
+            sync_volume(mount_path)
+        except Exception:
+            pass
+        log(f"✅ {message}" if written else f"⚠️ {message}")
+        tracker.written = written
+        tracker.skipped = skipped
+        tracker.failed = failed
+        tracker.finish(message)
+        return {
+            "success": True,
+            "message": message,
+            "written": written,
+            "skipped": skipped,
+            "failed": failed,
+            "scanned": scanned,
+            "missing": missing,
+        }
 
+    if not work:
+        return _finish_ok(
+            f"{written} arte(s) gravada(s); {skipped} já existiam; "
+            f"0 jogo(s) com falhas."
+        )
+
+    tracker.tick(force=True)
     try:
-        sync_volume(mount_path)
-    except Exception:
-        pass
+        for idx, job in enumerate(work, start=1):
+            check_cancelled()
+            rel = job["rel"]
+            meta = job.get("meta")
+            if not meta:
+                failed += 2
+                missing.append(
+                    {
+                        "rel_path": rel,
+                        "display_name": os.path.basename(rel),
+                        "game_code": None,
+                        "missing_cover": True,
+                        "missing_icon": True,
+                    }
+                )
+                tracker.written = written
+                tracker.skipped = skipped
+                tracker.failed = failed
+                tracker.current = idx
+                tracker.set_label(os.path.basename(rel))
+                tracker.tick(force=True)
+                continue
+
+            display = meta.get("display_name") or meta.get("basename") or rel
+            tracker.set_label(display)
+            tracker.tick(force=True)
+
+            need_cover = not job.get("has_cover")
+            need_icon = not job.get("has_icon")
+            cover_raw: Optional[bytes] = None
+            icon_raw: Optional[bytes] = None
+
+            if need_cover and need_icon:
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    f_c = pool.submit(_fetch_kind_bytes, meta, "cover")
+                    f_i = pool.submit(_fetch_kind_bytes, meta, "icon")
+                    try:
+                        cover_raw = f_c.result()
+                    except Exception:
+                        cover_raw = None
+                    try:
+                        icon_raw = f_i.result()
+                    except Exception:
+                        icon_raw = None
+            elif need_cover:
+                cover_raw = _fetch_kind_bytes(meta, "cover")
+            elif need_icon:
+                icon_raw = _fetch_kind_bytes(meta, "icon")
+
+            miss_cover = False
+            miss_icon = False
+
+            if need_cover:
+                if cover_raw and _apply_bytes_to_meta(
+                    mount_path, meta, "cover", cover_raw, log=log, defer_sync=True
+                ):
+                    written += 1
+                else:
+                    miss_cover = True
+                    failed += 1
+            else:
+                skipped += 1
+
+            if need_icon:
+                if icon_raw and _apply_bytes_to_meta(
+                    mount_path, meta, "icon", icon_raw, log=log, defer_sync=True
+                ):
+                    written += 1
+                else:
+                    miss_icon = True
+                    failed += 1
+            else:
+                skipped += 1
+
+            if miss_cover or miss_icon:
+                missing.append(
+                    {
+                        "rel_path": rel,
+                        "display_name": meta.get("basename") or os.path.basename(rel),
+                        "game_code": meta.get("game_code"),
+                        "missing_cover": miss_cover,
+                        "missing_icon": miss_icon,
+                    }
+                )
+            tracker.written = written
+            tracker.skipped = skipped
+            tracker.failed = failed
+            tracker.current = idx
+            tracker.tick(force=True)
+    except OperationCancelled as e:
+        msg = str(e) or "Operação cancelada pelo utilizador."
+        log(f"⚠️ {msg} ({written} gravada(s) antes).")
+        tracker.written = written
+        tracker.skipped = skipped
+        tracker.failed = failed
+        tracker.finish(msg)
+        try:
+            sync_volume(mount_path)
+        except Exception:
+            pass
+        return {
+            "success": False,
+            "error": msg,
+            "message": msg,
+            "written": written,
+            "skipped": skipped,
+            "failed": failed,
+            "scanned": scanned,
+            "missing": missing,
+            "cancelled": True,
+        }
 
     msg = (
         f"{written} arte(s) gravada(s); {skipped} já existiam; "
         f"{len(missing)} jogo(s) com falhas."
     )
-    log(f"✅ {msg}" if written else f"⚠️ {msg}")
-    _progress(total, msg, done=True)
-    return {
-        "success": True,
-        "message": msg,
-        "written": written,
-        "skipped": skipped,
-        "failed": failed,
-        "scanned": total,
-        "missing": missing,
-    }
+    return _finish_ok(msg)
 
 
 def generate_dspico_covers_batch(

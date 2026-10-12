@@ -113,11 +113,13 @@ def test_resolve_under_games_rejects_traversal(tmp_path):
 
 
 def test_browse_import_delete_games(tmp_path):
+    from tests.conftest import make_nds
+
     _minimal_dspico_sd(tmp_path)
     src = tmp_path / "host"
     src.mkdir()
     rom = src / "Kart.nds"
-    rom.write_bytes(b"ROMDATA")
+    make_nds(str(rom), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
 
     ok, msg, stats = dspico.import_dspico_games(
         str(tmp_path), [str(rom)], dest_rel_dir=""
@@ -127,12 +129,17 @@ def test_browse_import_delete_games(tmp_path):
     root = dspico.browse_dspico_games(str(tmp_path), "")
     assert root["success"]
     assert root.get("area") == "root"
-    assert {d.get("name") for d in root.get("dirs") or []} >= {"Games", "ROMs"}
+    assert "Games" in {d.get("name") for d in root.get("dirs") or []}
+    # ROMs/ só aparece se já existir no cartão (legado)
+    assert "ROMs" not in {d.get("name") for d in root.get("dirs") or []}
 
     browse = dspico.browse_dspico_games(str(tmp_path), "Games")
     assert browse["success"]
     assert browse.get("area") == "games"
-    assert any(f.get("name") == "Kart.nds" for f in browse.get("files") or [])
+    files = browse.get("files") or []
+    assert any(f.get("name") == "Kart.nds" for f in files)
+    kart = next(f for f in files if f.get("name") == "Kart.nds")
+    assert kart.get("kind") == "game"
 
     ok, msg, stats = dspico.delete_dspico_games(
         str(tmp_path), ["Kart.nds"]
@@ -141,29 +148,58 @@ def test_browse_import_delete_games(tmp_path):
     assert stats.get("removed") == 1
 
 
-def test_browse_lists_retro_roms(tmp_path):
+def test_browse_lists_retro_in_games(tmp_path):
+    _minimal_dspico_sd(tmp_path)
+    (tmp_path / "Games" / "Tetris.gb").write_bytes(b"GBROM")
+    (tmp_path / "Games" / "Zelda.gba").write_bytes(b"GBAROM")
+
+    browse = dspico.browse_dspico_games(str(tmp_path), "Games")
+    assert browse["success"]
+    assert browse.get("area") == "games"
+    files = browse.get("files") or []
+    by_name = {f.get("name"): f for f in files}
+    assert "Tetris.gb" in by_name
+    assert by_name["Tetris.gb"].get("kind") == "retro"
+    assert by_name["Tetris.gb"].get("platform") == "gb"
+    assert by_name["Tetris.gb"].get("rel_path") == "Tetris.gb"
+    assert "Zelda.gba" in by_name
+    assert by_name["Zelda.gba"].get("kind") == "retro"
+
+
+def test_dup_index_cache_reused(tmp_path):
+    """Índice de duplicatas partilha o mesmo objecto em cache (TTL)."""
+    from tests.conftest import make_nds
+
+    _minimal_dspico_sd(tmp_path)
+    make_nds(
+        str(tmp_path / "Games" / "Kart.nds"),
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+    )
+    dspico.invalidate_dspico_library_caches()
+    a = dspico._index_dspico_by_dup_key(str(tmp_path))
+    b = dspico._index_dspico_by_dup_key(str(tmp_path))
+    assert a is b
+    dspico.invalidate_dspico_library_caches(str(tmp_path))
+    c = dspico._index_dspico_by_dup_key(str(tmp_path))
+    assert c is not a
+
+
+def test_browse_lists_legacy_roms_folder(tmp_path):
+    """ROMs/ legado continua browsável se existir."""
     _minimal_dspico_sd(tmp_path)
     gb = tmp_path / "ROMs" / "GB"
     gb.mkdir(parents=True)
     (gb / "Tetris.gb").write_bytes(b"GBROM")
-    (tmp_path / "ROMs" / "GBA").mkdir(parents=True)
-    (tmp_path / "ROMs" / "GBA" / "Zelda.gba").write_bytes(b"GBAROM")
 
-    roms = dspico.browse_dspico_games(str(tmp_path), "ROMs")
-    assert roms["success"]
-    assert roms.get("area") == "roms"
-    dir_names = {d.get("name") for d in roms.get("dirs") or []}
-    assert "GB" in dir_names
-    assert "GBA" in dir_names
-
+    root = dspico.browse_dspico_games(str(tmp_path), "")
+    assert "ROMs" in {d.get("name") for d in root.get("dirs") or []}
     gb_list = dspico.browse_dspico_games(str(tmp_path), "ROMs/GB")
     assert gb_list["success"]
-    files = gb_list.get("files") or []
-    assert any(f.get("name") == "Tetris.gb" for f in files)
-    tetris = next(f for f in files if f.get("name") == "Tetris.gb")
+    tetris = next(f for f in gb_list.get("files") or [] if f.get("name") == "Tetris.gb")
     assert tetris.get("area") == "roms"
     assert tetris.get("rel_path") == "ROMs/GB/Tetris.gb"
-    assert tetris.get("platform") == "gb"
 
 
 def test_mkdir_and_move_games(tmp_path):
@@ -258,9 +294,15 @@ def test_organize_dspico_removes_foreign_and_layouts(tmp_path):
     from tests.conftest import make_nds
 
     _minimal_dspico_sd(tmp_path)
-    # Conteúdo de outros sistemas
+    # Conteúdo de outros sistemas (incl. jogo dentro de _nds — single-pass)
     (tmp_path / "_nds").mkdir()
     (tmp_path / "_nds" / "TWiLightMenu").mkdir()
+    make_nds(
+        str(tmp_path / "_nds" / "Hidden.nds"),
+        title=b"HIDDEN GAME",
+        code=b"AHDE",
+        maker=b"01",
+    )
     (tmp_path / "roms").mkdir()
     (tmp_path / "MOONSHL").mkdir()
     (tmp_path / "boot.nds").write_bytes(b"BOOT")
@@ -276,7 +318,7 @@ def test_organize_dspico_removes_foreign_and_layouts(tmp_path):
     )
     assert ok, msg
     assert not (tmp_path / "_nds").exists()
-    # /roms/ é preservado (emuladores Pico usam /ROMs/); jogos NDS são resgatados
+    # /roms/ (lower) é preservado em KEEP; jogos NDS migrados
     assert not (tmp_path / "MOONSHL").exists()
     assert not (tmp_path / "boot.nds").exists()
     assert (tmp_path / "_picoboot.nds").is_file()
@@ -284,20 +326,19 @@ def test_organize_dspico_removes_foreign_and_layouts(tmp_path):
     assert (tmp_path / "Games" / "Pokemon" / "Pokemon Pearl.nds").is_file() or (
         tmp_path / "Games" / "Pokemon"
     ).is_dir()
-    # Save segue o jogo
     pokemon_dir = tmp_path / "Games" / "Pokemon"
     assert pokemon_dir.is_dir()
     savs = list(pokemon_dir.glob("*.sav"))
     assert savs, "save deveria acompanhar o jogo"
     assert stats.get("removed_foreign", 0) >= 2
+    # Jogo dentro de _nds foi recolhido no único walk
+    assert stats.get("games", 0) >= 3
 
-    # Reorganizar soltos em Games/
     ok, msg, stats = dspico.organize_dspico_sd(str(tmp_path), layout="games")
     assert ok, msg
     flat = list((tmp_path / "Games").glob("*.nds"))
     assert len(flat) >= 2
 
-    # Layout raiz
     ok, msg, stats = dspico.organize_dspico_sd(str(tmp_path), layout="root")
     assert ok, msg
     root_nds = [
@@ -307,6 +348,35 @@ def test_organize_dspico_removes_foreign_and_layouts(tmp_path):
     ]
     assert len(root_nds) >= 2
     assert (tmp_path / "_picoboot.nds").is_file()
+
+
+def test_organize_dspico_apps_to_apps_folder(tmp_path):
+    from tests.conftest import make_nds
+
+    _minimal_dspico_sd(tmp_path)
+    make_nds(
+        str(tmp_path / "Games" / "Kart.nds"),
+        title=b"MARIOKARTDS",
+        code=b"AMCE",
+        maker=b"01",
+    )
+    (tmp_path / "misc").mkdir()
+    make_nds(
+        str(tmp_path / "misc" / "GodMode9i.nds"),
+        title=b"GODMODE9I",
+        code=b"####",
+        maker=b"00",
+    )
+
+    ok, msg, stats = dspico.organize_dspico_sd(str(tmp_path), layout="franchise")
+    assert ok, msg
+    assert (tmp_path / "Games" / "Apps").is_dir()
+    apps = list((tmp_path / "Games" / "Apps").glob("*.nds"))
+    assert apps, "app deveria ir para Games/Apps/"
+    assert stats.get("apps", 0) >= 1
+    assert not any(
+        "mario" in p.name.lower() or p.name.lower().startswith("kart") for p in apps
+    )
 
 
 def test_organize_dspico_platform_layout(tmp_path):
@@ -326,6 +396,7 @@ def test_organize_dspico_platform_layout(tmp_path):
         maker=b"01",
         unitcode=2,
     )
+    (tmp_path / "Games" / "Tetris.gb").write_bytes(b"GBROM")
     ok, msg, stats = dspico.organize_dspico_sd(
         str(tmp_path), layout="platform"
     )
@@ -334,30 +405,68 @@ def test_organize_dspico_platform_layout(tmp_path):
     assert any((tmp_path / "Games" / "nds").glob("*.nds"))
     assert (tmp_path / "Games" / "dsi").is_dir()
     assert any((tmp_path / "Games" / "dsi").glob("*.dsi"))
+    assert (tmp_path / "Games" / "gb").is_dir()
+    assert any((tmp_path / "Games" / "gb").glob("*.gb"))
 
 
-def test_organize_dspico_collects_retro_from_anywhere(tmp_path):
+def test_organize_dspico_collects_retro_into_games(tmp_path):
     _minimal_dspico_sd(tmp_path)
-    # Retro fora de ROMs/ (e um já no sítio certo)
     (tmp_path / "Downloads").mkdir()
     (tmp_path / "Downloads" / "Tetris.gb").write_bytes(b"GBROM")
     (tmp_path / "Downloads" / "Tetris.sav").write_bytes(b"SAVE")
     (tmp_path / "Games" / "Zelda.gba").write_bytes(b"GBAROM")
     (tmp_path / "misc").mkdir()
     (tmp_path / "misc" / "Mario.sfc").write_bytes(b"SNESROM")
+    (tmp_path / "misc" / "Mega.nes").write_bytes(b"NESROM")
+    (tmp_path / "misc" / "Sonic.gen").write_bytes(b"GENROM")
+    (tmp_path / "misc" / "Pitfall.a26").write_bytes(b"A26ROM")
     already = tmp_path / "ROMs" / "GB"
     already.mkdir(parents=True)
     (already / "Kirby.gb").write_bytes(b"KIRBY")
 
     ok, msg, stats = dspico.organize_dspico_sd(str(tmp_path), layout="games")
     assert ok, msg
-    assert (tmp_path / "ROMs" / "GB" / "Tetris.gb").is_file()
-    assert (tmp_path / "ROMs" / "GB" / "Tetris.sav").is_file()
-    assert (tmp_path / "ROMs" / "GBA" / "Zelda.gba").is_file()
-    assert (tmp_path / "ROMs" / "SNES" / "Mario.sfc").is_file()
-    assert (tmp_path / "ROMs" / "GB" / "Kirby.gb").is_file()
-    assert not (tmp_path / "Games" / "Zelda.gba").exists()
-    assert stats.get("retro", 0) >= 3
+    assert (tmp_path / "Games" / "Tetris.gb").is_file()
+    assert (tmp_path / "Games" / "Tetris.sav").is_file()
+    assert (tmp_path / "Games" / "Zelda.gba").is_file()
+    assert (tmp_path / "Games" / "Mario.sfc").is_file()
+    assert (tmp_path / "Games" / "Mega.nes").is_file()
+    assert (tmp_path / "Games" / "Sonic.gen").is_file()
+    assert (tmp_path / "Games" / "Pitfall.a26").is_file()
+    assert (tmp_path / "Games" / "Kirby.gb").is_file()
+    assert not (tmp_path / "ROMs" / "GB" / "Kirby.gb").exists()
+    assert stats.get("retro", 0) >= 6
+
+
+def test_import_dspico_all_emulator_extensions(tmp_path, monkeypatch):
+    _minimal_dspico_sd(tmp_path)
+    monkeypatch.setattr(dspico, "sync_volume", lambda *a, **k: None)
+    host = tmp_path / "host"
+    host.mkdir()
+    files = [
+        "Zelda.gba",
+        "Mega.nes",
+        "Sonic.gen",
+        "Pitfall.a26",
+        "Basic.car",
+        "Astro.int",
+        "Donkey.col",
+        "Mario.sfc",
+        "Metal.neo",
+        "Alex.sms",
+    ]
+    paths = []
+    for name in files:
+        p = host / name
+        p.write_bytes(b"ROMDATA" + name.encode())
+        paths.append(str(p))
+
+    ok, msg, stats = dspico.import_dspico_games(str(tmp_path), paths, dest_rel_dir="")
+    assert ok, msg
+    assert stats.get("copied") == len(files)
+    assert stats.get("retro") == len(files)
+    for name in files:
+        assert (tmp_path / "Games" / name).is_file()
 
 
 def test_find_duplicate_dspico_games(tmp_path):

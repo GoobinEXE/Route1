@@ -577,13 +577,37 @@ def _get_mounted_drives_linux():
     return drives
 
 
-def get_mounted_drives():
+# TTL curto: preflight / is_safe_mount_path repetidos (ex. USB MSC) evitam
+# N× diskutil/IOCTL na mesma janela. get_disks da UI usa force_refresh=True.
+_MOUNTED_DRIVES_CACHE = None  # (monotonic_ts, drives_list) | None
+_MOUNTED_DRIVES_TTL_S = 2.0
+
+
+def invalidate_mounted_drives_cache() -> None:
+    """Descarta o cache de volumes (após format/unmount ou refresh explícito)."""
+    global _MOUNTED_DRIVES_CACHE
+    _MOUNTED_DRIVES_CACHE = None
+
+
+def get_mounted_drives(*, force_refresh: bool = False):
     """Retorna unidades externas / cartões SD montados (macOS, Windows, Linux)."""
+    global _MOUNTED_DRIVES_CACHE
+    now = time.monotonic()
+    if (
+        not force_refresh
+        and _MOUNTED_DRIVES_CACHE is not None
+        and now - _MOUNTED_DRIVES_CACHE[0] < _MOUNTED_DRIVES_TTL_S
+    ):
+        return list(_MOUNTED_DRIVES_CACHE[1])
+
     if sys.platform == "darwin":
-        return _get_mounted_drives_macos()
-    if sys.platform == "win32":
-        return _get_mounted_drives_windows()
-    return _get_mounted_drives_linux()
+        drives = _get_mounted_drives_macos()
+    elif sys.platform == "win32":
+        drives = _get_mounted_drives_windows()
+    else:
+        drives = _get_mounted_drives_linux()
+    _MOUNTED_DRIVES_CACHE = (now, drives)
+    return list(drives)
 
 
 # --- Formatação ------------------------------------------------------------
@@ -1154,11 +1178,24 @@ def _format_sd_linux(mount_path, volume_name, expected_device_id=""):
 
 def format_sd_card(mount_path, volume_name="DSi_SD"):
     """Formata o cartão selecionado para FAT32 com cluster 32 KB (comportamento por SO)."""
+    from core.progress import ProgressTracker
+
+    tracker = ProgressTracker(
+        "format_sd",
+        label="A validar volume…",
+        total_items=3,
+    )
+    tracker.cancellable = False
+    tracker.set_phase("validate", label="A validar volume…", cancellable=False)
+
     if not _VOLUME_NAME_RE.match(volume_name or ""):
+        tracker.finish("Nome de volume inválido")
         return False, "Nome de volume inválido (use 1–11 caracteres A-Z, 0-9 ou _)."
 
+    invalidate_mounted_drives_cache()
     drive = resolve_safe_drive(mount_path)
     if not drive:
+        tracker.finish("Volume não reconhecido")
         return (
             False,
             "Formatação recusada: o caminho não é um volume removível/USB/SD reconhecido.",
@@ -1168,24 +1205,46 @@ def format_sd_card(mount_path, volume_name="DSi_SD"):
     # Revalidar imediatamente antes da operação destrutiva
     drive2 = resolve_safe_drive(mount_path)
     if not drive2:
+        tracker.finish("Volume desapareceu")
         return False, "Volume desapareceu antes da formatação."
     device_id2 = drive2.get("device_id") or device_id
     if device_id and device_id2 and device_id != device_id2:
+        tracker.finish("Dispositivo mudou")
         return False, "Dispositivo mudou entre validação e formatação — abortado."
 
-    if sys.platform == "darwin":
-        return _format_sd_macos(mount_path, volume_name, expected_device_id=device_id2)
-    if sys.platform == "win32":
-        return _format_sd_windows(mount_path, volume_name, expected_device_id=device_id2)
+    tracker.advance_item(label="Volume validado", written=True)
+    tracker.set_phase("format", label="A formatar FAT32…")
 
-    # Linux: exigir device_id resolvido e revalidar RM=1
-    if not device_id2:
-        device_id2 = _resolve_linux_source(mount_path) or ""
-    if not device_id2:
-        return False, "Não foi possível pinjar o dispositivo Linux (findmnt SOURCE vazio)."
-    rm = _linux_is_removable_mount(mount_path)
-    if rm is False:
-        return False, "Dispositivo não é removível (lsblk RM=0) — formatação abortada."
-    if not device_id2.startswith("/dev/"):
-        return False, f"Caminho de dispositivo inválido: {device_id2}"
-    return _format_sd_linux(mount_path, volume_name, expected_device_id=device_id2)
+    if sys.platform == "darwin":
+        ok, msg = _format_sd_macos(
+            mount_path, volume_name, expected_device_id=device_id2
+        )
+    elif sys.platform == "win32":
+        ok, msg = _format_sd_windows(
+            mount_path, volume_name, expected_device_id=device_id2
+        )
+    else:
+        # Linux: exigir device_id resolvido e revalidar RM=1
+        if not device_id2:
+            device_id2 = _resolve_linux_source(mount_path) or ""
+        if not device_id2:
+            tracker.finish("Dispositivo não encontrado")
+            return False, "Não foi possível pinjar o dispositivo Linux (findmnt SOURCE vazio)."
+        rm = _linux_is_removable_mount(mount_path)
+        if rm is False:
+            tracker.finish("Não removível")
+            return False, "Dispositivo não é removível (lsblk RM=0) — formatação abortada."
+        if not device_id2.startswith("/dev/"):
+            tracker.finish("Dispositivo inválido")
+            return False, f"Caminho de dispositivo inválido: {device_id2}"
+        ok, msg = _format_sd_linux(
+            mount_path, volume_name, expected_device_id=device_id2
+        )
+
+    if ok:
+        tracker.advance_item(label="Formatação concluída", written=True)
+        tracker.advance_item(label="Pronto", written=True)
+        tracker.finish("Formatação concluída")
+    else:
+        tracker.finish(str(msg or "Formatação falhou")[:80])
+    return ok, msg

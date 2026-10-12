@@ -2279,7 +2279,7 @@ html[data-theme="gameboy"] .brand-mark {
   right: 0;
   bottom: 0;
   z-index: 31;
-  width: min(100%, 20.5rem);
+  width: min(100%, 22.5rem);
   display: flex;
   flex-direction: column;
   background: rgb(var(--c-surface));
@@ -2287,6 +2287,16 @@ html[data-theme="gameboy"] .brand-mark {
   box-shadow: var(--shadow-panel);
   transform: translateX(105%);
   transition: transform 0.22s var(--ease);
+}
+
+.rom-x-art-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid rgb(var(--c-line));
+  flex-shrink: 0;
+  background: rgb(var(--c-surface));
 }
 
 .rom-x-drawer:not(.hidden) {
@@ -2534,6 +2544,29 @@ html[data-theme="gameboy"] .brand-mark {
   color: rgb(var(--c-fg));
 }
 
+.dspico-art-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid rgb(var(--c-line));
+  background: rgb(var(--c-surface));
+  flex-shrink: 0;
+}
+
+.dspico-art-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dspico-art-local-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: rgb(var(--c-fg-mute));
+}
+
 .dspico-art-body {
   flex: 1;
   overflow-y: auto;
@@ -2541,6 +2574,7 @@ html[data-theme="gameboy"] .brand-mark {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  min-height: 0;
 }
 
 .dspico-art-current {
@@ -2599,19 +2633,73 @@ html[data-theme="gameboy"] .brand-mark {
 }
 
 .dspico-art-search {
-  display: flex;
-  gap: 0.4rem;
+  display: block;
+  width: 100%;
 }
 
-.dspico-art-search input {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.75rem;
-  padding: 0.4rem 0.55rem;
-  border-radius: 0.4rem;
-  border: 1px solid rgb(var(--c-line));
-  background: rgb(var(--c-surface-2));
+.dspico-art-search-row {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.dspico-art-search input,
+.dspico-art-search input[type="text"],
+.dspico-art-search input[type="search"] {
+  box-sizing: border-box;
+  display: block;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 8rem;
+  min-height: 2.75rem;
+  height: 2.75rem;
+  max-height: none;
+  margin: 0;
+  font-size: 1rem;
+  font-family: var(--font-sans, inherit);
+  font-weight: 500;
+  line-height: normal;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.45rem;
+  border: 1px solid rgb(var(--c-line-strong));
+  background: rgb(var(--c-bg));
   color: rgb(var(--c-fg));
+  caret-color: rgb(var(--c-fg));
+  -webkit-text-fill-color: rgb(var(--c-fg));
+  opacity: 1;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dspico-art-search input::-webkit-search-decoration,
+.dspico-art-search input::-webkit-search-cancel-button,
+.dspico-art-search input::-webkit-search-results-button,
+.dspico-art-search input::-webkit-search-results-decoration {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.dspico-art-search input::placeholder {
+  color: rgb(var(--c-fg-mute));
+  opacity: 1;
+  -webkit-text-fill-color: rgb(var(--c-fg-mute));
+  font-weight: 400;
+}
+
+.dspico-art-search input:focus {
+  outline: 2px solid rgb(var(--c-accent) / 0.45);
+  outline-offset: 1px;
+  border-color: rgb(var(--c-accent) / 0.55);
+}
+
+.dspico-art-search #dspico-art-search-btn,
+.dspico-art-search #rom-x-art-search-btn {
+  flex-shrink: 0;
+  min-height: 2.75rem;
+  padding: 0 1rem !important;
+  font-size: 0.8125rem !important;
 }
 
 .dspico-art-grid {
@@ -2714,6 +2802,23 @@ html[data-theme="gameboy"] .brand-mark {
   color: rgb(var(--c-accent-fg));
   border-color: rgb(var(--c-accent) / 0.4);
   background: rgb(var(--c-accent) / 0.1);
+}
+
+.dspico-game-badge--kind {
+  color: rgb(var(--c-fg-soft));
+  border-color: rgb(var(--c-line));
+  background: rgb(var(--c-surface-2) / 0.6);
+}
+
+.dspico-games-list {
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.dspico-games-vlist {
+  height: min(48vh, 420px);
+  overflow: auto;
+  position: relative;
 }
 
 /* ---------- movimento reduzido ---------- */

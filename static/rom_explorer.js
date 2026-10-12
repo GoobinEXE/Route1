@@ -28,6 +28,11 @@ const RomExplorer = (() => {
   let tipVisible = false;
   let drawerRel = null;
   let drawerGen = 0;
+  let drawerData = null;
+  let artKind = "boxart";
+  let artCandidates = [];
+  let artSearching = false;
+  let artQueryDraft = "";
   let gridRenderGen = 0;
   let escBound = false;
 
@@ -759,7 +764,11 @@ const RomExplorer = (() => {
   }
 
   function closeDrawer() {
+    twlArtQuery();
     drawerRel = null;
+    drawerData = null;
+    artCandidates = [];
+    artSearching = false;
     drawerGen += 1;
     const d = document.getElementById("rom-x-drawer");
     const b = document.getElementById("rom-x-drawer-backdrop");
@@ -770,17 +779,93 @@ const RomExplorer = (() => {
     if (b) b.classList.add("hidden");
   }
 
-  function renderDrawerBody(data) {
+  function twlArtQuery() {
+    const el = document.getElementById("rom-x-art-query");
+    if (el) artQueryDraft = String(el.value || "");
+    return artQueryDraft;
+  }
+
+  function bindTwlArtControls(candidates) {
     const body = document.getElementById("rom-x-drawer-body");
     if (!body) return;
-    const rom = data.rom || {};
-    const run = data.run_info || {};
-    const hints = data.hints || {};
+    body.querySelectorAll("[data-twl-kind]").forEach((tab) => {
+      tab.onclick = () => {
+        const k = tab.getAttribute("data-twl-kind");
+        if (k !== "boxart" && k !== "icon") return;
+        if (artKind === k) return;
+        twlArtQuery();
+        artKind = k;
+        artCandidates = [];
+        artSearching = false;
+        if (drawerData) {
+          renderDrawerBody(drawerData, {
+            candidates: [],
+            message:
+              "Escolha «Pesquisar» ou «Buscar online» para ver opções de " +
+              (artKind === "icon" ? "ícone" : "capa") +
+              ".",
+          });
+        }
+      };
+    });
+    const queryEl = document.getElementById("rom-x-art-query");
+    if (queryEl) {
+      queryEl.oninput = () => {
+        artQueryDraft = String(queryEl.value || "");
+      };
+      queryEl.onkeydown = (ev) => {
+        if (ev.key === "Enter") {
+          ev.preventDefault();
+          runTwlArtSearch(twlArtQuery());
+        }
+      };
+    }
+    const searchBtn = document.getElementById("rom-x-art-search-btn");
+    if (searchBtn) searchBtn.onclick = () => runTwlArtSearch(twlArtQuery());
+    const autoBtn = document.getElementById("rom-x-art-auto");
+    if (autoBtn) autoBtn.onclick = () => runTwlArtSearch("");
+    const manBtn = document.getElementById("rom-x-art-manual");
+    if (manBtn) manBtn.onclick = () => pickArtwork(artKind);
+    body.querySelectorAll("[data-twl-art-idx]").forEach((btn) => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.getAttribute("data-twl-art-idx") || "-1", 10);
+        const c = candidates[idx];
+        if (c && c.url) applyTwlArtUrl(c.url);
+      };
+    });
+  }
+
+  function renderDrawerBody(data, artState) {
+    const body = document.getElementById("rom-x-drawer-body");
+    if (!body) return;
+    drawerData = data;
+    const rom = (data && data.rom) || {};
+    const run = (data && data.run_info) || {};
+    const hints = (data && data.hints) || {};
     const plat = (rom.platform || "").toUpperCase() || "—";
-    const cover = data.boxart;
-    const iconSrc = data.display_icon || data.custom_icon || rom.icon;
+    const cover =
+      artState && artState.current && artKind === "boxart"
+        ? artState.current
+        : data.boxart;
+    const iconSrc =
+      artState && artState.current && artKind === "icon"
+        ? artState.current
+        : data.display_icon || data.custom_icon || rom.icon;
     const sidecars = Array.isArray(rom.sidecars) ? rom.sidecars : [];
     const reqs = Array.isArray(run.requirements) ? run.requirements : [];
+    const candidates = Array.isArray(artState && artState.candidates)
+      ? artState.candidates
+      : artCandidates;
+    artCandidates = candidates;
+
+    const qEl = document.getElementById("rom-x-art-query");
+    if (qEl) artQueryDraft = String(qEl.value || "");
+    if (artState && typeof artState.query === "string") {
+      artQueryDraft = artState.query;
+    }
+    const queryVal = artQueryDraft;
+    const restoreFocus =
+      qEl && document.activeElement === qEl ? qEl.selectionStart : null;
 
     let coverHtml = cover
       ? `<img src="${cover}" alt="" draggable="false">`
@@ -826,14 +911,80 @@ const RomExplorer = (() => {
           .join("")}</ul>`
       : "";
 
+    const isIcon = artKind === "icon";
+    const opts = candidates
+      .map((c, i) => {
+        const src = escapeHtml(c.preview || c.url || "");
+        return (
+          `<button type="button" class="dspico-art-opt ${
+            isIcon ? "dspico-art-opt--icon" : ""
+          }" data-twl-art-idx="${i}">
+            <img src="${src}" alt="" draggable="false" loading="lazy" referrerpolicy="no-referrer"
+                 onerror="this.classList.add('hidden'); this.insertAdjacentHTML('afterend','<div class=\\'dspico-art-ph${
+                   isIcon ? " dspico-art-ph--icon" : ""
+                 }\\'>—</div>');">
+            <span class="dspico-art-opt-label">${escapeHtml(
+              (c.source ? c.source + " · " : "") + (c.label || "opção")
+            )}</span>
+          </button>`
+        );
+      })
+      .join("");
+
+    const artMsg =
+      (artState && artState.message) ||
+      (artSearching
+        ? "A procurar na Internet…"
+        : "Use «Pesquisar» ou «Buscar online» para ver opções.");
+
     body.innerHTML =
-      `<div class="rom-x-drawer-cover">${coverHtml}</div>` +
-      `<div class="rom-x-drawer-icons">${iconHtmlInner}</div>` +
+      `<div class="rom-x-drawer-cover">${
+        artKind === "boxart" ? coverHtml : iconHtmlInner
+      }</div>` +
+      (artKind === "boxart"
+        ? `<div class="rom-x-drawer-icons">${iconHtmlInner}</div>`
+        : "") +
       `<p class="rom-x-drawer-name">${escapeHtml(
         rom.display_name || rom.name || ""
       )}</p>` +
       `<p class="rom-x-drawer-path">/roms/${escapeHtml(rom.rel_path || "")}</p>` +
       `<dl class="rom-x-drawer-dl">${dl}</dl>` +
+      `<div class="rom-x-drawer-section">` +
+      `<h5>Arte TWiLight</h5>` +
+      `<div class="dspico-art-tabs mt-1">
+        <button type="button" class="dspico-art-tab ${
+          artKind === "boxart" ? "dspico-art-tab--on" : ""
+        }" data-twl-kind="boxart">Capa</button>
+        <button type="button" class="dspico-art-tab ${
+          artKind === "icon" ? "dspico-art-tab--on" : ""
+        }" data-twl-kind="icon">Ícone</button>
+      </div>` +
+      `<div class="dspico-art-search mt-2">
+        <div class="dspico-art-search-row">
+          <input type="text" id="rom-x-art-query" placeholder="Pesquisar capa/ícone…" autocomplete="off" spellcheck="false" value="${escapeHtml(
+            queryVal
+          )}">
+          <button type="button" class="btn-secondary" id="rom-x-art-search-btn">Pesquisar</button>
+        </div>
+      </div>` +
+      `<div class="dspico-art-actions mt-2">
+        <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="rom-x-art-auto">Buscar online</button>
+        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="rom-x-art-manual">Ficheiro do PC…</button>
+      </div>` +
+      `<p class="dspico-art-local-hint">PNG ou BMP. JPEG não suportado.</p>` +
+      `<p class="rom-x-drawer-hint">${escapeHtml(
+        hints[artKind === "icon" ? "icon" : "boxart"] || ""
+      )}</p>` +
+      (artMsg
+        ? `<p class="text-[12px] text-fg-soft mt-1">${escapeHtml(artMsg)}</p>`
+        : "") +
+      (candidates.length
+        ? `<div class="dspico-art-grid mt-2">${opts}</div>
+           <p class="rom-x-drawer-hint">Clique para gravar PNG no cartão.</p>`
+        : !artSearching
+          ? `<p class="rom-x-drawer-hint mt-1">Ainda sem resultados — pesquise ou escolha um ficheiro.</p>`
+          : "") +
+      `</div>` +
       `<div class="rom-x-drawer-section">` +
       `<h5>Como corre</h5>` +
       `<p><strong>${escapeHtml(run.title || "")}</strong></p>` +
@@ -841,17 +992,19 @@ const RomExplorer = (() => {
       reqList +
       `</div>` +
       `<div class="rom-x-drawer-section">` +
-      `<h5>Saves e extras</h5>${sideList}</div>` +
-      `<div class="rom-x-drawer-section">` +
-      `<h5>Personalizar</h5>` +
-      `<div class="rom-x-drawer-actions">` +
-      `<button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" onclick="RomExplorer.fetchArtwork()">Buscar capa e ícone</button>` +
-      `<p class="rom-x-drawer-hint">GameTDB (NDS) ou Libretro Thumbnails (outras consolas). Requer Internet.</p>` +
-      `<button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" onclick="RomExplorer.pickArtwork('boxart')">Escolher capa…</button>` +
-      `<p class="rom-x-drawer-hint">${escapeHtml(hints.boxart || "")}</p>` +
-      `<button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" onclick="RomExplorer.pickArtwork('icon')">Escolher ícone…</button>` +
-      `<p class="rom-x-drawer-hint">${escapeHtml(hints.icon || "")}</p>` +
-      `</div></div>`;
+      `<h5>Saves e extras</h5>${sideList}</div>`;
+
+    bindTwlArtControls(candidates);
+    const newQ = document.getElementById("rom-x-art-query");
+    if (newQ && restoreFocus != null) {
+      newQ.focus();
+      try {
+        const pos = Math.min(restoreFocus, newQ.value.length);
+        newQ.setSelectionRange(pos, pos);
+      } catch (_e) {
+        /* ignore */
+      }
+    }
   }
 
   async function openDrawer(rel) {
@@ -859,7 +1012,14 @@ const RomExplorer = (() => {
     hideTip();
     ensureGlobalBindings();
     const gen = ++drawerGen;
+    const same = drawerRel === rel;
     drawerRel = rel;
+    if (!same) {
+      artKind = "boxart";
+      artQueryDraft = "";
+    }
+    artCandidates = [];
+    artSearching = false;
     const d = document.getElementById("rom-x-drawer");
     const b = document.getElementById("rom-x-drawer-backdrop");
     const body = document.getElementById("rom-x-drawer-body");
@@ -891,7 +1051,13 @@ const RomExplorer = (() => {
         }
         return;
       }
-      renderDrawerBody(data);
+      renderDrawerBody(data, {
+        searching: false,
+        query: artQueryDraft,
+        message:
+          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um ficheiro do PC.",
+        candidates: [],
+      });
     } catch (err) {
       if (gen !== drawerGen) return;
       if (body) {
@@ -899,6 +1065,131 @@ const RomExplorer = (() => {
           err.message || String(err)
         )}</p>`;
       }
+    }
+  }
+
+  async function runTwlArtSearch(query, opts) {
+    if (!drawerRel || !mount()) return;
+    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
+    const options = opts && typeof opts === "object" ? opts : {};
+    const gen =
+      options.expectedGen != null ? options.expectedGen : ++drawerGen;
+    let q = typeof query === "string" ? query : twlArtQuery();
+    if (options.clearQuery) {
+      artQueryDraft = "";
+      q = "";
+    } else {
+      artQueryDraft = q;
+    }
+    artSearching = true;
+    artCandidates = [];
+    if (drawerData) {
+      renderDrawerBody(drawerData, {
+        searching: true,
+        query: artQueryDraft,
+        message: "A procurar na Internet…",
+        candidates: [],
+      });
+    }
+    try {
+      const api = getApi() || (await waitForApi());
+      if (!api || typeof api.search_rom_artwork !== "function") {
+        if (gen !== drawerGen) return;
+        artSearching = false;
+        // Fallback: fetch automático antigo
+        await fetchArtwork();
+        return;
+      }
+      setBusy(true, null, { soft: true });
+      const data = await api.search_rom_artwork(
+        mount(),
+        drawerRel,
+        artKind,
+        q
+      );
+      if (gen !== drawerGen) return;
+      artSearching = false;
+      if (!(data && data.success)) {
+        if (drawerData) {
+          renderDrawerBody(drawerData, {
+            query: artQueryDraft,
+            message: (data && data.error) || "Pesquisa falhou.",
+            candidates: [],
+          });
+        }
+        return;
+      }
+      artCandidates = data.candidates || [];
+      if (drawerData) {
+        renderDrawerBody(drawerData, {
+          ...data,
+          query: artQueryDraft,
+          current:
+            data.current ||
+            (artKind === "icon"
+              ? drawerData.custom_icon || drawerData.display_icon
+              : drawerData.boxart),
+          searching: false,
+        });
+      }
+    } catch (err) {
+      if (gen !== drawerGen) return;
+      artSearching = false;
+      if (drawerData) {
+        renderDrawerBody(drawerData, {
+          query: artQueryDraft,
+          message: err.message || String(err),
+          candidates: [],
+        });
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyTwlArtUrl(url) {
+    if (!drawerRel || !mount() || !url) return;
+    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
+      appendLog("Aguarde a operação em andamento terminar.", "warn");
+      return;
+    }
+    let ok = false;
+    const rel = drawerRel;
+    try {
+      const api = getApi() || (await waitForApi());
+      if (!api || typeof api.apply_rom_artwork_url !== "function") {
+        appendLog("API de aplicação de arte indisponível.", "error");
+        return;
+      }
+      setBusy(true);
+      appendLog(
+        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
+        "info"
+      );
+      const res = await api.apply_rom_artwork_url(
+        mount(),
+        rel,
+        artKind,
+        url
+      );
+      if (res && res.success) {
+        appendLog(res.message || "Arte gravada.", "success");
+        ok = true;
+      } else {
+        appendLog((res && res.error) || "Falha ao gravar arte.", "error");
+      }
+    } catch (err) {
+      appendLog(`Falha na arte: ${err.message}`, "error");
+    } finally {
+      setBusy(false);
+    }
+    if (ok) {
+      invalidateCatalog();
+      await openDrawer(rel);
+      await refresh();
     }
   }
 
@@ -972,7 +1263,10 @@ const RomExplorer = (() => {
         appendLog("API de lote TWiLight indisponível.", "error");
         return;
       }
-      setBusy(true);
+      setBusy(true, null, {
+        op: "generate_twilight_artwork_batch",
+        label: "A buscar capas e ícones…",
+      });
       appendLog("A buscar capas e ícones TWiLight em lote…", "info");
       const res = await api.generate_twilight_artwork_batch(mount());
       if (res && res.success) {
@@ -993,7 +1287,7 @@ const RomExplorer = (() => {
 
   async function fetchArtwork() {
     if (!drawerRel || !mount()) return;
-    if (busy) {
+    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
       appendLog("Aguarde a operação em andamento terminar.", "warn");
       return;
     }
@@ -1016,20 +1310,29 @@ const RomExplorer = (() => {
           `Arte: ${(result && result.error) || "não encontrada"}`,
           "warn"
         );
+        if (drawerData) {
+          renderDrawerBody(drawerData, {
+            message: (result && result.error) || "Não encontrada.",
+            candidates: [],
+          });
+        }
       }
     } catch (err) {
       appendLog(`Falha ao buscar arte: ${err.message}`, "error");
     } finally {
       setBusy(false);
+      artSearching = false;
     }
   }
 
   async function pickArtwork(kind) {
     if (!drawerRel || !mount()) return;
-    if (busy) {
+    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
       appendLog("Aguarde a operação em andamento terminar.", "warn");
       return;
     }
+    const k = kind === "icon" ? "icon" : "boxart";
+    artKind = k;
     try {
       const api = getApi() || (await waitForApi());
       if (!api || typeof api.pick_image_file !== "function") {
@@ -1048,13 +1351,13 @@ const RomExplorer = (() => {
 
       setBusy(true);
       appendLog(
-        kind === "boxart" ? "A gravar capa…" : "A gravar ícone…",
+        k === "boxart" ? "A gravar capa…" : "A gravar ícone…",
         "info"
       );
       const result = await api.set_rom_artwork(
         mount(),
         drawerRel,
-        kind,
+        k,
         picked.path
       );
       if (result && result.success) {

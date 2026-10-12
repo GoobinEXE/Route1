@@ -3,7 +3,6 @@
 Route 1 Kit — App desktop multiplataforma (pywebview + HTML/CSS/JS).
 """
 
-import json
 import os
 import sys
 import threading
@@ -25,80 +24,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from core import __version__
-from core.about import build_about_payload, is_allowed_external_url
-from core.artwork import (
-    fetch_rom_artwork as do_fetch_rom_artwork,
-    generate_twilight_artwork_batch as do_generate_twilight_artwork_batch,
-    install_boxarts as do_install_boxarts,
-)
-from core.cleaner import backup_drive, clean_macos_metadata
-from core.disks import format_sd_card, get_mounted_drives, is_safe_mount_path
-from core.exploits import setup_nand_backup_stage, setup_unlaunch_stage
-from core.homebrew_catalog import build_catalog_payload
-from core.inspect_sd import inspect_sd_card, quarantine_dcim as do_quarantine_dcim
 from core.privacy import expand_user_path, redact_path, redact_text
-from core.rom_cleaner import normalize_layout, organize_roms_directory
-from core.rom_manager import (
-    browse_roms as do_browse_roms,
-    check_rom_import_conflicts as do_check_rom_import_conflicts,
-    default_saves_backup_dir,
-    delete_roms as do_delete_roms,
-    find_duplicate_roms as do_find_duplicate_roms,
-    import_roms as do_import_roms,
-    list_rom_dir as do_list_rom_dir,
-    list_rom_tree as do_list_rom_tree,
-    list_roms as do_list_roms,
-    mkdir_rom_dir as do_mkdir_rom_dir,
-    move_roms as do_move_roms,
-    normalize_conflict_resolutions,
-    normalize_save_mode,
-    rom_details as do_rom_details,
-    set_rom_artwork as do_set_rom_artwork,
-)
-from core.sd_utils import (
-    copy_nand_backup as do_copy_nand_backup,
-    format_sd_report as do_sd_report,
-    install_cheats as do_install_cheats,
-    install_homebrew as do_install_homebrew,
-    setup_godmode9i as do_setup_godmode9i,
-)
-from core.sdio import preflight
-from core.dspico import (
-    browse_dspico_games as do_browse_dspico_games,
-    check_dspico_import_conflicts as do_check_dspico_import_conflicts,
-    delete_dspico_games as do_delete_dspico_games,
-    delete_dspico_retro_roms as do_delete_dspico_retro_roms,
-    ensure_emunand_skeleton as do_ensure_emunand_skeleton,
-    find_duplicate_dspico_games as do_find_duplicate_dspico_games,
-    flash_dspico_firmware as do_flash_dspico_firmware,
-    get_dspico_settings as do_get_dspico_settings,
-    import_biosnds7 as do_import_biosnds7,
-    import_dspico_games as do_import_dspico_games,
-    import_twl_font as do_import_twl_font,
-    install_dspico_package,
-    inspect_dspico as do_inspect_dspico,
-    is_rp2_volume,
-    list_rp2_volumes as do_list_rp2_volumes,
-    mkdir_dspico_games as do_mkdir_dspico_games,
-    move_dspico_games as do_move_dspico_games,
-    normalize_dspico_layout,
-    official_links as dspico_official_links,
-    organize_dspico_sd as do_organize_dspico_sd,
-    set_dspico_settings as do_set_dspico_settings,
-)
-from core.dspico_emulators import (
-    install_dspico_emulators as do_install_dspico_emulators,
-    list_emulators as do_list_dspico_emulators,
-)
-from core.cache import dspico_firmware_uf2_ready
-from core.hiya import install_hiya_cfw
-from core.pico_artwork import (
-    apply_dspico_artwork_url as do_apply_dspico_artwork_url,
-    get_dspico_game_artwork as do_get_dspico_game_artwork,
-    search_dspico_artwork as do_search_dspico_artwork,
-    set_dspico_artwork_file as do_set_dspico_artwork_file,
-)
-from core.twilight import install_gei_kernel, install_r4_kernel, probe_kernels
 
 LOG_MAX = 500
 SYSTEM_LOGS = deque(maxlen=LOG_MAX)
@@ -109,6 +35,51 @@ _LOG_SEQ = 0
 # Fronteira UI↔Python: rejeitar tipos inesperados.
 _TRUE_LITERALS = frozenset({"1", "true", "yes", "on"})
 _FALSE_LITERALS = frozenset({"0", "false", "no", "off", ""})
+
+
+# --- Wrappers lazy (arranque leve; monkeypatch em testes via app.<nome>) ----
+
+
+def is_safe_mount_path(path):
+    from core.disks import is_safe_mount_path as _impl
+
+    return _impl(path)
+
+
+def preflight(*args, **kwargs):
+    from core.sdio import preflight as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def setup_nand_backup_stage(*args, **kwargs):
+    from core.exploits import setup_nand_backup_stage as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def backup_drive(*args, **kwargs):
+    from core.cleaner import backup_drive as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def inspect_sd_card(*args, **kwargs):
+    from core.inspect_sd import inspect_sd_card as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def probe_kernels(*args, **kwargs):
+    from core.twilight import probe_kernels as _impl
+
+    return _impl(*args, **kwargs)
+
+
+def install_r4_kernel(*args, **kwargs):
+    from core.twilight import install_r4_kernel as _impl
+
+    return _impl(*args, **kwargs)
 
 
 def add_log(msg):
@@ -164,6 +135,16 @@ def _as_bool(value, *, default=None):
     return None, "Flag booleana inválida."
 
 
+def _reject_if_unsafe_mount(mount_path):
+    """Valida volume removível; None se OK, senão payload de erro."""
+    if not is_safe_mount_path(mount_path):
+        return _reject(
+            "Unidade não reconhecida como volume removível/USB/SD. "
+            "Atualize a lista e selecione o cartão novamente."
+        )
+    return None
+
+
 def _run_mount_op(require_safe=True, min_free_mb=32, skip_preflight=False):
     """Decorator: valida mount_path, preflight, serializa operações e padroniza erros."""
 
@@ -173,18 +154,39 @@ def _run_mount_op(require_safe=True, min_free_mb=32, skip_preflight=False):
             mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
             if err:
                 return _reject(err)
-            if require_safe and not is_safe_mount_path(mount_path):
-                return _reject(
-                    "Unidade não reconhecida como volume removível/USB/SD. "
-                    "Atualize a lista e selecione o cartão novamente."
-                )
+            if require_safe:
+                unsafe = _reject_if_unsafe_mount(mount_path)
+                if unsafe:
+                    return unsafe
             if not OP_LOCK.acquire(blocking=False):
                 return _reject("Outra operação já está em andamento. Aguarde.")
             try:
                 try:
+                    from core.progress import (
+                        begin_operation,
+                        emit_progress,
+                        op_label_pt,
+                    )
                     from services import web_events
 
-                    web_events.emit("busy", {"busy": True, "op": fn.__name__})
+                    begin_operation(fn.__name__)
+                    label = op_label_pt(fn.__name__)
+                    web_events.emit(
+                        "busy",
+                        {
+                            "busy": True,
+                            "op": fn.__name__,
+                            "label": label,
+                        },
+                    )
+                    # Snapshot imediato — a UI pode fazer poll se o push falhar.
+                    emit_progress(
+                        {
+                            "op": fn.__name__,
+                            "label": label,
+                            "done": False,
+                        }
+                    )
                 except Exception:
                     pass
                 # Preflight dentro do lock: evita I/O paralelo no cartão com outra op.
@@ -198,9 +200,12 @@ def _run_mount_op(require_safe=True, min_free_mb=32, skip_preflight=False):
                 return _reject(e)
             finally:
                 try:
+                    from core.progress import clear_last_progress, end_operation
                     from services import web_events
 
                     web_events.emit("busy", {"busy": False, "op": fn.__name__})
+                    clear_last_progress()
+                    end_operation()
                 except Exception:
                     pass
                 OP_LOCK.release()
@@ -231,7 +236,21 @@ class Api:
         self._picker = picker
 
     def get_disks(self):
-        drives = get_mounted_drives()
+        from core.disks import get_mounted_drives
+
+        drives = get_mounted_drives(force_refresh=True)
+        for d in drives:
+            mp = d.get("mount_path") or ""
+            try:
+                d["dspico_likely"] = bool(
+                    mp
+                    and (
+                        os.path.isfile(os.path.join(mp, "_picoboot.nds"))
+                        or os.path.isdir(os.path.join(mp, "_pico"))
+                    )
+                )
+            except OSError:
+                d["dspico_likely"] = False
         return {"success": True, "drives": drives}
 
     def get_logs(self, since=0):
@@ -244,8 +263,30 @@ class Api:
             next_id = _LOG_SEQ
         return {"logs": sliced, "next_index": next_id}
 
+    def get_op_progress(self):
+        """Último snapshot de progresso (fallback se o push web_events falhar)."""
+        try:
+            from core.progress import get_last_progress
+
+            payload = get_last_progress()
+            return {"success": True, "progress": payload}
+        except Exception as e:
+            return _reject(e)
+
+    def cancel_op(self):
+        """Pede cancelamento cooperativo da op sob OP_LOCK (ponto seguro)."""
+        try:
+            from core.progress import request_cancel
+
+            request_cancel()
+            return {"success": True, "message": "Cancelamento pedido."}
+        except Exception as e:
+            return _reject(e)
+
     def get_about(self):
         """Metadados da tela Sobre + última entrada do CHANGELOG.md."""
+        from core.about import build_about_payload
+
         try:
             return build_about_payload(BASE_DIR)
         except Exception as e:
@@ -253,6 +294,8 @@ class Api:
 
     def open_external_url(self, url):
         """Abre URL allowlisted no browser do sistema (Sobre / GameBrew)."""
+        from core.about import is_allowed_external_url
+
         if not isinstance(url, str):
             return _reject("URL inválida.")
         cleaned = url.strip()
@@ -266,6 +309,8 @@ class Api:
 
     def get_homebrew_catalog(self):
         """Catálogo de apps instaláveis (só leitura)."""
+        from core.homebrew_catalog import build_catalog_payload
+
         try:
             return build_catalog_payload()
         except Exception as e:
@@ -285,11 +330,9 @@ class Api:
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -312,6 +355,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def quarantine_dcim(self, mount_path):
+        from core.inspect_sd import quarantine_dcim as do_quarantine_dcim
+
         success, msg = do_quarantine_dcim(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
@@ -332,6 +377,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=64)
     def setup_unlaunch(self, mount_path):
+        from core.exploits import setup_unlaunch_stage
+
         setup_unlaunch_stage(mount_path, log_callback=add_log)
         return {
             "success": True,
@@ -340,28 +387,34 @@ class Api:
 
     @_run_mount_op(min_free_mb=8)
     def setup_gei(self, mount_path):
+        from core.twilight import install_gei_kernel
+
         success, msg = install_gei_kernel(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=8)
     def setup_dspico(self, mount_path):
+        from core.dspico import install_dspico_package
+
         success, msg = install_dspico_package(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     def get_dspico_official_links(self):
         """URLs oficiais LNH (só allowlist)."""
+        from core.dspico import official_links as dspico_official_links
+
         return {"success": True, "links": dspico_official_links()}
 
     def inspect_dspico(self, mount_path):
         """Checklist / estado do microSD DSPico (leitura sob OP_LOCK)."""
+        from core.dspico import inspect_dspico as do_inspect_dspico
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -372,13 +425,14 @@ class Api:
             OP_LOCK.release()
 
     def browse_dspico_games(self, mount_path, rel_dir=""):
+        from core.dspico import browse_dspico_games as do_browse_dspico_games
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -395,6 +449,9 @@ class Api:
     def import_dspico_games(
         self, mount_path, host_paths=None, dest_rel_dir="", conflict_resolutions=None
     ):
+        from core.dspico import import_dspico_games as do_import_dspico_games
+        from core.rom_manager import normalize_conflict_resolutions
+
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
@@ -427,13 +484,14 @@ class Api:
         return result
 
     def find_duplicate_dspico_games(self, mount_path):
+        from core.dspico import find_duplicate_dspico_games as do_find_duplicate_dspico_games
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -444,13 +502,14 @@ class Api:
             OP_LOCK.release()
 
     def check_dspico_import_conflicts(self, mount_path, host_paths=None, dest_rel_dir=""):
+        from core.dspico import check_dspico_import_conflicts as do_check_dspico_import_conflicts
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
@@ -481,6 +540,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def delete_dspico_games(self, mount_path, rel_paths=None):
+        from core.dspico import delete_dspico_games as do_delete_dspico_games
+
         if rel_paths is None:
             rel_paths = []
         if not isinstance(rel_paths, (list, tuple)):
@@ -495,6 +556,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def delete_dspico_retro_roms(self, mount_path, rel_paths=None):
+        from core.dspico import delete_dspico_retro_roms as do_delete_dspico_retro_roms
+
         if rel_paths is None:
             rel_paths = []
         if not isinstance(rel_paths, (list, tuple)):
@@ -509,6 +572,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def move_dspico_games(self, mount_path, rel_paths=None, dest_rel_dir=""):
+        from core.dspico import move_dspico_games as do_move_dspico_games
+
         if rel_paths is None:
             rel_paths = []
         if not isinstance(rel_paths, (list, tuple)):
@@ -527,6 +592,8 @@ class Api:
     @_run_mount_op(min_free_mb=4)
     def organize_dspico(self, mount_path, layout="games"):
         """Remove conteúdo de outros sistemas e organiza jogos no layout DSPico."""
+        from core.dspico import normalize_dspico_layout, organize_dspico_sd as do_organize_dspico_sd
+
         mode = normalize_dspico_layout(layout)
         if mode is None:
             return _reject(
@@ -541,6 +608,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def mkdir_dspico_games(self, mount_path, parent_rel="", name=""):
+        from core.dspico import mkdir_dspico_games as do_mkdir_dspico_games
+
         parent = parent_rel if isinstance(parent_rel, str) else ""
         folder = name if isinstance(name, str) else ""
         if "\x00" in parent or "\x00" in folder:
@@ -554,13 +623,14 @@ class Api:
 
     def get_dspico_game_artwork(self, mount_path, rel_path=""):
         """Estado actual de capa/ícone Pico Launcher para um jogo em Games/."""
+        from core.pico_artwork import get_dspico_game_artwork as do_get_dspico_game_artwork
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -573,6 +643,29 @@ class Api:
         except Exception as e:
             return _reject(e)
 
+    def get_dspico_game_previews(self, mount_path, rel_paths=None):
+        """Thumbs lazy (BMP→PNG data-URL) para linhas visíveis da lista DSPico."""
+        from core.pico_artwork import get_dspico_game_previews as do_get_dspico_game_previews
+
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
+        if rel_paths is None:
+            rel_paths = []
+        if not isinstance(rel_paths, list):
+            return _reject("Lista de caminhos inválida.")
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return do_get_dspico_game_previews(mount_path, rel_paths)
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
+
     def search_dspico_artwork(
         self, mount_path, rel_path="", kind="cover", query=""
     ):
@@ -580,13 +673,14 @@ class Api:
 
         Só rede + leitura — não segura OP_LOCK (a gravação usa apply/set).
         """
+        from core.pico_artwork import search_dspico_artwork as do_search_dspico_artwork
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -612,6 +706,8 @@ class Api:
         self, mount_path, rel_path="", kind="cover", url=""
     ):
         """Aplica capa/ícone a partir de URL allowlisted (converte para BMP Pico)."""
+        from core.pico_artwork import apply_dspico_artwork_url as do_apply_dspico_artwork_url
+
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -637,6 +733,8 @@ class Api:
     @_run_mount_op(min_free_mb=1)
     def set_dspico_artwork(self, mount_path, rel_path="", kind="cover", source_path=""):
         """Grava capa/ícone Pico a partir de PNG/BMP local."""
+        from core.pico_artwork import set_dspico_artwork_file as do_set_dspico_artwork_file
+
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -662,6 +760,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def ensure_dspico_emunand(self, mount_path):
+        from core.dspico import ensure_emunand_skeleton as do_ensure_emunand_skeleton
+
         success, msg, stats = do_ensure_emunand_skeleton(
             mount_path, log_callback=add_log
         )
@@ -711,6 +811,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def import_dspico_bios(self, mount_path, source_path=""):
+        from core.dspico import import_biosnds7 as do_import_biosnds7
+
         source_path, err = _as_path_str(source_path, label="caminho do BIOS")
         if err:
             return _reject(err)
@@ -720,6 +822,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def import_dspico_twl_font(self, mount_path, source_path=""):
+        from core.dspico import import_twl_font as do_import_twl_font
+
         source_path, err = _as_path_str(source_path, label="caminho da fonte")
         if err:
             return _reject(err)
@@ -728,13 +832,14 @@ class Api:
         return _api_result(success, msg)
 
     def get_dspico_settings(self, mount_path):
+        from core.dspico import get_dspico_settings as do_get_dspico_settings
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -746,6 +851,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def set_dspico_settings(self, mount_path, patch=None):
+        from core.dspico import set_dspico_settings as do_set_dspico_settings
+
         if patch is None:
             patch = {}
         if not isinstance(patch, dict):
@@ -757,15 +864,16 @@ class Api:
 
     def list_dspico_emulators(self, mount_path=""):
         """Catálogo de emuladores; com cartão, marca installed se o NDS existir."""
+        from core.dspico_emulators import list_emulators as do_list_dspico_emulators
+
         mount = ""
         if mount_path is not None and mount_path != "":
             mount, err = _as_path_str(mount_path, label="caminho do cartão")
             if err:
                 return _reject(err)
-            if not is_safe_mount_path(mount):
-                return _reject(
-                    "Unidade não reconhecida como volume removível/USB/SD."
-                )
+            unsafe = _reject_if_unsafe_mount(mount)
+            if unsafe:
+                return unsafe
             if not OP_LOCK.acquire(blocking=False):
                 return _reject("Outra operação já está em andamento. Aguarde.")
             try:
@@ -781,6 +889,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=16)
     def install_dspico_emulators(self, mount_path, emulator_ids=None):
+        from core.dspico_emulators import install_dspico_emulators as do_install_dspico_emulators
+
         if emulator_ids is None:
             emulator_ids = []
         if not isinstance(emulator_ids, (list, tuple)):
@@ -805,6 +915,9 @@ class Api:
 
     def list_rp2_volumes(self):
         """Volumes BOOTSEL RPI-RP2 (não é SD do cartucho)."""
+        from core.dspico import list_rp2_volumes as do_list_rp2_volumes
+        from core.cache import dspico_firmware_uf2_ready
+
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -821,6 +934,8 @@ class Api:
 
     def flash_dspico_firmware(self, rp2_mount_path):
         """Grava UF2 oficial LNH no RPI-RP2 — sem path de ficheiro da UI."""
+        from core.dspico import flash_dspico_firmware as do_flash_dspico_firmware, is_rp2_volume
+
         rp2_mount_path, err = _as_path_str(
             rp2_mount_path, label="caminho do volume RPI-RP2"
         )
@@ -841,20 +956,16 @@ class Api:
             OP_LOCK.release()
 
     def pick_dspico_rom_files(self):
-        """Diálogo multi-ficheiro: ROMs DSPico e arquivos (.zip/.7z/.rar)."""
+        """Diálogo multi-ficheiro: ROMs DSPico (todos os emuladores) e arquivos."""
         if self._picker is None:
             return _reject("Diálogo de ficheiros indisponível.")
         try:
+            from core.dspico_emulators import dspico_rom_picker_filter_labels
+
             cancelled, paths = self._picker.open_files(
                 caption="ROMs / arquivos DSPico",
-                filters=(
-                    # pywebview rejeita '/' no rótulo do filtro (interpreta como separador).
-                    "ROMs e arquivos (*.nds *.dsi *.ids *.gb *.gbc *.gba *.sfc *.smc *.zip *.7z *.7zip *.rar)",
-                    "ROMs NDS DSi (*.nds *.dsi *.ids)",
-                    "ROMs GB GBA SNES (*.gb *.gbc *.gba *.sfc *.smc)",
-                    "Arquivos (*.zip *.7z *.7zip *.rar)",
-                    "Todos os ficheiros (*.*)",
-                ),
+                # pywebview rejeita '/' no rótulo do filtro (interpreta como separador).
+                filters=dspico_rom_picker_filter_labels(),
                 multiple=True,
             )
         except Exception as e:
@@ -869,6 +980,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=512)
     def setup_hiya(self, mount_path, nand_path="", update_only=False):
+        from core.hiya import install_hiya_cfw
+
         nand_path, err = _as_path_str(nand_path, label="caminho do nand.bin") if nand_path else ("", None)
         if err:
             return _reject(err)
@@ -904,6 +1017,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=4)
     def organize_roms(self, mount_path, layout="console"):
+        from core.rom_cleaner import normalize_layout, organize_roms_directory
+
         mode = normalize_layout(layout)
         if mode is None:
             return _reject(
@@ -916,14 +1031,14 @@ class Api:
 
     def list_roms(self, mount_path):
         """Lista jogos/apps em /roms/ (leitura; OP_LOCK)."""
+        from core.rom_manager import list_roms as do_list_roms
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -935,14 +1050,14 @@ class Api:
 
     def list_rom_dir(self, mount_path, rel_dir=""):
         """Lista pastas + ROMs num nível sob /roms/."""
+        from core.rom_manager import list_rom_dir as do_list_rom_dir
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if rel_dir is None:
             rel_dir = ""
         if not isinstance(rel_dir, str):
@@ -960,14 +1075,14 @@ class Api:
 
     def list_rom_tree(self, mount_path):
         """Árvore de pastas sob /roms/."""
+        from core.rom_manager import list_rom_tree as do_list_rom_tree
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -979,14 +1094,14 @@ class Api:
 
     def browse_roms(self, mount_path, rel_dir=""):
         """Pasta actual + árvore numa só aquisição de OP_LOCK (evita falso 'em andamento')."""
+        from core.rom_manager import browse_roms as do_browse_roms
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if rel_dir is None:
             rel_dir = ""
         if not isinstance(rel_dir, str) or "\x00" in rel_dir:
@@ -1002,14 +1117,14 @@ class Api:
 
     def rom_details(self, mount_path, rel_path=""):
         """Detalhes de um jogo (capa, ícone, como corre) — leitura sob OP_LOCK."""
+        from core.rom_manager import rom_details as do_rom_details
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD. "
-                "Atualize a lista e selecione o cartão novamente."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -1027,6 +1142,8 @@ class Api:
     @_run_mount_op(min_free_mb=1)
     def set_rom_artwork(self, mount_path, rel_path="", kind="boxart", source_path=""):
         """Grava capa ou ícone PNG no TWiLight (boxart/icons)."""
+        from core.rom_manager import set_rom_artwork as do_set_rom_artwork
+
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -1056,9 +1173,9 @@ class Api:
             return _reject("Diálogo de ficheiros indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
-                caption="Imagem",
+                caption="Capa ou ícone (PNG ou BMP)",
                 filters=(
-                    "Imagens (*.png *.bmp)",
+                    "PNG ou BMP (*.png *.bmp)",
                     "PNG (*.png)",
                     "BMP (*.bmp)",
                     "Todos os ficheiros (*.*)",
@@ -1069,14 +1186,22 @@ class Api:
             return _reject(e)
         if cancelled or not paths:
             return {"success": True, "cancelled": True, "path": ""}
+        path = paths[0]
+        low = path.lower()
+        if not (low.endswith(".png") or low.endswith(".bmp")):
+            return _reject(
+                "Formato não suportado — use PNG ou BMP (não JPEG/WebP)."
+            )
         return {
             "success": True,
             "cancelled": False,
-            "path": redact_path(paths[0]),
+            "path": redact_path(path),
         }
 
     @_run_mount_op(min_free_mb=1)
     def mkdir_rom_dir(self, mount_path, parent_rel="", name=""):
+        from core.rom_manager import mkdir_rom_dir as do_mkdir_rom_dir
+
         parent = parent_rel if isinstance(parent_rel, str) else ""
         if "\x00" in parent:
             return _reject("Pasta pai inválida.")
@@ -1092,6 +1217,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def move_roms(self, mount_path, rel_paths=None, dest_rel_dir=""):
+        from core.rom_manager import move_roms as do_move_roms
+
         if rel_paths is None:
             rel_paths = []
         if not isinstance(rel_paths, (list, tuple)):
@@ -1162,6 +1289,8 @@ class Api:
 
     def default_saves_backup_dir(self):
         """Pasta padrão sugerida para backup de saves (redigida)."""
+        from core.rom_manager import default_saves_backup_dir
+
         try:
             return {
                 "success": True,
@@ -1179,6 +1308,12 @@ class Api:
         dest_rel_dir="",
         conflict_resolutions=None,
     ):
+        from core.rom_cleaner import normalize_layout
+        from core.rom_manager import (
+            import_roms as do_import_roms,
+            normalize_conflict_resolutions,
+        )
+
         mode = normalize_layout(layout)
         if mode is None:
             return _reject("Layout inválido. Use: console, franchise ou both.")
@@ -1215,13 +1350,14 @@ class Api:
         return result
 
     def find_duplicate_roms(self, mount_path):
+        from core.rom_manager import find_duplicate_roms as do_find_duplicate_roms
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         if not OP_LOCK.acquire(blocking=False):
             return _reject("Outra operação já está em andamento. Aguarde.")
         try:
@@ -1234,13 +1370,15 @@ class Api:
     def check_rom_import_conflicts(
         self, mount_path, host_paths=None, layout="console", dest_rel_dir=""
     ):
+        from core.rom_cleaner import normalize_layout
+        from core.rom_manager import check_rom_import_conflicts as do_check_rom_import_conflicts
+
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(mount_path):
-            return _reject(
-                "Unidade não reconhecida como volume removível/USB/SD."
-            )
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
         mode = normalize_layout(layout)
         if mode is None:
             return _reject("Layout inválido. Use: console, franchise ou both.")
@@ -1281,6 +1419,12 @@ class Api:
         backup_dir="",
         remove_boxart=True,
     ):
+        from core.rom_manager import (
+            default_saves_backup_dir,
+            delete_roms as do_delete_roms,
+            normalize_save_mode,
+        )
+
         mode = normalize_save_mode(save_mode)
         if mode is None:
             return _reject("Modo de save inválido. Use: delete, backup ou keep.")
@@ -1327,16 +1471,22 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def sd_report(self, mount_path):
+        from core.sd_utils import format_sd_report as do_sd_report
+
         success, msg = do_sd_report(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=4)
     def setup_godmode9i(self, mount_path):
+        from core.sd_utils import setup_godmode9i as do_setup_godmode9i
+
         success, msg = do_setup_godmode9i(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=16)
     def install_homebrew(self, mount_path, app_id):
+        from core.sd_utils import install_homebrew as do_install_homebrew
+
         app_id, err = _as_path_str(app_id, label="aplicação")
         if err:
             return _reject(err)
@@ -1347,22 +1497,30 @@ class Api:
 
     @_run_mount_op(min_free_mb=64)
     def install_cheats(self, mount_path):
+        from core.sd_utils import install_cheats as do_install_cheats
+
         success, msg = do_install_cheats(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=1)
     def copy_nand_backup(self, mount_path):
+        from core.sd_utils import copy_nand_backup as do_copy_nand_backup
+
         success, msg = do_copy_nand_backup(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=32)
     def install_boxarts(self, mount_path):
+        from core.artwork import install_boxarts as do_install_boxarts
+
         success, msg = do_install_boxarts(mount_path, log_callback=add_log)
         return _api_result(success, msg)
 
     @_run_mount_op(min_free_mb=2)
     def fetch_rom_artwork(self, mount_path, rel_path=""):
         """Descarrega capa/ícone (GameTDB ou Libretro) para um jogo em /roms/."""
+        from core.artwork import fetch_rom_artwork as do_fetch_rom_artwork
+
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
         if err:
             return _reject(err)
@@ -1371,6 +1529,67 @@ class Api:
         success, msg, stats = do_fetch_rom_artwork(
             mount_path,
             rel.replace("\\", "/").lstrip("/"),
+            log_callback=add_log,
+        )
+        result = _api_result(success, msg)
+        result["stats"] = stats or {}
+        return result
+
+    def search_rom_artwork(
+        self, mount_path, rel_path="", kind="boxart", query=""
+    ):
+        """Pesquisa capas/ícones TWiLight online (sem gravar)."""
+        from core.artwork import search_rom_artwork as do_search_rom_artwork
+
+        mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(mount_path)
+        if unsafe:
+            return unsafe
+        rel, err = _as_path_str(rel_path, label="caminho do jogo")
+        if err:
+            return _reject(err)
+        if "\x00" in rel:
+            return _reject("Caminho do jogo inválido.")
+        kind_s = kind if isinstance(kind, str) else "boxart"
+        q = query if isinstance(query, str) else ""
+        if "\x00" in kind_s or "\x00" in q:
+            return _reject("Parâmetros inválidos.")
+        try:
+            return do_search_rom_artwork(
+                mount_path,
+                rel.replace("\\", "/").lstrip("/"),
+                kind=kind_s.strip().lower(),
+                query=q,
+                log_callback=add_log,
+            )
+        except Exception as e:
+            return _reject(e)
+
+    @_run_mount_op(min_free_mb=1)
+    def apply_rom_artwork_url(
+        self, mount_path, rel_path="", kind="boxart", url=""
+    ):
+        """Aplica capa/ícone TWiLight a partir de URL allowlisted."""
+        from core.artwork import apply_rom_artwork_url as do_apply_rom_artwork_url
+
+        rel, err = _as_path_str(rel_path, label="caminho do jogo")
+        if err:
+            return _reject(err)
+        if "\x00" in rel:
+            return _reject("Caminho do jogo inválido.")
+        kind_s, err = _as_path_str(kind, label="tipo de arte")
+        if err:
+            return _reject(err)
+        url_s, err = _as_path_str(url, label="URL")
+        if err:
+            return _reject(err)
+        success, msg, stats = do_apply_rom_artwork_url(
+            mount_path,
+            rel.replace("\\", "/").lstrip("/"),
+            kind_s.strip().lower(),
+            url_s.strip(),
             log_callback=add_log,
         )
         result = _api_result(success, msg)
@@ -1390,6 +1609,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1)
     def clean_sd(self, mount_path):
+        from core.cleaner import clean_macos_metadata
+
         success, msg = clean_macos_metadata(mount_path, log_callback=add_log)
         out = _api_result(success, msg)
         # clean_sd historicamente devolve message também em falha
@@ -1399,6 +1620,8 @@ class Api:
 
     @_run_mount_op(min_free_mb=1, skip_preflight=True)
     def format_sd(self, mount_path):
+        from core.disks import format_sd_card
+
         # Formatação: não exigir FAT no preflight (o objetivo é converter para FAT32).
         # Ainda valida removível via is_safe_mount_path no decorator e format_sd_card.
         add_log(f"Formatando unidade {mount_path} em FAT32 (cluster 32 KB)...")
@@ -1464,8 +1687,9 @@ class Api:
         path, err = _as_path_str(mount_path, label="caminho do cartão")
         if err:
             return _reject(err)
-        if not is_safe_mount_path(path):
-            return _reject("Unidade não reconhecida como volume removível/USB/SD.")
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
         try:
             res = _list(path)
             if res.get("success") and "active" not in res:
@@ -1535,71 +1759,73 @@ class Api:
     @_run_mount_op(min_free_mb=8)
     def generate_twilight_artwork_batch(self, mount_path):
         """Lote isolado TWiLight: boxart + ícones PNG com missing[]."""
+        from core.artwork import generate_twilight_artwork_batch as do_generate_twilight_artwork_batch
+
         return do_generate_twilight_artwork_batch(mount_path, log_callback=add_log)
 
     def get_prefs(self):
-        path = os.path.join(_user_data_dir(), "prefs.json")
+        from core.prefs import load_prefs
+        from core.steamgriddb import normalize_api_key
+
         try:
-            if not os.path.isfile(path):
-                return {"success": True, "prefs": {}}
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if not isinstance(data, dict):
-                return {"success": True, "prefs": {}}
-            return {"success": True, "prefs": data}
+            prefs = load_prefs()
+            # Não devolver a chave em claro — só o estado configurado.
+            out = {
+                k: v for k, v in prefs.items() if k != "steamgriddb_api_key"
+            }
+            out["steamgriddb_configured"] = bool(
+                normalize_api_key(prefs.get("steamgriddb_api_key"))
+            )
+            return {"success": True, "prefs": out}
         except Exception as e:
             return _reject(e)
 
     def set_prefs(self, prefs):
+        from core.prefs import load_prefs, save_prefs
+        from core.steamgriddb import normalize_api_key
+
         if not isinstance(prefs, dict):
             return _reject("Preferências inválidas.")
-        # Allowlist superficial — UI só grava chaves simples.
-        clean = {}
+        # Merge com prefs existentes (UI pode enviar só o delta).
+        merged = dict(load_prefs())
         for k, v in list(prefs.items())[:64]:
             if not isinstance(k, str) or len(k) > 64:
+                continue
+            if k == "steamgriddb_configured":
+                continue
+            if k == "steamgriddb_api_key":
+                if v is None or v == "":
+                    merged.pop("steamgriddb_api_key", None)
+                    continue
+                key = normalize_api_key(v)
+                if not key:
+                    return _reject(
+                        "Chave SteamGridDB inválida "
+                        "(8–256 caracteres alfanuméricos)."
+                    )
+                merged["steamgriddb_api_key"] = key
                 continue
             if isinstance(v, (str, int, float, bool)) or v is None:
                 if isinstance(v, str) and len(v) > 2048:
                     continue
-                clean[k] = v
-        path = os.path.join(_user_data_dir(), "prefs.json")
-        partial = path + ".partial"
-        try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(partial, "w", encoding="utf-8") as f:
-                json.dump(clean, f, ensure_ascii=False, indent=2)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(partial, path)
-            return {"success": True, "prefs": clean}
-        except Exception as e:
-            try:
-                if os.path.isfile(partial):
-                    os.remove(partial)
-            except OSError:
-                pass
-            return _reject(e)
+                if v is None:
+                    merged.pop(k, None)
+                else:
+                    merged[k] = v
+        ok, err, clean = save_prefs(merged)
+        if not ok:
+            return _reject(err or "Falha ao gravar preferências.")
+        configured = bool(normalize_api_key(clean.get("steamgriddb_api_key")))
+        safe = {k: v for k, v in clean.items() if k != "steamgriddb_api_key"}
+        safe["steamgriddb_configured"] = configured
+        return {"success": True, "prefs": safe}
 
 
 def _user_data_dir() -> str:
-    """Pasta de dados do utilizador (localStorage / prefs)."""
-    if sys.platform == "darwin":
-        root = os.path.expanduser("~/Library/Application Support/Route1Kit")
-    elif sys.platform.startswith("win"):
-        root = os.path.join(
-            os.environ.get("LOCALAPPDATA") or os.path.expanduser("~"),
-            "Route1Kit",
-        )
-    else:
-        root = os.path.join(
-            os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"),
-            "Route1Kit",
-        )
-    try:
-        os.makedirs(root, exist_ok=True)
-    except OSError:
-        pass
-    return root
+    """Pasta de dados do utilizador (compat; preferir core.prefs.user_data_dir)."""
+    from core.prefs import user_data_dir
+
+    return user_data_dir()
 
 
 def start_app():

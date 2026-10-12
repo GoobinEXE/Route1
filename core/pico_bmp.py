@@ -1,7 +1,9 @@
-"""Conversão de imagens para o formato BMP do Pico Launcher (stdlib only).
+"""Conversão de imagens para Pico Launcher e TWiLight Menu++ (stdlib only).
 
-Capas: 128×96, 8 bpp (área útil 106×96 à esquerda).
-Ícones: 32×32, 4 bpp (cor 0 = transparente).
+Pico capas: 128×96 BMP 8 bpp (área útil 106×96 à esquerda).
+Pico ícones: 32×32 BMP 4 bpp (cor 0 = transparente).
+TWiLight capas: PNG ~128×115 (GameTDB coverS).
+TWiLight ícones: PNG 32×32 com ≤16 cores + transparência.
 """
 
 from __future__ import annotations
@@ -15,6 +17,11 @@ COVER_W = 128
 COVER_H = 96
 COVER_VISIBLE_W = 106
 ICON_SIZE = 32
+
+# GameTDB coverS / tamanho habitual no TWiLight Menu++.
+TWILIGHT_BOXART_W = 128
+TWILIGHT_BOXART_H = 115
+TWILIGHT_ICON_SIZE = 32
 
 
 def decode_png_rgba(data: bytes) -> tuple[int, int, bytes]:
@@ -250,14 +257,25 @@ def _resize_rgba(
 
 
 def _fit_contain(
-    src_w: int, src_h: int, src: bytes, box_w: int, box_h: int, pad_rgb=(0, 0, 0)
+    src_w: int,
+    src_h: int,
+    src: bytes,
+    box_w: int,
+    box_h: int,
+    pad_rgb=(0, 0, 0),
+    *,
+    pad_alpha: int = 255,
 ) -> bytes:
-    """Encaixa mantendo aspecto; padding com pad_rgb, alpha 255."""
+    """Encaixa mantendo aspecto; padding com pad_rgb/pad_alpha."""
+    try:
+        pa = max(0, min(255, int(pad_alpha)))
+    except (TypeError, ValueError):
+        pa = 255
     if src_w < 1 or src_h < 1:
         canvas = bytearray(box_w * box_h * 4)
         pr, pg, pb = pad_rgb
         for i in range(0, len(canvas), 4):
-            canvas[i : i + 4] = bytes((pr, pg, pb, 255))
+            canvas[i : i + 4] = bytes((pr, pg, pb, pa))
         return bytes(canvas)
     scale = min(box_w / src_w, box_h / src_h)
     tw = max(1, int(round(src_w * scale)))
@@ -266,7 +284,7 @@ def _fit_contain(
     canvas = bytearray(box_w * box_h * 4)
     pr, pg, pb = pad_rgb
     for i in range(0, len(canvas), 4):
-        canvas[i : i + 4] = bytes((pr, pg, pb, 255))
+        canvas[i : i + 4] = bytes((pr, pg, pb, pa))
     ox = (box_w - tw) // 2
     oy = (box_h - th) // 2
     for y in range(th):
@@ -425,7 +443,9 @@ def rgba_to_cover_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
 
 def rgba_to_icon_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
     """Converte imagem → ícone Pico 32×32 4 bpp (cor 0 transparente)."""
-    fitted = _fit_contain(src_w, src_h, rgba, ICON_SIZE, ICON_SIZE)
+    fitted = _fit_contain(
+        src_w, src_h, rgba, ICON_SIZE, ICON_SIZE, pad_alpha=0
+    )
     samples = []
     for i in range(ICON_SIZE * ICON_SIZE):
         o = i * 4
@@ -448,12 +468,58 @@ def rgba_to_icon_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
     return _pack_bmp(ICON_SIZE, ICON_SIZE, 4, palette, bytes(indices))
 
 
+def _quantize_icon_rgba(src_w: int, src_h: int, rgba: bytes, size: int) -> bytes:
+    """Encaixa em size×size e reduz a 16 cores (índice 0 transparente) → RGBA."""
+    fitted = _fit_contain(src_w, src_h, rgba, size, size, pad_alpha=0)
+    samples = []
+    for i in range(size * size):
+        o = i * 4
+        if fitted[o + 3] < 128:
+            continue
+        samples.append((fitted[o], fitted[o + 1], fitted[o + 2]))
+    palette_rgb = [(0, 0, 0)] + _median_cut_palette(samples, 15)
+    while len(palette_rgb) < 16:
+        palette_rgb.append((0, 0, 0))
+    out = bytearray(size * size * 4)
+    for i in range(size * size):
+        o = i * 4
+        if fitted[o + 3] < 128:
+            out[o : o + 4] = b"\x00\x00\x00\x00"
+            continue
+        idx = _nearest_index(fitted[o], fitted[o + 1], fitted[o + 2], palette_rgb, 1)
+        r, g, b = palette_rgb[idx]
+        out[o : o + 4] = bytes((r, g, b, 255))
+    return bytes(out)
+
+
+def rgba_to_twilight_boxart_png(src_w: int, src_h: int, rgba: bytes) -> bytes:
+    """Capa TWiLight: PNG 128×115 (proporção GameTDB coverS)."""
+    fitted = _fit_contain(
+        src_w, src_h, rgba, TWILIGHT_BOXART_W, TWILIGHT_BOXART_H
+    )
+    return rgba_to_png(TWILIGHT_BOXART_W, TWILIGHT_BOXART_H, fitted)
+
+
+def rgba_to_twilight_icon_png(src_w: int, src_h: int, rgba: bytes) -> bytes:
+    """Ícone TWiLight: PNG 32×32 com ≤16 cores + transparência."""
+    quantized = _quantize_icon_rgba(src_w, src_h, rgba, TWILIGHT_ICON_SIZE)
+    return rgba_to_png(TWILIGHT_ICON_SIZE, TWILIGHT_ICON_SIZE, quantized)
+
+
 def image_bytes_to_pico_bmp(data: bytes, kind: str) -> bytes:
-    """kind: 'cover' | 'icon'."""
+    """kind: 'cover' | 'icon' — redimensiona, paleta e bpp Pico."""
     w, h, rgba = decode_image_rgba(data)
     if kind == "icon":
         return rgba_to_icon_bmp(w, h, rgba)
     return rgba_to_cover_bmp(w, h, rgba)
+
+
+def image_bytes_to_twilight_png(data: bytes, kind: str) -> bytes:
+    """kind: 'boxart' | 'icon' — redimensiona e ajusta para TWiLight."""
+    w, h, rgba = decode_image_rgba(data)
+    if kind == "icon":
+        return rgba_to_twilight_icon_png(w, h, rgba)
+    return rgba_to_twilight_boxart_png(w, h, rgba)
 
 
 def rgba_to_png(width: int, height: int, rgba: bytes) -> bytes:

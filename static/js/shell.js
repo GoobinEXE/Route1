@@ -68,25 +68,54 @@
     });
   }
 
-  function mount(view) {
-    if (mounted[view]) return;
-    mounted[view] = true;
-    if (view === "softmod" && typeof Wizard !== "undefined" && Wizard.render) {
-      Wizard.render();
+  function ensureSgdbPanel() {
+    /** Garante o painel SteamGridDB no DOM (HTML em cache / markup em falta). */
+    const pane = $("view-settings");
+    if (!pane) return false;
+    if ($("sgdb-api-key")) return false;
+    const existing = $("sgdb-settings-panel");
+    if (existing) existing.remove();
+    const section = document.createElement("section");
+    section.id = "sgdb-settings-panel";
+    section.className = "panel p-5 space-y-3 mb-5";
+    section.innerHTML =
+      '<h3 class="section-label">SteamGridDB — chave API</h3>' +
+      '<p class="text-[12px] text-fg-mute leading-relaxed">' +
+      "Necessária para capas/ícones de jogos retro (GBA, GBC, SNES, etc.). " +
+      "Crie uma chave em steamgriddb.com → Preferences → API, cole e guarde." +
+      "</p>" +
+      '<label class="block text-[12px] text-fg-mute" for="sgdb-api-key">Chave API</label>' +
+      '<input id="sgdb-api-key" type="password" autocomplete="off" spellcheck="false" ' +
+      'class="w-full max-w-xl rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-fg" ' +
+      'placeholder="Cole a chave aqui" />' +
+      '<p id="sgdb-api-status" class="text-[12px] text-fg-mute"></p>' +
+      '<div class="flex flex-wrap gap-2">' +
+      '<button type="button" class="btn-primary" id="sgdb-api-save">Guardar chave</button>' +
+      '<button type="button" class="btn-ghost" id="sgdb-api-clear">Remover chave</button>' +
+      "</div>";
+    const head = pane.querySelector(".page-head");
+    if (head && head.nextSibling) {
+      pane.insertBefore(section, head.nextSibling);
+    } else {
+      pane.insertBefore(section, pane.firstChild);
     }
+    return true;
+  }
+
+  function mount(view) {
+    // DSPico: re-entrar sempre (poll USB MSC + refresh) sem depender de mounted[].
     if (view === "dspico" && typeof Dspico !== "undefined" && Dspico.enter) {
       Dspico.enter();
+      mounted[view] = true;
+      return;
     }
-    if (view === "card" && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
-      RomExplorer.refresh();
-    }
-    if (view === "utilidades" && window.R1K.utilidades && R1K.utilidades.ensure) {
-      R1K.utilidades.ensure();
-    }
+    // Definições: re-montar sempre (painel SGDB + prefs).
     if (view === "settings") {
+      mounted[view] = true;
       if (typeof loadAboutPage === "function") loadAboutPage();
       const host = $("settings-theme-host");
-      if (host && typeof Theme !== "undefined" && Theme.list) {
+      if (host && typeof Theme !== "undefined" && Theme.list && !host.dataset.themesFilled) {
+        host.dataset.themesFilled = "1";
         host.innerHTML = "";
         const themes = Theme.list();
         for (const t of themes) {
@@ -98,6 +127,20 @@
           host.appendChild(b);
         }
       }
+      ensureSgdbPanel();
+      loadSteamGridDbPrefs();
+      return;
+    }
+    if (mounted[view]) return;
+    mounted[view] = true;
+    if (view === "softmod" && typeof Wizard !== "undefined" && Wizard.render) {
+      Wizard.render();
+    }
+    if (view === "card" && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
+      RomExplorer.refresh();
+    }
+    if (view === "utilidades" && window.R1K.utilidades && R1K.utilidades.ensure) {
+      R1K.utilidades.ensure();
     }
     if (view === "home") {
       updateHomeDrive();
@@ -135,12 +178,25 @@
   }
 
   function navigate(view, { silent } = {}) {
-    if (typeof busy !== "undefined" && busy && !silent) {
+    const hard =
+      typeof isHardBusy === "function"
+        ? isHardBusy()
+        : typeof busy !== "undefined" && busy;
+    if (hard && !silent) {
       alert("Aguarde a operação em andamento terminar antes de mudar de ecrã.");
       return;
     }
     if (!VIEWS.includes(view)) view = "home";
     relocateLegacyPanels();
+    const prev = current;
+    if (
+      prev === "dspico" &&
+      view !== "dspico" &&
+      typeof Dspico !== "undefined" &&
+      Dspico.leave
+    ) {
+      Dspico.leave();
+    }
     current = view;
     try {
       sessionStorage.setItem(STORAGE_KEY, current);
@@ -168,6 +224,106 @@
     activityOpen = typeof force === "boolean" ? force : !activityOpen;
     const drawer = $("activity-drawer");
     if (drawer) drawer.classList.toggle("activity-drawer--open", activityOpen);
+  }
+
+  function setSgdbStatus(text, ok) {
+    const el = $("sgdb-api-status");
+    if (!el) return;
+    el.textContent = text || "";
+    el.className =
+      "text-[12px] " + (ok ? "text-ok" : text ? "text-fg-mute" : "text-fg-mute");
+  }
+
+  async function loadSteamGridDbPrefs() {
+    const input = $("sgdb-api-key");
+    const saveBtn = $("sgdb-api-save");
+    const clearBtn = $("sgdb-api-clear");
+    if (!input || !saveBtn || !clearBtn) return;
+
+    if (!input.dataset.bound) {
+      input.dataset.bound = "1";
+      saveBtn.addEventListener("click", async () => {
+        const api = typeof getApi === "function" ? getApi() : null;
+        if (!api || typeof api.set_prefs !== "function") {
+          setSgdbStatus("API indisponível.", false);
+          return;
+        }
+        const raw = String(input.value || "").trim();
+        if (!raw) {
+          setSgdbStatus("Cole uma chave ou use «Remover chave».", false);
+          return;
+        }
+        try {
+          const res = await api.set_prefs({ steamgriddb_api_key: raw });
+          if (res && res.success) {
+            input.value = "";
+            input.placeholder = "Chave guardada — cole outra para substituir";
+            setSgdbStatus(
+              "Chave SteamGridDB guardada. Capas/ícones usam-na como fonte principal.",
+              true
+            );
+          } else {
+            setSgdbStatus(
+              (res && res.error) || "Não foi possível guardar a chave.",
+              false
+            );
+          }
+        } catch (e) {
+          setSgdbStatus("Falha ao guardar a chave.", false);
+        }
+      });
+      clearBtn.addEventListener("click", async () => {
+        const api = typeof getApi === "function" ? getApi() : null;
+        if (!api || typeof api.set_prefs !== "function") {
+          setSgdbStatus("API indisponível.", false);
+          return;
+        }
+        try {
+          const res = await api.set_prefs({ steamgriddb_api_key: "" });
+          if (res && res.success) {
+            input.value = "";
+            input.placeholder = "Cole a chave aqui";
+            setSgdbStatus(
+              "Chave removida. Fallback: GameTDB + Libretro.",
+              true
+            );
+          } else {
+            setSgdbStatus(
+              (res && res.error) || "Não foi possível remover a chave.",
+              false
+            );
+          }
+        } catch (e) {
+          setSgdbStatus("Falha ao remover a chave.", false);
+        }
+      });
+    }
+
+    const api = typeof getApi === "function" ? getApi() : null;
+    if (!api || typeof api.get_prefs !== "function") {
+      setSgdbStatus("API indisponível.", false);
+      return;
+    }
+    try {
+      const res = await api.get_prefs();
+      const configured =
+        res &&
+        res.success &&
+        res.prefs &&
+        res.prefs.steamgriddb_configured === true;
+      if (configured) {
+        input.placeholder = "Chave guardada — cole outra para substituir";
+        setSgdbStatus("SteamGridDB activo (fonte principal de capas/ícones).", true);
+      } else {
+        input.placeholder = "Cole a chave aqui";
+        setSgdbStatus(
+          "Sem chave — capas usam GameTDB (NDS) e Libretro.",
+          false
+        );
+      }
+    } catch (e) {
+      setSgdbStatus("Não foi possível ler as preferências.", false);
+    }
   }
 
   function init() {

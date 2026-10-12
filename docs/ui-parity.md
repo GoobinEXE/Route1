@@ -10,6 +10,7 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 | Troca de vista | só `hidden` / mount preguiçoso |
 | Listas &gt; 200 itens | virtualizadas |
 | Logs / busy em idle | push (`web_events`), sem polling |
+| Progresso de ops longas | faixa topbar `#r1k-op-progress` (n/total, %, barra, tamanho, velocidade, ETA) via `web_events` `progress` + `core.progress.ProgressTracker` |
 | CSS total | &lt; 40 KB (Tailwind purge + `app.css`) |
 | Scripts | `defer`; módulos na 1.ª visita à vista |
 
@@ -36,10 +37,10 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 | `inspect_sd` / `probe_kernels` / `quarantine_dcim` | Softmod / Cartão / Outros |
 | `setup_nand_dump` / `setup_unlaunch` / `setup_hiya` | Softmod DSi |
 | `setup_godmode9i` / `install_cheats` / `copy_nand_backup` | Softmod → Extras |
-| `install_boxarts` / `fetch_rom_artwork` / `set_rom_artwork` | Softmod extras + Utilidades → Capas + Cartão |
+| `install_boxarts` / `fetch_rom_artwork` / `search_rom_artwork` / `apply_rom_artwork_url` / `set_rom_artwork` | Softmod extras + Utilidades → Capas + Cartão (gaveta: pesquisa + grelha + ficheiro) |
 | `setup_dspico` / `inspect_dspico` / `get_dspico_official_links` | DSPico |
 | `browse_dspico_games` / `import_dspico_games` / `delete_dspico_games` / `move_dspico_games` / `mkdir_dspico_games` / `organize_dspico` | DSPico → Jogos |
-| `get/search/apply/set_dspico_artwork` / `get_dspico_game_artwork` | DSPico → Capas + Utilidades |
+| `get/search/apply/set_dspico_artwork` / `get_dspico_game_artwork` / `get_dspico_game_previews` | DSPico → Capas + Utilidades / thumbs lazy em Jogos |
 | `ensure_dspico_emunand` / `import_dspico_bios` / `import_dspico_twl_font` | DSPico → Definições |
 | `get_dspico_settings` / `set_dspico_settings` | DSPico → Definições |
 | `list_dspico_emulators` / `install_dspico_emulators` | DSPico → Emuladores + Utilidades |
@@ -53,7 +54,7 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 | `list/set/import/create_pico_*_theme` | Utilidades → Temas |
 | `install_dspico_usb_apps` | Utilidades → Apps |
 | `generate_dspico_covers_batch` | Utilidades → Capas |
-| `get_prefs` / `set_prefs` | Definições |
+| `get_prefs` / `set_prefs` | Definições (incl. chave SteamGridDB) |
 
 ## Secções legadas (`static/index.html` antigo) → destino
 
@@ -69,6 +70,7 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 | Softmod extra | Softmod → Extras |
 | Apps homebrew | Utilidades → Apps |
 | Atividade (logs) | Gaveta Atividade global |
+| Progresso (ops longas) | Faixa topbar + métricas (`progress` / `ProgressTracker`) |
 | view-dspico | DSPico |
 | view-about | Definições e Sobre |
 | Temas (theme.js, 7 temas) | Definições → Aparência |

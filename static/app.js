@@ -3,8 +3,11 @@ let selectedDrive = null;
 let lastLogIndex = 0;
 let apiReady = false;
 let busy = false;
+/** Soft busy: spinner/CTA sem bloquear tabs nem Actualizar (leituras / UI leve). */
+let softBusy = false;
 let logPollTimer = null;
 let logPollInFlight = false;
+let fetchDrivesInFlight = false;
 let activeActionBtn = null;
 let activeActionLabel = null;
 let appMode = "wizard"; // wizard | advanced | about | dspico
@@ -105,7 +108,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (p && p.message) appendLog(p.message, p.level || "info");
     });
     R1K.events.on("busy", (p) => {
-      if (p && typeof p.busy === "boolean") setBusy(!!p.busy);
+      if (p && typeof p.busy === "boolean") {
+        setBusy(!!p.busy);
+        if (p.busy) {
+          showBusyOpProgress(p);
+        }
+      }
     });
     R1K.events.on("progress", (p) => {
       updateOpProgress(p);
@@ -208,20 +216,44 @@ function actionButtons() {
   );
 }
 
-function setBusy(isBusy, sourceBtn) {
-  busy = !!isBusy;
+function isHardBusy() {
+  return !!busy && !softBusy;
+}
+
+function setBusy(isBusy, sourceBtn, options) {
+  const soft = !!(options && options.soft);
+  const opHint = options && options.op ? String(options.op) : "";
+  const labelHint =
+    options && options.label ? String(options.label) : "A iniciar…";
+  if (isBusy) {
+    busy = true;
+    softBusy = soft;
+  } else {
+    busy = false;
+    softBusy = false;
+  }
   actionButtons().forEach((btn) => {
-    if (
-      (btn.classList.contains("mode-tab") || btn.classList.contains("adv-tab")) &&
-      !busy
-    ) {
+    const isNavTab =
+      btn.classList.contains("mode-tab") || btn.classList.contains("adv-tab");
+    const isRefresh = btn.id === "btn-refresh";
+    if (!busy) {
+      if (isNavTab || isRefresh) {
+        btn.disabled = false;
+        btn.classList.remove("opacity-50", "pointer-events-none");
+        return;
+      }
       btn.disabled = false;
       btn.classList.remove("opacity-50", "pointer-events-none");
       return;
     }
-    btn.disabled = busy;
-    btn.classList.toggle("opacity-50", busy);
-    btn.classList.toggle("pointer-events-none", busy);
+    // Soft busy: tabs + Actualizar continuam usáveis (USB MSC / listagens).
+    if (softBusy && (isNavTab || isRefresh)) {
+      btn.disabled = false;
+      btn.classList.remove("opacity-50", "pointer-events-none");
+      return;
+    }
+    btn.disabled = true;
+    btn.classList.add("opacity-50", "pointer-events-none");
   });
 
   if (busy && sourceBtn) {
@@ -235,11 +267,18 @@ function setBusy(isBusy, sourceBtn) {
     activeActionLabel = null;
   }
 
-  if (!busy) {
+  if (busy) {
+    showBusyOpProgress({
+      busy: true,
+      op: opHint,
+      label: labelHint,
+    });
+  } else {
     hideOpProgress();
   }
 
   scheduleLogPolling();
+  scheduleProgressPolling();
   if (typeof RomExplorer !== "undefined" && RomExplorer.updateRemoveBtn) {
     RomExplorer.updateRemoveBtn();
   }
@@ -248,54 +287,250 @@ function setBusy(isBusy, sourceBtn) {
   }
 }
 
-const _PROGRESS_OPS = new Set([
-  "dspico_artwork_batch",
-  "twilight_artwork_batch",
-  "dspico_import_games",
-]);
+const _OP_LABELS_PT = {
+  dspico_import_games: "Importar jogos",
+  dspico_artwork_batch: "Capas DSPico",
+  twilight_artwork_batch: "Capas TWiLight",
+  generate_dspico_artwork_batch: "Capas DSPico",
+  generate_dspico_covers_batch: "Capas DSPico",
+  generate_twilight_artwork_batch: "Capas TWiLight",
+  dspico_organize: "Organizar DSPico",
+  organize_dspico: "Organizar DSPico",
+  import_roms: "Importar ROMs",
+  organize_roms: "Organizar ROMs",
+  setup_dspico: "Preparar DSPico",
+  setup_gei: "Kernel GEi",
+  setup_r4: "Kernel R4",
+  setup_nand_dump: "Passo 1 (dump)",
+  setup_unlaunch: "Passo 2 (Unlaunch)",
+  setup_hiya: "hiyaCFW",
+  setup_godmode9i: "GodMode9i",
+  format_sd: "Formatar cartão",
+  backup_sd: "Backup do cartão",
+  backup_drive: "Backup do cartão",
+  backup: "Backup do cartão",
+  download: "Descarregar",
+  cache_download: "Descarregar",
+};
+
+function opLabelPt(op, fallback) {
+  const key = String(op || "").trim();
+  if (_OP_LABELS_PT[key]) return _OP_LABELS_PT[key];
+  if (fallback) return String(fallback);
+  return key ? key.replace(/_/g, " ") : "Operação";
+}
+
+function formatProgressBytes(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v) || v < 0) return "";
+  if (v < 1024) return `${Math.round(v)} B`;
+  if (v < 1024 * 1024) return `${(v / 1024).toFixed(1)} KiB`;
+  if (v < 1024 * 1024 * 1024) return `${(v / (1024 * 1024)).toFixed(1)} MiB`;
+  return `${(v / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
+}
+
+function formatProgressSpeed(payload) {
+  const bps = Number(payload && payload.speed_bps);
+  if (Number.isFinite(bps) && bps > 0) {
+    if (bps < 1024) return `${Math.round(bps)} B/s`;
+    if (bps < 1024 * 1024) return `${(bps / 1024).toFixed(1)} KiB/s`;
+    return `${(bps / (1024 * 1024)).toFixed(1)} MiB/s`;
+  }
+  const ips = Number(payload && payload.speed_ips);
+  if (Number.isFinite(ips) && ips > 0) {
+    if (ips >= 10) return `${Math.round(ips)}/s`;
+    return `${ips.toFixed(1)}/s`;
+  }
+  return "";
+}
+
+function formatProgressEta(sec) {
+  const s = Math.max(0, Math.round(Number(sec)));
+  if (!Number.isFinite(s)) return "";
+  if (s < 60) return `~${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m < 60) return r ? `~${m}m ${r}s` : `~${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm ? `~${h}h ${rm}m` : `~${h}h`;
+}
+
+const _CANCELLABLE_ARTWORK_OPS = {
+  twilight_artwork_batch: true,
+  dspico_artwork_batch: true,
+  generate_twilight_artwork_batch: true,
+  generate_dspico_artwork_batch: true,
+  generate_dspico_covers_batch: true,
+  install_boxarts: true,
+};
 
 function hideOpProgress() {
   const root = document.getElementById("r1k-op-progress");
   if (!root) return;
   root.classList.add("hidden");
   root.setAttribute("aria-hidden", "true");
+  const bar = document.getElementById("r1k-op-progress-bar");
+  if (bar) {
+    bar.classList.remove("r1k-op-progress-bar--indeterminate");
+    bar.style.width = "0%";
+  }
+  const cancelBtn = document.getElementById("r1k-op-progress-cancel");
+  if (cancelBtn) {
+    cancelBtn.classList.add("hidden");
+    cancelBtn.disabled = false;
+  }
+}
+
+async function cancelBusyOp() {
+  const cancelBtn = document.getElementById("r1k-op-progress-cancel");
+  if (cancelBtn) {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = "A cancelar…";
+  }
+  try {
+    const api = typeof getApi === "function" ? getApi() : null;
+    if (api && typeof api.cancel_op === "function") {
+      await api.cancel_op();
+    }
+  } catch (e) {
+    /* best-effort */
+  }
+}
+
+function showBusyOpProgress(payload) {
+  if (!payload || !payload.busy) return;
+  updateOpProgress({
+    op: payload.op || "",
+    label: payload.label || "A iniciar…",
+    done: false,
+  });
 }
 
 function updateOpProgress(payload) {
   if (!payload || typeof payload !== "object") return;
-  const op = payload.op || "";
-  if (!_PROGRESS_OPS.has(op) && !payload.done) return;
+  // Aceitar progresso mesmo se o evento busy ainda não chegou (race push/poll).
 
   const root = document.getElementById("r1k-op-progress");
   const bar = document.getElementById("r1k-op-progress-bar");
-  const countEl = document.getElementById("r1k-op-progress-count");
+  const titleEl = document.getElementById("r1k-op-progress-title");
+  const metricsEl = document.getElementById("r1k-op-progress-metrics");
   const labelEl = document.getElementById("r1k-op-progress-label");
-  if (!root || !bar || !countEl || !labelEl) return;
+  // Compat: HTML antigo só tinha count; HTML novo tem metrics.
+  const countEl = document.getElementById("r1k-op-progress-count");
+  if (!root || !bar || !labelEl) return;
+  if (!metricsEl && !countEl) return;
 
-  if (payload.done) {
-    const total = Math.max(0, parseInt(payload.total, 10) || 0);
-    const written = Math.max(0, parseInt(payload.written, 10) || 0);
-    countEl.textContent =
-      total > 0 ? `${total} / ${total} · ${written} feitos` : "Concluído";
-    labelEl.textContent = String(payload.label || "Concluído");
-    bar.style.width = "100%";
-    root.classList.remove("hidden");
-    root.setAttribute("aria-hidden", "false");
-    return;
-  }
+  const op = payload.op || "";
+  if (titleEl) titleEl.textContent = opLabelPt(op, payload.title);
 
   const total = Math.max(0, parseInt(payload.total, 10) || 0);
   const current = Math.max(0, parseInt(payload.current, 10) || 0);
-  const written = Math.max(0, parseInt(payload.written, 10) || 0);
-  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
-  countEl.textContent =
-    total > 0
-      ? `${current} / ${total} · ${written} feitos`
-      : `${written} feitos`;
-  labelEl.textContent = String(payload.label || "A processar…");
-  bar.style.width = `${pct}%`;
+  const bytesDone = Math.max(0, parseInt(payload.bytes_done, 10) || 0);
+  const bytesTotal = Math.max(0, parseInt(payload.bytes_total, 10) || 0);
+  let pct =
+    payload.pct != null && payload.pct !== ""
+      ? Math.max(0, Math.min(100, parseInt(payload.pct, 10) || 0))
+      : null;
+  if (pct == null) {
+    if (bytesTotal > 0) {
+      pct = Math.min(100, Math.round((bytesDone / bytesTotal) * 100));
+    } else if (total > 0) {
+      pct = Math.min(100, Math.round((current / total) * 100));
+    }
+  }
+  if (payload.done && (total > 0 || bytesTotal > 0)) {
+    pct = 100;
+  }
+
+  const parts = [];
+  if (total > 0) {
+    parts.push(`${payload.done ? total : current} / ${total}`);
+  }
+  if (pct != null) {
+    parts.push(`${pct}%`);
+  }
+  if (bytesDone > 0 || bytesTotal > 0) {
+    if (bytesTotal > 0) {
+      parts.push(
+        `${formatProgressBytes(bytesDone)} / ${formatProgressBytes(bytesTotal)}`
+      );
+    } else {
+      parts.push(formatProgressBytes(bytesDone));
+    }
+  }
+  if (!payload.done) {
+    const speed = formatProgressSpeed(payload);
+    if (speed) parts.push(speed);
+    const eta = formatProgressEta(payload.eta_s);
+    if (eta) parts.push(eta);
+  } else if (parts.length === 0) {
+    parts.push("Concluído");
+  }
+
+  const metricsText = parts.join(" · ");
+  if (metricsEl) metricsEl.textContent = metricsText;
+  if (countEl) countEl.textContent = metricsText || (payload.done ? "Concluído" : "…");
+  labelEl.textContent = String(payload.label || (payload.done ? "Concluído" : "A processar…"));
+
+  const determinate = pct != null;
+  bar.classList.toggle("r1k-op-progress-bar--indeterminate", !determinate && !payload.done);
+  if (determinate || payload.done) {
+    bar.style.width = `${payload.done ? 100 : pct}%`;
+  } else {
+    bar.style.width = "36%";
+  }
+
+  const cancelBtn = document.getElementById("r1k-op-progress-cancel");
+  if (cancelBtn) {
+    const showCancel =
+      !payload.done &&
+      (payload.cancellable === true ||
+        !!_CANCELLABLE_ARTWORK_OPS[op] ||
+        !!_CANCELLABLE_ARTWORK_OPS[String(payload.op || "")]);
+    cancelBtn.classList.toggle("hidden", !showCancel);
+    if (payload.cancelling) {
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = "A cancelar…";
+    } else {
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = "Cancelar";
+    }
+  }
+
   root.classList.remove("hidden");
   root.setAttribute("aria-hidden", "false");
+}
+
+let progressPollTimer = null;
+let progressPollInFlight = false;
+
+async function pollOpProgressOnce() {
+  if (progressPollInFlight || !busy) return;
+  const api = typeof getApi === "function" ? getApi() : null;
+  if (!api || typeof api.get_op_progress !== "function") return;
+  progressPollInFlight = true;
+  try {
+    const res = await api.get_op_progress();
+    if (res && res.success && res.progress && typeof res.progress === "object") {
+      updateOpProgress(res.progress);
+    }
+  } catch (e) {
+    /* poll best-effort */
+  } finally {
+    progressPollInFlight = false;
+  }
+}
+
+function scheduleProgressPolling() {
+  if (progressPollTimer) {
+    clearInterval(progressPollTimer);
+    progressPollTimer = null;
+  }
+  if (!busy) return;
+  // Fallback quando evaluate_js não chega durante a chamada API (comum no macOS).
+  progressPollTimer = setInterval(pollOpProgressOnce, 400);
+  pollOpProgressOnce();
 }
 
 function syncDriveSelects() {
@@ -325,12 +560,16 @@ function syncDriveSelects() {
   });
 }
 
-async function fetchDrives() {
-  if (busy) return;
+async function fetchDrives(options) {
+  const quiet = !!(options && options.quiet);
+  // Hard busy bloqueia; soft busy e idle permitem (USB MSC a montar/desmontar).
+  if (isHardBusy()) return;
+  if (fetchDrivesInFlight) return;
+  fetchDrivesInFlight = true;
   const refreshBtn = document.getElementById("btn-refresh");
   const refreshIcon = document.getElementById("refresh-icon");
-  if (refreshBtn) refreshBtn.classList.add("opacity-50", "pointer-events-none");
-  if (refreshIcon) refreshIcon.classList.add("spinning");
+  if (!quiet && refreshBtn) refreshBtn.classList.add("opacity-50", "pointer-events-none");
+  if (!quiet && refreshIcon) refreshIcon.classList.add("spinning");
 
   try {
     const api = getApi() || (await waitForApi());
@@ -345,7 +584,13 @@ async function fetchDrives() {
       document.getElementById("wizard-drive-badge")?.classList.add("hidden");
     } else {
       const keep = currentDrives.find((d) => d.mount_path === previous);
-      selectedDrive = keep || currentDrives[0];
+      let pick = keep || null;
+      if (!pick && typeof appMode !== "undefined" && appMode === "dspico") {
+        pick =
+          currentDrives.find((d) => d && d.dspico_likely) ||
+          currentDrives[0];
+      }
+      selectedDrive = pick || currentDrives[0];
       setDriveStatus(true);
       updateDriveBadge();
     }
@@ -353,11 +598,20 @@ async function fetchDrives() {
     if (typeof Wizard !== "undefined" && Wizard.onDrivesUpdated) {
       Wizard.onDrivesUpdated();
     }
+    if (
+      typeof appMode !== "undefined" &&
+      appMode === "dspico" &&
+      typeof Dspico !== "undefined" &&
+      Dspico.onDrivesUpdated
+    ) {
+      Dspico.onDrivesUpdated();
+    }
   } catch (err) {
-    appendLog(`Erro ao buscar unidades: ${err.message}`, "error");
+    if (!quiet) appendLog(`Erro ao buscar unidades: ${err.message}`, "error");
     setDriveStatus(false);
   } finally {
-    if (!busy && refreshBtn) {
+    fetchDrivesInFlight = false;
+    if (!isHardBusy() && refreshBtn) {
       refreshBtn.classList.remove("opacity-50", "pointer-events-none");
     }
     if (refreshIcon) refreshIcon.classList.remove("spinning");
@@ -526,21 +780,25 @@ async function runMountOp(options = {}) {
     const layout = options.layout || "games";
     let layoutLine;
     if (layout === "franchise") {
-      layoutLine = "• jogos em Games/<franquia>/ (ex. Pokemon, Mario)\n";
+      layoutLine =
+        "• jogos e ROMs retro em Games/<franquia>/ (ex. Pokemon, Mario)\n";
     } else if (layout === "platform") {
-      layoutLine = "• jogos em Games/nds/ ou Games/dsi/\n";
+      layoutLine =
+        "• jogos e ROMs retro em Games/<plataforma>/ (nds, dsi, gb, gba, …)\n";
     } else if (layout === "root") {
       layoutLine =
-        "• jogos soltos na raiz, ao lado de _picoboot.nds\n";
+        "• jogos e ROMs retro soltos na raiz, ao lado de _picoboot.nds\n";
     } else {
-      layoutLine = "• jogos soltos em Games/\n";
+      layoutLine = "• jogos e ROMs retro soltos em Games/\n";
     }
     const conf = confirm(
       "Organizar pastas DSPico irá:\n" +
         layoutLine +
+        "• apps/homebrew em Games/Apps/\n" +
         "• sincronizar saves junto de cada jogo\n" +
-        "• REMOVER pastas/ficheiros de outros sistemas (_nds, roms, MoonShell, hiya, kernels R4/GEi, …)\n" +
-        "• manter apenas o necessário: _picoboot.nds, _pico/, Games/ e emunand (se existir)\n\n" +
+        "• REMOVER pastas/ficheiros de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
+        "• manter: _picoboot.nds, _pico/, Games/, Emulators/, _gba/, data/, emunand e snemul.cfg\n" +
+        "  (ROMs/ só se tiver BIOS — jogos retro migram para Games/)\n\n" +
         "Esta acção é destrutiva para conteúdo que não seja DSPico.\n\n" +
         "Continuar?"
     );

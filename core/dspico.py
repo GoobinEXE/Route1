@@ -8,6 +8,7 @@ import platform
 import re
 import shutil
 import tempfile
+import time
 import zipfile
 from typing import Any, Optional
 
@@ -19,10 +20,15 @@ from core.cache import (
     ensure_cached,
     ensure_cache_dir,
 )
-from core.dspico_emulators import count_installed_emulators
+from core.dspico_emulators import (
+    count_installed_emulators,
+    retro_platform_map,
+    retro_rom_dirs_map,
+)
 from core.logging_util import emit_log
 from core.privacy import redact_path
 from core.rom_cleaner import (
+    JUNK_EXTS,
     SKIP_DIR_NAMES,
     SYSTEM_ROOT_NAMES,
     UNKNOWN_FRANCHISE,
@@ -64,36 +70,24 @@ DSPICO_OFFICIAL_LINKS = {
 }
 
 GAMES_DIRNAME = "Games"
-ROMS_DIRNAME = "ROMs"
-GAME_EXTS = frozenset({".nds", ".dsi", ".ids"})
-# ROMs retro → /ROMs/<sistema>/ (guia Sanrax / catálogo de emuladores).
-RETRO_ROM_DIRS: dict[str, str] = {
-    ".gb": f"{ROMS_DIRNAME}/GB",
-    ".gbc": f"{ROMS_DIRNAME}/GB",
-    ".gba": f"{ROMS_DIRNAME}/GBA",
-    ".sfc": f"{ROMS_DIRNAME}/SNES",
-    ".smc": f"{ROMS_DIRNAME}/SNES",
-}
-RETRO_EXTS = frozenset(RETRO_ROM_DIRS.keys())
+APPS_DIRNAME = "Apps"
+ROMS_DIRNAME = "ROMs"  # legado / BIOS de emuladores; organize não promove jogos aqui
+GAME_EXTS = frozenset({".nds", ".dsi", ".ids", ".srl", ".app"})
+# Extensão → pasta Games/<plat>/ — derivado do catálogo de emuladores Pico.
+_RETRO_PLATFORM: dict[str, str] = retro_platform_map()
+RETRO_EXTS = frozenset(_RETRO_PLATFORM.keys())
+# Legado: pastas /ROMs/… que o instalador ainda cria (BIOS / ROMPath).
+RETRO_ROM_DIRS: dict[str, str] = retro_rom_dirs_map()
 IMPORT_EXTS = GAME_EXTS | RETRO_EXTS
-_RETRO_PLATFORM: dict[str, str] = {
-    ".gb": "gb",
-    ".gbc": "gbc",
-    ".gba": "gba",
-    ".sfc": "snes",
-    ".smc": "snes",
-}
+LIBRARY_FILE_EXTS = GAME_EXTS | RETRO_EXTS
 SETTINGS_FILENAME = "settings.json"
 
 
 def _emit_import_progress(payload: dict) -> None:
     """Push best-effort para a barra de progresso da UI."""
-    try:
-        from services import web_events
+    from core.progress import emit_progress
 
-        web_events.emit("progress", payload)
-    except Exception:
-        pass
+    emit_progress(payload)
 
 
 def _unique_dest_path(dest_dir: str, base_name: str) -> str:
@@ -109,21 +103,39 @@ def _unique_dest_path(dest_dir: str, base_name: str) -> str:
         n += 1
 
 
+def _apps_root(mount_path: str) -> str:
+    return os.path.join(_games_root(mount_path), APPS_DIRNAME)
+
+
+def _nds_out_ext(ext: str) -> str:
+    """Normaliza extensão NDS/DSi à saída (.ids/.srl → .nds, .app → .dsi)."""
+    low = (ext or "").lower()
+    if low in (".ids", ".srl"):
+        return ".nds"
+    if low == ".app":
+        return ".dsi"
+    return low
+
+
 def _dest_dir_for_import(
-    mount_path: str, ext: str, games_dest_dir: str
+    mount_path: str,
+    ext: str,
+    games_dest_dir: str,
+    *,
+    nds_kind: Optional[str] = None,
 ) -> tuple[Optional[str], Optional[str]]:
     """
-    Devolve (dest_dir, kind) onde kind é 'games' ou 'retro'.
-    Retro nunca vai para Games/.
+    Devolve (dest_dir, bucket) onde bucket é 'games' | 'apps' | 'retro'.
+    NDS/DSi e retro vão para Games/ (apps → Games/Apps/).
     """
     low = (ext or "").lower()
     if low in GAME_EXTS:
+        if nds_kind == "app":
+            return _apps_root(mount_path), "apps"
         return games_dest_dir, "games"
-    rel = RETRO_ROM_DIRS.get(low)
-    if not rel:
-        return None, None
-    dest = os.path.join(mount_path, *rel.replace("\\", "/").split("/"))
-    return dest, "retro"
+    if low in RETRO_EXTS:
+        return games_dest_dir, "retro"
+    return None, None
 
 # Layouts de organização DSPico (escolha do utilizador)
 LAYOUT_FRANCHISE = "franchise"  # Games/<franquia>/
@@ -168,9 +180,8 @@ _KEEP_DIR_NAMES = frozenset(
 _KEEP_ROOT_FILES = frozenset({"_picoboot.nds", "snemul.cfg"})
 _PICOBOOT_NAME = "_picoboot.nds"
 
-# Não recolher jogos dentro destas pastas (sistema / CFW / emunand / emuladores).
-# Nota: `roms`/`ROMs` NÃO entra aqui — jogos NDS em /roms/ do TWiLight são
-# resgatados; a pasta em si é preservada em _KEEP_DIR_NAMES (emuladores Pico).
+# Não descer nestas pastas ao recolher (sistema DSPico / emunand / emuladores).
+# Pastas estrangeiras (_nds, MOONSHL, …) e ROMs/ SÃO varridas para migrar jogos.
 _COLLECT_SKIP_DIRS = frozenset(
     {
         "_pico",
@@ -334,8 +345,38 @@ def _format_size(n: int) -> str:
     return f"{n / (1024 * 1024):.1f} MB"
 
 
+# Cache curto: inspect/browse no USB MSC evitam walks repetidos na mesma sessão.
+_GAMES_COUNT_CACHE: dict[str, tuple[float, int]] = {}
+_GAMES_COUNT_TTL_S = 5.0
+_DUP_INDEX_CACHE: dict[str, tuple[float, dict[str, list[dict[str, Any]]]]] = {}
+_DUP_INDEX_TTL_S = 30.0
+
+
+def invalidate_dspico_library_caches(mount_path: Optional[str] = None) -> None:
+    """Invalida contagens/índices após escrita na biblioteca DSPico."""
+    if mount_path is None:
+        _GAMES_COUNT_CACHE.clear()
+        _DUP_INDEX_CACHE.clear()
+        return
+    try:
+        key = os.path.realpath(mount_path)
+    except OSError:
+        key = mount_path
+    _GAMES_COUNT_CACHE.pop(key, None)
+    _DUP_INDEX_CACHE.pop(key, None)
+
+
 def _count_games(mount_path: str) -> int:
-    """Conta .nds/.dsi/.ids em Games/ e também soltos na raiz (exceto launcher)."""
+    """Conta jogos (NDS + retro) em Games/ e soltos na raiz (exceto launcher)."""
+    try:
+        cache_key = os.path.realpath(mount_path)
+    except OSError:
+        cache_key = mount_path
+    now = time.monotonic()
+    hit = _GAMES_COUNT_CACHE.get(cache_key)
+    if hit and now - hit[0] < _GAMES_COUNT_TTL_S:
+        return hit[1]
+
     n = 0
     root = _games_root(mount_path)
     if os.path.isdir(root):
@@ -348,7 +389,7 @@ def _count_games(mount_path: str) -> int:
             for f in files:
                 if f.startswith(".") or f.endswith(".partial"):
                     continue
-                if os.path.splitext(f)[1].lower() in GAME_EXTS:
+                if os.path.splitext(f)[1].lower() in LIBRARY_FILE_EXTS:
                     n += 1
     try:
         for f in os.listdir(mount_path):
@@ -357,10 +398,11 @@ def _count_games(mount_path: str) -> int:
             full = os.path.join(mount_path, f)
             if not os.path.isfile(full):
                 continue
-            if os.path.splitext(f)[1].lower() in GAME_EXTS:
+            if os.path.splitext(f)[1].lower() in LIBRARY_FILE_EXTS:
                 n += 1
     except OSError:
         pass
+    _GAMES_COUNT_CACHE[cache_key] = (now, n)
     return n
 
 
@@ -611,35 +653,53 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
     Prepara o microSD do DSPico com Pico Launcher + Loader oficiais pinados.
     O firmware .uf2 do cartucho não é gravado aqui.
     """
+    from core.progress import ProgressTracker
+
     log = lambda msg: emit_log(log_callback, msg)
     log("=== Instalando pacote DSPico (Pico Launcher + Loader oficiais LNH) ===")
+    tracker = ProgressTracker(
+        "setup_dspico",
+        label="A preparar…",
+        total_items=5,
+    )
+    tracker.set_phase("download", label="A obter pacotes oficiais…")
 
     try:
         assert_dspico_cache_key("pico_launcher")
         assert_dspico_cache_key("pico_loader_dspico")
         launcher_zip = ensure_cached("pico_launcher", log_callback)
+        tracker.advance_item(label="Launcher obtido", written=True)
         loader_zip = ensure_cached("pico_loader_dspico", log_callback)
+        tracker.advance_item(label="Loader obtido", written=True)
+        tracker.set_phase("extract", label="A extrair pacotes…")
         launcher_dir = _extract_zip_safe(
             launcher_zip, os.path.join(CACHE_DIR, "Pico_Launcher"), log_callback
         )
         loader_dir = _extract_zip_safe(
             loader_zip, os.path.join(CACHE_DIR, "Pico_Loader_DSPICO"), log_callback
         )
+        tracker.advance_item(label="Pacotes extraídos", written=True)
     except Exception as e:
+        tracker.finish("Falha ao obter pacote")
         return False, f"Não foi possível obter o pacote DSPico: {e}"
 
     assembled = os.path.join(CACHE_DIR, "DSPico_SD_ready")
     try:
+        tracker.set_phase("assemble", label="A montar árvore DSPico…")
         _assemble_dspico_staging(launcher_dir, loader_dir, assembled)
+        tracker.advance_item(label="Árvore montada", written=True)
     except Exception as e:
+        tracker.finish("Falha ao montar árvore")
         return False, str(e)
 
     if not dspico_markers_ok(assembled):
+        tracker.finish("Árvore incompleta")
         return False, "Árvore DSPico montada incompleta após assemble."
 
     undo = UndoStack()
     baks: list[Optional[str]] = []
     try:
+        tracker.set_phase("copy", label="A gravar no cartão…")
         bak = _stage_file_copy(
             undo,
             os.path.join(assembled, "_picoboot.nds"),
@@ -669,14 +729,17 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
         if not dspico_markers_ok(mount_path):
             raise RuntimeError("Validação pós-install falhou (markers DSPico).")
 
+        tracker.advance_item(label="Cartão pronto", written=True)
         log(
             "🎉 MicroSD DSPico pronto. Insira no cartucho "
             "(firmware .uf2 oficial LNH já deve estar gravado)."
         )
+        tracker.finish("Pacote DSPico instalado")
         return True, "Pacote DSPico instalado no microSD."
     except Exception as e:
         log(f"⚠️ Falha ao instalar DSPico — revertendo: {e}")
         undo.rollback(log_callback, mount_path=mount_path)
+        tracker.finish("Falha na instalação")
         return False, str(e)
 
 
@@ -736,7 +799,7 @@ def _count_visible_children(path: str, allowed_exts: Optional[frozenset] = None)
 
 
 def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
-    """Lista pastas e jogos sob Games/ e ROMs/ (biblioteca DSPico)."""
+    """Lista pastas e jogos sob Games/ (NDS + retro); ROMs/ só se existir (legado)."""
     if not os.path.isdir(mount_path):
         return {
             "success": False,
@@ -762,25 +825,31 @@ def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
         games_root = _games_root(mount_path)
         roms_root = _roms_root(mount_path)
         os.makedirs(games_root, exist_ok=True)
-        os.makedirs(roms_root, exist_ok=True)
         dirs_out.append(
             {
                 "name": GAMES_DIRNAME,
                 "rel_path": GAMES_DIRNAME,
-                "item_count": _count_visible_children(games_root, GAME_EXTS),
+                "item_count": _count_visible_children(games_root, LIBRARY_FILE_EXTS),
                 "type": "dir",
                 "area": "games",
             }
         )
-        dirs_out.append(
-            {
-                "name": ROMS_DIRNAME,
-                "rel_path": ROMS_DIRNAME,
-                "item_count": _count_visible_children(roms_root, RETRO_EXTS),
-                "type": "dir",
-                "area": "roms",
-            }
-        )
+        # Legado: mostrar ROMs/ só se a pasta já existir no cartão.
+        if os.path.isdir(roms_root):
+            n_roms = _count_visible_children(roms_root, RETRO_EXTS)
+            if n_roms > 0 or any(
+                not n.startswith(".")
+                for n in (os.listdir(roms_root) if os.path.isdir(roms_root) else [])
+            ):
+                dirs_out.append(
+                    {
+                        "name": ROMS_DIRNAME,
+                        "rel_path": ROMS_DIRNAME,
+                        "item_count": n_roms,
+                        "type": "dir",
+                        "area": "roms",
+                    }
+                )
         return {
             "success": True,
             "rel_dir": "",
@@ -809,7 +878,7 @@ def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
         else:
             os.makedirs(games_root, exist_ok=True)
             target = os.path.realpath(games_root)
-        allowed = GAME_EXTS
+        allowed = LIBRARY_FILE_EXTS
         root_for_rel = games_root
         nav_prefix = GAMES_DIRNAME
     else:
@@ -827,7 +896,16 @@ def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
                     "area": "roms",
                 }
         else:
-            os.makedirs(roms_root, exist_ok=True)
+            if not os.path.isdir(roms_root):
+                return {
+                    "success": False,
+                    "error": "Pasta ROMs/ inexistente.",
+                    "dirs": [],
+                    "files": [],
+                    "rel_dir": under,
+                    "nav": nav,
+                    "area": "roms",
+                }
             target = os.path.realpath(roms_root)
         allowed = RETRO_EXTS
         root_for_rel = roms_root
@@ -878,12 +956,16 @@ def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
             kind = None
             platform = _RETRO_PLATFORM.get(ext, "retro")
             if area == "games":
-                raw_title, game_code, _uc, maker = get_nds_header_info(full)
-                kind = classify_nds_kind(
-                    raw_title, game_code, maker, name, at_sd_root=False
-                )
-                display = clean_rom_filename(name, game_code) or display
-                platform = "dsi" if ext == ".dsi" else "nds"
+                if ext in GAME_EXTS:
+                    raw_title, game_code, unitcode, maker = get_nds_header_info(full)
+                    kind = classify_nds_kind(
+                        raw_title, game_code, maker, name, at_sd_root=False
+                    )
+                    display = clean_rom_filename(name, game_code) or display
+                    platform = _dspico_platform(ext, unitcode)
+                else:
+                    kind = "retro"
+                    display = clean_rom_filename(name, None) or display
                 op_rel = rel_under
             else:
                 kind = "retro"
@@ -905,7 +987,8 @@ def browse_dspico_games(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
             try:
                 from core.pico_artwork import enrich_dspico_game_entry
 
-                enrich_dspico_game_entry(mount_path, entry, with_preview=True)
+                # Sem preview síncrono: UI pede thumbs sob demanda (USB MSC lento).
+                enrich_dspico_game_entry(mount_path, entry, with_preview=False)
             except Exception:
                 entry["has_cover"] = False
                 entry["has_icon"] = False
@@ -968,12 +1051,7 @@ def mkdir_dspico_games(
 
 
 def _retro_platform_for_ext(ext: str) -> Optional[str]:
-    rel = RETRO_ROM_DIRS.get((ext or "").lower())
-    if not rel:
-        return None
-    # ROMs/GBA → gba
-    parts = rel.replace("\\", "/").split("/")
-    return (parts[-1] if parts else "").lower() or None
+    return _RETRO_PLATFORM.get((ext or "").lower())
 
 
 def _dspico_entry_meta(full: str, name: str, ext: str, *, under_games: bool) -> Optional[dict]:
@@ -982,17 +1060,17 @@ def _dspico_entry_meta(full: str, name: str, ext: str, *, under_games: bool) -> 
     kind = None
     platform = None
     display = os.path.splitext(name)[0]
-    if under_games and ext in GAME_EXTS:
-        raw_title, game_code, _uc, maker = get_nds_header_info(full)
+    if ext in GAME_EXTS:
+        raw_title, game_code, unitcode, maker = get_nds_header_info(full)
         kind = classify_nds_kind(raw_title, game_code, maker, name, at_sd_root=False)
         if kind == "system":
             return None
         display = clean_rom_filename(name, game_code) or display
-        platform = "dsi" if ext == ".dsi" else "nds"
-    elif not under_games and ext in RETRO_EXTS:
+        platform = _dspico_platform(ext, unitcode)
+    elif ext in RETRO_EXTS:
         platform = _retro_platform_for_ext(ext)
-        display = os.path.splitext(name)[0]
-        kind = "game"
+        display = clean_rom_filename(name, None) or display
+        kind = "retro"
     else:
         return None
     key = duplicate_key(platform, game_code, display)
@@ -1013,11 +1091,24 @@ def _dspico_entry_meta(full: str, name: str, ext: str, *, under_games: bool) -> 
         "ext": ext,
         "dup_key": key,
         "full": full,
+        "under_games": under_games,
     }
 
 
-def _index_dspico_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]:
-    """Indexa Games/ (NDS) e ROMs/ (retro) por chave de duplicata."""
+def _index_dspico_by_dup_key(
+    mount_path: str, *, use_cache: bool = True
+) -> dict[str, list[dict[str, Any]]]:
+    """Indexa Games/ (NDS + retro) e ROMs/ legado por chave de duplicata."""
+    try:
+        cache_key = os.path.realpath(mount_path)
+    except OSError:
+        cache_key = mount_path
+    now = time.monotonic()
+    if use_cache:
+        hit = _DUP_INDEX_CACHE.get(cache_key)
+        if hit and now - hit[0] < _DUP_INDEX_TTL_S:
+            return hit[1]
+
     index: dict[str, list[dict[str, Any]]] = {}
     games_root = _games_root(mount_path)
     if os.path.isdir(games_root):
@@ -1029,7 +1120,7 @@ def _index_dspico_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]
                 if name.startswith(".") or name.endswith(".partial"):
                     continue
                 ext = os.path.splitext(name)[1].lower()
-                if ext not in GAME_EXTS:
+                if ext not in LIBRARY_FILE_EXTS:
                     continue
                 full = os.path.join(root, name)
                 meta = _dspico_entry_meta(full, name, ext, under_games=True)
@@ -1082,6 +1173,7 @@ def _index_dspico_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]
                     "size_label": meta["size_label"],
                 }
                 index.setdefault(meta["dup_key"], []).append(item)
+    _DUP_INDEX_CACHE[cache_key] = (now, index)
     return index
 
 
@@ -1272,7 +1364,7 @@ def import_dspico_games(
     conflict_resolutions=None,
 ) -> tuple[bool, str, dict]:
     """
-    Copia ROMs do host: NDS/DSi → Games/; GB/GBC/GBA/SNES → ROMs/.
+    Copia ROMs do host para Games/ (NDS, apps em Games/Apps/, retro).
     Aceita arquivos zip/7z/rar. Emite progresso para a UI.
     conflict_resolutions: mapa conflict_id → replace|keep_both|skip.
     """
@@ -1306,10 +1398,11 @@ def import_dspico_games(
     errors: list[str] = []
     expand_stats: dict = {}
     games_n = 0
+    apps_n = 0
     retro_n = 0
     replaced = 0
 
-    log(f"=== Importar {len(source_paths)} item(ns) (Games/ + ROMs/) ===")
+    log(f"=== Importar {len(source_paths)} item(ns) para Games/ ===")
     try:
         rom_paths, expand_errors, expand_stats = expand_rom_sources(
             source_paths, IMPORT_EXTS
@@ -1331,30 +1424,56 @@ def import_dspico_games(
 
     index = _index_dspico_by_dup_key(mount_path)
     total = len(rom_paths)
+    total_bytes = 0
+    for src in rom_paths:
+        try:
+            total_bytes += max(0, int(os.path.getsize(src)))
+        except OSError:
+            pass
 
-    def _progress(current: int, label: str, *, done: bool = False) -> None:
-        _emit_import_progress(
-            {
-                "op": "dspico_import_games",
-                "current": current,
-                "total": total,
-                "written": copied,
-                "skipped": skipped,
-                "label": label,
-                "done": done,
-            }
-        )
+    from core.progress import ProgressTracker
+
+    tracker = ProgressTracker(
+        "dspico_import_games",
+        label="A iniciar…",
+        total_items=total,
+        total_bytes=total_bytes,
+        emit_fn=_emit_import_progress,
+    )
 
     try:
-        _progress(0, "A iniciar…")
-        for idx, src in enumerate(rom_paths, start=1):
+        tracker.tick(force=True)
+        for _idx, src in enumerate(rom_paths, start=1):
             base_name = os.path.basename(src)
+            try:
+                src_size = max(0, int(os.path.getsize(src)))
+            except OSError:
+                src_size = 0
             ext = os.path.splitext(base_name)[1].lower()
-            dest_dir, kind = _dest_dir_for_import(mount_path, ext, games_dest)
-            _progress(idx, base_name)
-            if not dest_dir or not kind:
+            nds_kind = None
+            if ext in GAME_EXTS:
+                raw_title, game_code, _uc, maker = get_nds_header_info(src)
+                nds_kind = classify_nds_kind(
+                    raw_title, game_code, maker, base_name, at_sd_root=False
+                )
+                if nds_kind == "system":
+                    log(f"⏭️ Ignorado (sistema): {base_name}")
+                    skipped += 1
+                    tracker.advance_item(
+                        bytes_delta=src_size, label=base_name, skipped=True
+                    )
+                    continue
+            dest_dir, bucket = _dest_dir_for_import(
+                mount_path, ext, games_dest, nds_kind=nds_kind
+            )
+            tracker.set_label(base_name)
+            tracker.tick(force=True)
+            if not dest_dir or not bucket:
                 errors.append(f"Extensão não suportada: {base_name}")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
                 continue
 
             dup_key, _gc, _disp = _import_src_dup_info(src, ext)
@@ -1366,6 +1485,9 @@ def import_dspico_games(
             if resolution == "skip":
                 log(f"⏭️ Ignorado (duplicata): {base_name}")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
                 continue
 
             try:
@@ -1373,92 +1495,106 @@ def import_dspico_games(
             except OSError as e:
                 errors.append(f"{base_name}: pasta destino — {e}")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
                 continue
+
+            out_name = base_name
+            if ext in GAME_EXTS:
+                out_name = os.path.splitext(base_name)[0] + _nds_out_ext(ext)
 
             if resolution == "replace" and existing:
                 _remove_dspico_existing(mount_path, existing, log=log)
                 replaced += len(existing)
-                dest = os.path.join(dest_dir, base_name)
+                dest = os.path.join(dest_dir, out_name)
             else:
-                dest = _unique_dest_path(dest_dir, base_name)
+                dest = _unique_dest_path(dest_dir, out_name)
             try:
                 dest_parent = os.path.realpath(os.path.dirname(dest))
                 common = os.path.commonpath([mount_real, dest_parent])
             except ValueError:
                 errors.append(f"{base_name}: destino fora do cartão.")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
                 continue
             if os.path.normcase(common) != os.path.normcase(mount_real):
                 errors.append(f"{base_name}: destino fora do cartão.")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
                 continue
-            if kind == "games":
-                try:
-                    g_common = os.path.commonpath(
-                        [os.path.realpath(games_root), dest_parent]
-                    )
-                except ValueError:
-                    errors.append("Destino fora de Games/.")
-                    skipped += 1
-                    continue
-                if os.path.normcase(g_common) != os.path.normcase(
-                    os.path.realpath(games_root)
-                ):
-                    errors.append("Destino fora de Games/.")
-                    skipped += 1
-                    continue
-            else:
-                try:
-                    if os.path.commonpath(
-                        [os.path.realpath(games_root), dest_parent]
-                    ) == os.path.realpath(games_root):
-                        errors.append(f"{base_name}: ROM retro não pode ir a Games/.")
-                        skipped += 1
-                        continue
-                except ValueError:
-                    pass
+            try:
+                g_common = os.path.commonpath(
+                    [os.path.realpath(games_root), dest_parent]
+                )
+            except ValueError:
+                errors.append("Destino fora de Games/.")
+                skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
+                continue
+            if os.path.normcase(g_common) != os.path.normcase(
+                os.path.realpath(games_root)
+            ):
+                errors.append("Destino fora de Games/.")
+                skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, skipped=True
+                )
+                continue
 
             try:
                 copy_fast(src, dest, log_callback=log_callback)
                 undo.push_remove(dest)
                 copied += 1
-                if kind == "games":
-                    games_n += 1
-                    rel = os.path.relpath(dest, games_root).replace("\\", "/")
-                    log(f"📥 {base_name} → Games/{rel}")
-                else:
+                if bucket == "apps":
+                    apps_n += 1
+                elif bucket == "retro":
                     retro_n += 1
-                    rel = os.path.relpath(dest, mount_path).replace("\\", "/")
-                    log(f"📥 {base_name} → /{rel}")
+                else:
+                    games_n += 1
+                rel = os.path.relpath(dest, games_root).replace("\\", "/")
+                log(f"📥 {base_name} → Games/{rel}")
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, written=True
+                )
 
-                if kind == "games":
-                    stem = os.path.splitext(src)[0]
-                    src_dir = os.path.dirname(src)
-                    try:
-                        near = os.listdir(src_dir)
-                    except OSError:
-                        near = []
-                    stem_l = os.path.basename(stem).lower()
-                    for name in near:
-                        for key, _suf in companion_index_keys(name):
-                            if key == stem_l:
-                                sav_src = os.path.join(src_dir, name)
-                                if os.path.isfile(sav_src):
-                                    sav_dest = os.path.join(
-                                        os.path.dirname(dest), name
+                stem = os.path.splitext(src)[0]
+                src_dir = os.path.dirname(src)
+                try:
+                    near = os.listdir(src_dir)
+                except OSError:
+                    near = []
+                stem_l = os.path.basename(stem).lower()
+                for name in near:
+                    for key, _suf in companion_index_keys(name):
+                        if key == stem_l:
+                            sav_src = os.path.join(src_dir, name)
+                            if os.path.isfile(sav_src):
+                                sav_dest = os.path.join(
+                                    os.path.dirname(dest), name
+                                )
+                                if not os.path.exists(sav_dest):
+                                    copy_fast(
+                                        sav_src,
+                                        sav_dest,
+                                        log_callback=log_callback,
                                     )
-                                    if not os.path.exists(sav_dest):
-                                        copy_fast(
-                                            sav_src,
-                                            sav_dest,
-                                            log_callback=log_callback,
-                                        )
-                                        undo.push_remove(sav_dest)
-                                break
+                                    undo.push_remove(sav_dest)
+                            break
             except Exception as e:
                 errors.append(f"{base_name}: {e}")
                 skipped += 1
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, failed=True
+                )
 
+        invalidate_dspico_library_caches(mount_path)
         sync_volume(mount_path)
         stats = {
             "copied": copied,
@@ -1467,22 +1603,27 @@ def import_dspico_games(
             "archives": expand_stats.get("archives", 0),
             "extracted_roms": expand_stats.get("extracted_roms", 0),
             "games": games_n,
+            "apps": apps_n,
             "retro": retro_n,
             "replaced": replaced,
         }
+        tracker.written = copied
+        tracker.skipped = skipped
         if copied == 0 and errors:
-            _progress(total, errors[0], done=True)
+            tracker.finish(errors[0])
             return False, errors[0], stats
         if copied == 0:
             msg = f"Nada a importar ({skipped} ignorado(s))."
-            _progress(total, msg, done=True)
+            tracker.finish(msg)
             return True, msg, stats
         parts = []
         if games_n:
-            parts.append(f"{games_n} em Games/")
+            parts.append(f"{games_n} jogo(s)")
+        if apps_n:
+            parts.append(f"{apps_n} app(s)")
         if retro_n:
-            parts.append(f"{retro_n} em ROMs/")
-        msg = f"{copied} jogo(s) importado(s)"
+            parts.append(f"{retro_n} retro")
+        msg = f"{copied} ficheiro(s) importado(s) para Games/"
         if parts:
             msg += " (" + ", ".join(parts) + ")"
         msg += "."
@@ -1492,7 +1633,7 @@ def import_dspico_games(
             msg += f" ({expand_stats['archives']} arquivo(s))"
         if skipped:
             msg += f" {skipped} ignorado(s)."
-        _progress(total, msg, done=True)
+        tracker.finish(msg)
         return True, msg, stats
     finally:
         cleanup_expand_staging(expand_stats)
@@ -1554,6 +1695,7 @@ def delete_dspico_games(
         except OSError as e:
             errors.append(str(e))
 
+    invalidate_dspico_library_caches(mount_path)
     sync_volume(mount_path)
     stats = {"removed": removed, "errors": len(errors)}
     if removed == 0:
@@ -1587,6 +1729,7 @@ def delete_dspico_retro_roms(
             log(f"🗑️ Removido: /{show}")
         except OSError as e:
             errors.append(str(e))
+    invalidate_dspico_library_caches(mount_path)
     sync_volume(mount_path)
     stats = {"removed": removed, "errors": len(errors)}
     if removed == 0:
@@ -1639,6 +1782,7 @@ def move_dspico_games(
         except OSError as e:
             errors.append(str(e))
 
+    invalidate_dspico_library_caches(mount_path)
     sync_volume(mount_path)
     stats = {"moved": moved, "errors": len(errors)}
     if moved == 0 and errors:
@@ -1682,13 +1826,16 @@ def _safe_move(src: str, dst: str) -> str:
     return dst
 
 
-def _dspico_platform(ext: str, unitcode) -> str:
-    """Pasta de plataforma no DSPico: nds ou dsi."""
+def _dspico_platform(ext: str, unitcode=None) -> str:
+    """Pasta de plataforma: nds/dsi ou plataforma retro (gb, gba, nes, …)."""
+    low = (ext or "").lower()
+    if low in RETRO_EXTS:
+        return _RETRO_PLATFORM.get(low, "retro")
     try:
         uc = int(unitcode) if unitcode is not None else 0
     except (TypeError, ValueError):
         uc = 0
-    if ext == ".dsi" or uc == 2:
+    if low == ".dsi" or low == ".app" or uc == 2:
         return "dsi"
     return "nds"
 
@@ -1696,7 +1843,7 @@ def _dspico_platform(ext: str, unitcode) -> str:
 def _dspico_dest_dir(
     mount_path: str, platform: str, franchise: Optional[str], layout: str
 ) -> str:
-    """Directório de destino absoluto conforme o layout DSPico."""
+    """Directório de destino absoluto conforme o layout DSPico (jogos + retro)."""
     if layout == LAYOUT_ROOT:
         return mount_path
     games = _games_root(mount_path)
@@ -1704,7 +1851,6 @@ def _dspico_dest_dir(
         return games
     if layout == LAYOUT_PLATFORM:
         return os.path.join(games, platform or "nds")
-    # franchise
     folder = franchise or UNKNOWN_FRANCHISE
     cleaned = _sanitize_dir_name(folder) or UNKNOWN_FRANCHISE
     return os.path.join(games, cleaned)
@@ -1715,10 +1861,16 @@ def _is_picoboot(name: str) -> bool:
 
 
 def _should_skip_collect_dir(name: str) -> bool:
+    """Só pastas de sistema DSPico — entra em _nds/MOONSHL/ROMs para migrar jogos.
+
+    ROMs/BIOS fica intacta (BIOS proprietária / dumps do utilizador).
+    """
     if not name or name.startswith("."):
         return True
     low = name.lower()
-    return low in _COLLECT_SKIP_DIRS or low in _SKIP_DIR_LOWER
+    if low == "bios":
+        return True
+    return low in _COLLECT_SKIP_DIRS
 
 
 def _prune_empty_under(root: str, *, preserve_root: bool = True) -> int:
@@ -1742,7 +1894,6 @@ def _prune_empty_under(root: str, *, preserve_root: bool = True) -> int:
         ]
         if meaningful:
             continue
-        # limpar lixo macOS antes de rmdir
         for e in entries:
             try:
                 os.remove(os.path.join(walk_root, e))
@@ -1768,12 +1919,21 @@ def _remove_path_best_effort(path: str, log) -> bool:
         return False
 
 
-def _retro_dest_dir(mount_path: str, ext: str) -> Optional[str]:
-    """Destino canónico ROMs/<sistema>/ para uma extensão retro."""
-    rel = RETRO_ROM_DIRS.get((ext or "").lower())
-    if not rel:
-        return None
-    return os.path.join(mount_path, *rel.replace("\\", "/").split("/"))
+def _ensure_dir_cached(path: str, created: set[str], log) -> bool:
+    """makedirs uma vez por destino; devolve False se falhar."""
+    try:
+        real = os.path.realpath(path)
+    except OSError:
+        real = path
+    if real in created:
+        return True
+    try:
+        os.makedirs(path, exist_ok=True)
+        created.add(real)
+        return True
+    except OSError as e:
+        log(f"⚠️ Falha ao criar pasta: {e}")
+        return False
 
 
 def organize_dspico_sd(
@@ -1782,18 +1942,16 @@ def organize_dspico_sd(
     """
     Limpa o microSD de conteúdo de outros sistemas e organiza jogos.
 
-    Mantém o necessário para DSPico: `_picoboot.nds`, `_pico/`, `Games/`,
-    emunand (`photo/`, `shared1/`, `shared2/`, `sys/`), e suporte a emuladores
-    (`ROMs/`, `_gba/`, `Emulators/`, `data/`, `snemul.cfg`).
+    Mantém: `_picoboot.nds`, `_pico/`, `Games/`, emunand, `Emulators/`,
+    `_gba/`, `data/`, `snemul.cfg`, e `ROMs/` se existir (BIOS legado).
 
-    NDS/DSi seguem o layout escolhido. ROMs retro (GB/GBC/GBA/SNES) em
-    qualquer pasta do cartão (exceto pastas de sistema) vão para
-    `ROMs/<sistema>/` — o Pico Launcher abre-as em qualquer sítio, mas os
-    emuladores esperam estas pastas.
+    NDS/DSi e ROMs retro de todos os emuladores Pico seguem o mesmo layout
+    em `Games/` (apps → `Games/Apps/`). Não cria pasta `ROMs/` para jogos;
+    `ROMs/BIOS` (se existir) é preservada.
 
-    Layouts (só NDS/DSi):
+    Layouts:
     - franchise: Games/<franquia>/
-    - platform:  Games/nds/ ou Games/dsi/
+    - platform:  Games/<plat>/ (nds, dsi, gba, genesis, 2600, …)
     - games:     soltos em Games/
     - root:      soltos na raiz ao lado do launcher
     """
@@ -1814,6 +1972,14 @@ def organize_dspico_sd(
         LAYOUT_ROOT: "soltos na raiz (ao lado do launcher)",
     }
     log(f"=== Organizar DSPico ({labels.get(mode, mode)}) ===")
+    from core.progress import ProgressTracker
+
+    tracker = ProgressTracker(
+        "dspico_organize",
+        label="A varrer o cartão…",
+        emit_fn=_emit_import_progress,
+    )
+    tracker.set_phase("scan", label="A varrer o cartão…")
 
     if not isinstance(mount_path, str) or not mount_path.strip():
         return False, "Caminho do cartão inválido.", {}
@@ -1823,14 +1989,15 @@ def organize_dspico_sd(
     mount_norm = mount_path.rstrip("/\\")
     games_root = _games_root(mount_path)
     roms_root = _roms_root(mount_path)
+    apps_root = _apps_root(mount_path)
     if mode != LAYOUT_ROOT:
         os.makedirs(games_root, exist_ok=True)
-    os.makedirs(roms_root, exist_ok=True)
 
-    # --- 1) Recolher jogos e companions ------------------------------------
-    rom_candidates = []  # (name, full, ext, platform, game_code, raw_title)
-    retro_candidates = []  # (name, full, ext)
-    companion_candidates = []  # (name, full)
+    # candidates: (name, full, ext, kind, platform, game_code, raw_title)
+    # kind: game | app | retro
+    candidates: list[tuple] = []
+    companion_candidates: list[tuple] = []
+    header_cache: dict[str, tuple] = {}
 
     for root, dirs, files in os.walk(mount_path, topdown=True):
         dirs[:] = [d for d in dirs if not _should_skip_collect_dir(d)]
@@ -1851,32 +2018,52 @@ def organize_dspico_sd(
                 continue
 
             if ext in RETRO_EXTS:
-                retro_candidates.append((f, full, ext))
+                plat = _dspico_platform(ext)
+                candidates.append((f, full, ext, "retro", plat, None, None))
                 continue
 
             if ext not in GAME_EXTS:
                 continue
+            if _is_picoboot(f):
+                continue
 
-            header = get_nds_header_info(full)
+            try:
+                real = os.path.realpath(full)
+            except OSError:
+                real = full
+            if real in header_cache:
+                header = header_cache[real]
+            else:
+                header = get_nds_header_info(full)
+                header_cache[real] = header
             raw_title, game_code, unitcode, maker = header
             kind = classify_nds_kind(
                 raw_title, game_code, maker, f, at_sd_root=at_sd_root
             )
             if kind == "system":
                 continue
-            if _is_picoboot(f):
-                continue
-
+            if kind != "app":
+                kind = "game"
             plat = _dspico_platform(ext, unitcode)
-            rom_candidates.append(
-                (f, full, ext, plat, game_code, raw_title)
+            candidates.append(
+                (f, full, ext, kind, plat, game_code, raw_title)
             )
 
+    n_games = sum(1 for c in candidates if c[3] == "game")
+    n_apps = sum(1 for c in candidates if c[3] == "app")
+    n_retro = sum(1 for c in candidates if c[3] == "retro")
     log(
-        f"Encontrados: {len(rom_candidates)} NDS/DSi, "
-        f"{len(retro_candidates)} ROM(s) retro e "
-        f"{len(companion_candidates)} save(s)/sidecar(s)."
+        f"Encontrados: {n_games} jogo(s), {n_apps} app(s), "
+        f"{n_retro} retro, {len(companion_candidates)} save(s)."
     )
+    total_bytes = 0
+    for _c in candidates:
+        try:
+            total_bytes += max(0, int(os.path.getsize(_c[1])))
+        except OSError:
+            pass
+    tracker.set_totals(items=len(candidates), bytes=total_bytes)
+    tracker.set_phase("move", label="A organizar jogos…")
 
     companions_by_stem: dict[str, list] = {}
     for comp_name, comp_path in companion_candidates:
@@ -1887,12 +2074,15 @@ def organize_dspico_sd(
 
     handled_companions: set[str] = set()
     kept_paths: set[str] = set()
+    dirs_created: set[str] = set()
     organized = 0
+    games_moved = 0
+    apps_moved = 0
+    retro_moved = 0
     companions_moved = 0
     move_failures = 0
     counts: dict[str, int] = {}
 
-    # Sempre preservar launcher + _pico
     pico_boot = os.path.join(mount_path, _PICOBOOT_NAME)
     if os.path.isfile(pico_boot):
         kept_paths.add(os.path.realpath(pico_boot))
@@ -1900,48 +2090,33 @@ def organize_dspico_sd(
     if os.path.isdir(pico_dir):
         kept_paths.add(os.path.realpath(pico_dir))
 
-    for original_name, full_path, ext, platform, game_code, raw_title in rom_candidates:
+    for i, (original_name, full_path, ext, kind, platform, game_code, raw_title) in enumerate(
+        candidates, start=1
+    ):
         if not os.path.exists(full_path):
+            tracker.advance_item(label=original_name, skipped=True)
             continue
+        try:
+            item_size = max(0, int(os.path.getsize(full_path)))
+        except OSError:
+            item_size = 0
 
         clean_name = clean_rom_filename(original_name, game_code)
-        out_ext = ".nds" if ext == ".ids" else ext
+        out_ext = _nds_out_ext(ext) if ext in GAME_EXTS else ext
 
-        franchise = None
-        if mode == LAYOUT_FRANCHISE:
-            franchise = detect_franchise(
-                clean_name,
-                game_code=game_code,
-                raw_title=raw_title,
-                original_name=original_name,
-            )
-
-        dest_dir = _dspico_dest_dir(mount_path, platform, franchise, mode)
-        try:
-            os.makedirs(dest_dir, exist_ok=True)
-        except OSError as e:
-            move_failures += 1
-            log(f"⚠️ Falha ao criar pasta para {original_name}: {e}")
-            continue
-
-        target = os.path.join(dest_dir, f"{clean_name}{out_ext}")
-        try:
-            new_path = _safe_move(full_path, target)
-            organized += 1
-            kept_paths.add(os.path.realpath(new_path))
-            try:
-                if mode == LAYOUT_ROOT:
-                    rel = os.path.basename(new_path)
-                else:
-                    rel = os.path.relpath(new_path, games_root).replace("\\", "/")
-            except ValueError:
-                rel = os.path.basename(new_path)
-            where = rel if mode == LAYOUT_ROOT else f"Games/{rel}"
-            if os.path.abspath(full_path) != os.path.abspath(new_path):
-                log(f"🎮 {original_name} → {where}")
-            else:
-                log(f"🎮 {where} (já no lugar)")
-
+        if kind == "app":
+            dest_dir = apps_root
+            bucket = APPS_DIRNAME
+        else:
+            franchise = None
+            if mode == LAYOUT_FRANCHISE:
+                franchise = detect_franchise(
+                    clean_name,
+                    game_code=game_code,
+                    raw_title=raw_title,
+                    original_name=original_name,
+                )
+            dest_dir = _dspico_dest_dir(mount_path, platform, franchise, mode)
             if mode == LAYOUT_FRANCHISE:
                 bucket = franchise or UNKNOWN_FRANCHISE
             elif mode == LAYOUT_PLATFORM:
@@ -1950,10 +2125,49 @@ def organize_dspico_sd(
                 bucket = "raiz"
             else:
                 bucket = "Games"
+
+        if not _ensure_dir_cached(dest_dir, dirs_created, log):
+            move_failures += 1
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, failed=True
+            )
+            continue
+
+        target = os.path.join(dest_dir, f"{clean_name}{out_ext}")
+        try:
+            new_path = _safe_move(full_path, target)
+            organized += 1
+            if kind == "app":
+                apps_moved += 1
+            elif kind == "retro":
+                retro_moved += 1
+            else:
+                games_moved += 1
+            kept_paths.add(os.path.realpath(new_path))
+            try:
+                if mode == LAYOUT_ROOT and kind != "app":
+                    rel = os.path.basename(new_path)
+                    where = rel
+                else:
+                    rel = os.path.relpath(new_path, games_root).replace("\\", "/")
+                    where = f"Games/{rel}"
+            except ValueError:
+                where = os.path.basename(new_path)
+            icon = "🧩" if kind == "app" else ("🕹" if kind == "retro" else "🎮")
+            if os.path.abspath(full_path) != os.path.abspath(new_path):
+                log(f"{icon} {original_name} → {where}")
+            else:
+                log(f"{icon} {where} (já no lugar)")
             counts[bucket] = counts.get(bucket, 0) + 1
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, written=True
+            )
         except Exception as e:
             move_failures += 1
             log(f"⚠️ Falha ao mover {original_name}: {e}")
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, failed=True
+            )
             continue
 
         rom_dir = os.path.dirname(new_path)
@@ -1974,67 +2188,8 @@ def organize_dspico_sd(
                     move_failures += 1
                     log(f"⚠️ Falha ao mover {comp_name}: {e}")
 
-    # --- 1b) ROMs retro → ROMs/<sistema>/ (qualquer pasta de origem) --------
-    for original_name, full_path, ext in retro_candidates:
-        if not os.path.exists(full_path):
-            continue
-        dest_dir = _retro_dest_dir(mount_path, ext)
-        if not dest_dir:
-            continue
-        try:
-            os.makedirs(dest_dir, exist_ok=True)
-        except OSError as e:
-            move_failures += 1
-            log(f"⚠️ Falha ao criar pasta para {original_name}: {e}")
-            continue
-
-        clean_name = clean_rom_filename(original_name, None) or os.path.splitext(
-            original_name
-        )[0]
-        target = os.path.join(dest_dir, f"{clean_name}{ext}")
-        try:
-            new_path = _safe_move(full_path, target)
-            organized += 1
-            kept_paths.add(os.path.realpath(new_path))
-            try:
-                rel = os.path.relpath(new_path, mount_path).replace("\\", "/")
-            except ValueError:
-                rel = os.path.basename(new_path)
-            if os.path.abspath(full_path) != os.path.abspath(new_path):
-                log(f"🕹 {original_name} → {rel}")
-            else:
-                log(f"🕹 {rel} (já no lugar)")
-            bucket = RETRO_ROM_DIRS.get(ext, "ROMs")
-            counts[bucket] = counts.get(bucket, 0) + 1
-        except Exception as e:
-            move_failures += 1
-            log(f"⚠️ Falha ao mover {original_name}: {e}")
-            continue
-
-        rom_dir = os.path.dirname(new_path)
-        stem_original = os.path.splitext(original_name)[0]
-        final_stem = os.path.splitext(os.path.basename(new_path))[0]
-        for key in {stem_original.lower(), clean_name.lower(), final_stem.lower()}:
-            for comp_name, comp_path, suffix in companions_by_stem.get(key, []):
-                if comp_path in handled_companions or not os.path.exists(comp_path):
-                    continue
-                target_comp = os.path.join(rom_dir, f"{final_stem}{suffix}")
-                try:
-                    new_comp = _safe_move(comp_path, target_comp)
-                    handled_companions.add(comp_path)
-                    companions_moved += 1
-                    kept_paths.add(os.path.realpath(new_comp))
-                    log(f"💾 {comp_name} → junto da ROM")
-                except Exception as e:
-                    move_failures += 1
-                    log(f"⚠️ Falha ao mover {comp_name}: {e}")
-
-    try:
-        kept_paths.add(os.path.realpath(roms_root))
-    except OSError:
-        pass
-
-    # --- 2) Remover conteúdo de outros sistemas ----------------------------
+    # --- Remover conteúdo de outros sistemas (sem segundo walk de resgate) ---
+    tracker.set_phase("clean", label="A limpar outros sistemas…")
     removed_foreign = 0
     foreign_errors = 0
     try:
@@ -2057,78 +2212,8 @@ def organize_dspico_sd(
             real = os.path.realpath(full)
         except OSError:
             real = full
-
         if real in kept_paths:
             continue
-
-        # Resgatar jogos ainda dentro de pastas a apagar (falhas parciais)
-        if os.path.isdir(full) and not os.path.islink(full):
-            for walk_root, dirs, files in os.walk(full, topdown=True):
-                dirs[:] = [d for d in dirs if not _should_skip_collect_dir(d)]
-                for f in files:
-                    if f.startswith(".") or f.endswith(".partial"):
-                        continue
-                    ext = os.path.splitext(f)[1].lower()
-                    src = os.path.join(walk_root, f)
-                    if ext in RETRO_EXTS:
-                        dest_dir = _retro_dest_dir(mount_path, ext)
-                        if not dest_dir:
-                            continue
-                        clean_name = clean_rom_filename(f, None) or os.path.splitext(f)[
-                            0
-                        ]
-                        try:
-                            os.makedirs(dest_dir, exist_ok=True)
-                            new_path = _safe_move(
-                                src, os.path.join(dest_dir, f"{clean_name}{ext}")
-                            )
-                            kept_paths.add(os.path.realpath(new_path))
-                            organized += 1
-                            bucket = RETRO_ROM_DIRS.get(ext, "ROMs")
-                            counts[bucket] = counts.get(bucket, 0) + 1
-                            log(f"🕹 (resgate) {f} → {bucket}/")
-                        except Exception as e:
-                            move_failures += 1
-                            log(f"⚠️ Resgate falhou para {f}: {e}")
-                        continue
-                    if ext not in GAME_EXTS:
-                        continue
-                    if _is_picoboot(f):
-                        continue
-                    header = get_nds_header_info(src)
-                    raw_title, game_code, unitcode, _maker = header
-                    plat = _dspico_platform(ext, unitcode)
-                    clean_name = clean_rom_filename(f, game_code)
-                    out_ext = ".nds" if ext == ".ids" else ext
-                    franchise = None
-                    if mode == LAYOUT_FRANCHISE:
-                        franchise = detect_franchise(
-                            clean_name,
-                            game_code=game_code,
-                            raw_title=raw_title,
-                            original_name=f,
-                        )
-                    dest_dir = _dspico_dest_dir(
-                        mount_path, plat, franchise, mode
-                    )
-                    try:
-                        os.makedirs(dest_dir, exist_ok=True)
-                        new_path = _safe_move(
-                            src, os.path.join(dest_dir, f"{clean_name}{out_ext}")
-                        )
-                        kept_paths.add(os.path.realpath(new_path))
-                        organized += 1
-                        log(f"🎮 (resgate) {f} → layout DSPico")
-                    except Exception as e:
-                        move_failures += 1
-                        log(f"⚠️ Resgate falhou para {f}: {e}")
-
-            try:
-                real = os.path.realpath(full)
-            except OSError:
-                real = full
-            if real in kept_paths:
-                continue
 
         label = f"{name}/" if os.path.isdir(full) else name
         log(f"🧹 Removendo (outro sistema): {label}")
@@ -2137,20 +2222,15 @@ def organize_dspico_sd(
         else:
             foreign_errors += 1
 
-    # Garantir Games/ + ROMs/ (estrutura do pacote) mesmo em layout root
     os.makedirs(games_root, exist_ok=True)
-    os.makedirs(roms_root, exist_ok=True)
 
-    # Preservar pastas de emunand se existirem (já em _KEEP_DIR_NAMES)
-    # Limpar lixo macOS sob Games/ e ROMs/
     junk_removed = 0
-    for clean_root in (games_root, roms_root):
-        if not os.path.isdir(clean_root):
-            continue
-        for walk_root, dirs, files in os.walk(clean_root):
+    if os.path.isdir(games_root):
+        for walk_root, dirs, files in os.walk(games_root):
             dirs[:] = [d for d in dirs if not d.startswith(".")]
             for f in files:
-                if f.startswith("._") or f == ".DS_Store":
+                ext = os.path.splitext(f)[1].lower()
+                if f.startswith("._") or f == ".DS_Store" or ext in JUNK_EXTS:
                     try:
                         os.remove(os.path.join(walk_root, f))
                         junk_removed += 1
@@ -2158,12 +2238,27 @@ def organize_dspico_sd(
                         pass
 
     empty_removed = _prune_empty_under(games_root, preserve_root=True)
-    empty_removed += _prune_empty_under(roms_root, preserve_root=True)
+    if os.path.isdir(roms_root):
+        empty_removed += _prune_empty_under(roms_root, preserve_root=True)
+        # Remover ROMs/ se ficou vazia (BIOS/resto preservados pelo prune)
+        try:
+            if not os.listdir(roms_root):
+                os.rmdir(roms_root)
+                empty_removed += 1
+                log("🧹 Pasta ROMs/ vazia removida.")
+        except OSError:
+            pass
 
+    invalidate_dspico_library_caches(mount_path)
     sync_volume(mount_path)
+    tracker.phase = "done"
+    tracker.finish("Concluído")
 
     stats = {
         "organized": organized,
+        "games": games_moved,
+        "apps": apps_moved,
+        "retro": retro_moved,
         "companions": companions_moved,
         "removed_foreign": removed_foreign,
         "empty_dirs": empty_removed,
@@ -2172,28 +2267,29 @@ def organize_dspico_sd(
         "foreign_errors": foreign_errors,
         "layout": mode,
         "counts": counts,
-        "retro": sum(
-            n for k, n in counts.items() if str(k).startswith(f"{ROMS_DIRNAME}/")
-        ),
     }
 
     log("✅ Organização DSPico concluída.")
     if counts:
         for bucket, n in sorted(counts.items()):
-            log(f"   - {bucket}: {n} jogo(s)")
-    log(f"   - {organized} jogo(s) organizados; {companions_moved} save(s).")
+            log(f"   - {bucket}: {n}")
+    log(
+        f"   - {games_moved} jogo(s), {apps_moved} app(s), {retro_moved} retro; "
+        f"{companions_moved} save(s)."
+    )
     log(f"   - {removed_foreign} item(ns) de outros sistemas removido(s).")
-    log(f"   - {empty_removed} pasta(s) vazia(s); {junk_removed} lixo macOS.")
+    log(f"   - {empty_removed} pasta(s) vazia(s); {junk_removed} lixo.")
 
     detail = ", ".join(f"{n} {p}" for p, n in sorted(counts.items())) or "0"
     where = labels.get(mode, mode)
     msg = (
-        f"{organized} jogo(s) ({detail}); "
+        f"{organized} ficheiro(s) ({detail}); "
+        f"{apps_moved} app(s) em Games/{APPS_DIRNAME}/; "
         f"{companions_moved} save(s); "
         f"{removed_foreign} item(ns) de outros sistemas removido(s). "
-        f"Layout NDS: {where}; retro → ROMs/<sistema>/."
+        f"Layout: {where}."
     )
-    if move_failures and organized == 0 and (rom_candidates or retro_candidates):
+    if move_failures and organized == 0 and candidates:
         return False, f"Organização falhou ({move_failures} erro(s)). {msg}", stats
     if move_failures or foreign_errors:
         return (

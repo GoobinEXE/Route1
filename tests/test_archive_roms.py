@@ -103,7 +103,7 @@ def test_expand_unsupported_inside_zip(tmp_path):
         archive_roms.cleanup_expand_staging(stats)
 
 
-def test_import_dspico_gba_to_roms_and_progress(fake_sd, tmp_path, monkeypatch):
+def test_import_dspico_gba_to_games_and_progress(fake_sd, tmp_path, monkeypatch):
     games = fake_sd / "Games"
     games.mkdir(exist_ok=True)
     (fake_sd / "_picoboot.nds").write_bytes(b"x")
@@ -127,8 +127,8 @@ def test_import_dspico_gba_to_roms_and_progress(fake_sd, tmp_path, monkeypatch):
     assert stats.get("games") == 1
     assert stats.get("retro") == 1
     assert (fake_sd / "Games" / "Kart.nds").is_file()
-    assert (fake_sd / "ROMs" / "GBA" / "Zelda.gba").is_file()
-    assert not (fake_sd / "Games" / "Zelda.gba").exists()
+    assert (fake_sd / "Games" / "Zelda.gba").is_file()
+    assert not (fake_sd / "ROMs" / "GBA" / "Zelda.gba").exists()
     assert events
     assert events[-1].get("done") is True
     assert events[-1].get("op") == "dspico_import_games"

@@ -23,7 +23,8 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ### Adicionado
 
-- **Capas e ícones no DSPico**: pesquisa online (GameTDB + Libretro), opções semelhantes / campo de pesquisa, escolha manual PNG/BMP; grava BMP Pico Launcher em `/_pico/covers/` e `/_pico/icons/`
+- **Capas e ícones no DSPico**: pesquisa online (SteamGridDB + GameTDB + Libretro), opções semelhantes / campo de pesquisa, escolha manual PNG/BMP; grava BMP Pico Launcher em `/_pico/covers/` e `/_pico/icons/`
+- **SteamGridDB**: fonte principal de capas/ícones (TWiLight e DSPico); chave API em Definições (ou env `STEAMGRIDDB_API_KEY`); fallback GameTDB / Libretro
 - Modo de topo **DSPico**: estado do microSD, instalar pacote oficial LNH, jogos em `Games/`, emunand, `settings.json` e firmware UF2 (só releases `LNH-team`)
 - **Emuladores** no modo DSPico: selecção múltipla (GBARunner3/2, GameYob, nesDS, Atari, Sega, NGP, TurboGrafx, Coleco, Intellivision, SNEmulDS, jEnesisDS, NeoDS); instala em `/_pico/emulators/` ou `/Emulators/`, cria `/ROMs/…` e configura `fileAssociations` (SHA-256 pinado; sem BIOS proprietária)
 - **Organizar pastas** no modo DSPico: remove conteúdo de outros sistemas e organiza jogos por franquia, plataforma (`nds`/`dsi`), soltos em `Games/` ou soltos na raiz ao lado do launcher; preserva `/ROMs/`, `_gba/`, `Emulators/` e `data/`

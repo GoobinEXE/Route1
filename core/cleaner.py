@@ -76,6 +76,19 @@ def _count_files(path):
     return total
 
 
+def _dir_total_bytes(path: str) -> int:
+    total = 0
+    for root, _dirs, files in os.walk(path):
+        for name in files:
+            if name in _BACKUP_IGNORE_NAMES or name.startswith("._"):
+                continue
+            try:
+                total += max(0, int(os.path.getsize(os.path.join(root, name))))
+            except OSError:
+                pass
+    return total
+
+
 def backup_drive(mount_path, log_callback=None):
     """Cria um backup completo do cartão SD no Desktop do usuário."""
     log = lambda msg: emit_log(log_callback, msg)
@@ -98,35 +111,76 @@ def backup_drive(mount_path, log_callback=None):
     log(f"Criando pasta de backup: {backup_dir}")
     os.makedirs(backup_dir, exist_ok=True)
 
+    from core.progress import ProgressTracker
+
+    try:
+        top_items = [n for n in os.listdir(mount_path) if not n.startswith(".")]
+    except OSError as e:
+        return False, str(e)
+
+    total_bytes = 0
+    for item in top_items:
+        src = os.path.join(mount_path, item)
+        try:
+            if os.path.isdir(src):
+                total_bytes += _dir_total_bytes(src)
+            elif os.path.isfile(src):
+                if item in _BACKUP_IGNORE_NAMES or item.startswith("._"):
+                    continue
+                total_bytes += max(0, int(os.path.getsize(src)))
+        except OSError:
+            pass
+
+    tracker = ProgressTracker(
+        "backup_sd",
+        label="A iniciar backup…",
+        total_items=len(top_items),
+        total_bytes=total_bytes,
+    )
+    tracker.tick(force=True)
+
     copied = 0
     file_count = 0
     errors = 0
-    for item in os.listdir(mount_path):
-        if item.startswith("."):
-            continue
+    for item in top_items:
         src = os.path.join(mount_path, item)
         dst = os.path.join(backup_dir, item)
         log(f"Copiando: {item} ...")
         try:
             if os.path.isdir(src):
                 n_files = _count_files(src)
+                item_bytes = _dir_total_bytes(src)
                 # symlinks=True: não seguir links (evita escapar do cartão)
                 shutil.copytree(src, dst, ignore=_backup_ignore, symlinks=True)
                 file_count += n_files
                 log(f"   ↳ {item}/ ({n_files} arquivos)")
+                tracker.advance_item(
+                    bytes_delta=item_bytes, label=item, written=True
+                )
             else:
                 if item in _BACKUP_IGNORE_NAMES or item.startswith("._"):
+                    tracker.advance_item(label=item, skipped=True)
                     continue
+                try:
+                    item_bytes = max(0, int(os.path.getsize(src)))
+                except OSError:
+                    item_bytes = 0
                 shutil.copy2(src, dst, follow_symlinks=False)
                 file_count += 1
+                tracker.advance_item(
+                    bytes_delta=item_bytes, label=item, written=True
+                )
             copied += 1
         except Exception as e:
             errors += 1
             log(f"⚠️ Erro ao copiar {item}: {e}")
+            tracker.advance_item(label=item, failed=True)
 
     if errors or copied == 0:
         log(f"❌ Backup incompleto em: {backup_dir} ({copied} itens, {errors} erros)")
+        tracker.finish("Backup incompleto")
         return False, backup_dir
 
     log(f"✅ Backup concluído em: {backup_dir} ({copied} itens, ~{file_count} arquivos)")
+    tracker.finish("Backup concluído")
     return True, backup_dir

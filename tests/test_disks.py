@@ -38,6 +38,26 @@ def test_target_cluster_constant():
     assert disks.TARGET_CLUSTER_BYTES == 32768
 
 
+def test_mounted_drives_cache_ttl(monkeypatch):
+    calls = {"n": 0}
+
+    def fake_macos():
+        calls["n"] += 1
+        return [{"name": "SD", "mount_path": "/Volumes/SD", "is_removable": True}]
+
+    monkeypatch.setattr(disks, "_get_mounted_drives_macos", fake_macos)
+    monkeypatch.setattr(disks, "_get_mounted_drives_windows", fake_macos)
+    monkeypatch.setattr(disks, "_get_mounted_drives_linux", fake_macos)
+    disks.invalidate_mounted_drives_cache()
+    a = disks.get_mounted_drives()
+    b = disks.get_mounted_drives()
+    assert calls["n"] == 1
+    assert a == b
+    c = disks.get_mounted_drives(force_refresh=True)
+    assert calls["n"] == 2
+    assert c[0]["name"] == "SD"
+
+
 def test_get_cluster_size_missing_path():
     assert disks.get_cluster_size_bytes("") is None
     assert disks.get_cluster_size_bytes("/nonexistent/path/xyz") is None

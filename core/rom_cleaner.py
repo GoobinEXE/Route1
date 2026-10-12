@@ -866,6 +866,22 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
         f"{len(companion_candidates)} saves/sidecars."
     )
 
+    from core.progress import ProgressTracker
+
+    total_bytes = 0
+    for _c in rom_candidates:
+        try:
+            total_bytes += max(0, int(os.path.getsize(_c[1])))
+        except OSError:
+            pass
+    tracker = ProgressTracker(
+        "organize_roms",
+        label="A organizar…",
+        total_items=len(rom_candidates),
+        total_bytes=total_bytes,
+    )
+    tracker.set_phase("move", label="A organizar ROMs…")
+
     companions_by_stem = {}
     for comp_name, comp_path in companion_candidates:
         for key, suffix in companion_index_keys(comp_name):
@@ -879,7 +895,12 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
 
     for original_name, full_path, ext, platform, game_code, kind, raw_title in rom_candidates:
         if not os.path.exists(full_path):
+            tracker.advance_item(label=original_name, skipped=True)
             continue
+        try:
+            item_size = max(0, int(os.path.getsize(full_path)))
+        except OSError:
+            item_size = 0
 
         clean_name = clean_rom_filename(original_name, game_code)
         out_ext = ext if ext else ".nds"
@@ -903,6 +924,9 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
         except OSError as e:
             move_failures += 1
             log(f"⚠️ Falha ao criar pasta de destino para {original_name}: {e}")
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, failed=True
+            )
             continue
 
         target_rom = os.path.join(dest_dir, f"{clean_name}{out_ext}")
@@ -927,9 +951,15 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
             else:
                 bucket = platform
             counts_moved[bucket] = counts_moved.get(bucket, 0) + 1
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, written=True
+            )
         except Exception as e:
             move_failures += 1
             log(f"⚠️ Falha ao mover {original_name}: {e}")
+            tracker.advance_item(
+                bytes_delta=item_size, label=original_name, failed=True
+            )
             continue
 
         rom_dir = os.path.dirname(new_rom_path)
@@ -1015,8 +1045,16 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
         f"{matched_companions_count} saves/sidecars sincronizados; "
         f"{removed_empty} pasta(s) vazia(s) removida(s). {where}"
     )
+    if organized_count or matched_companions_count:
+        from core.rom_manager import invalidate_rom_dup_index
+
+        invalidate_rom_dup_index(mount_path)
+
     if move_failures and organized_count == 0 and rom_candidates:
+        tracker.finish("Organização falhou")
         return False, f"Organização falhou ({move_failures} erro(s)). {msg}"
     if move_failures:
+        tracker.finish(msg)
         return True, f"{msg} ({move_failures} item(ns) falharam — verifique o log.)"
+    tracker.finish(msg)
     return True, msg

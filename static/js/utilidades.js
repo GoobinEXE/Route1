@@ -230,7 +230,11 @@
         if (msg) msg.textContent = "API de lote DSPico indisponível.";
         return;
       }
-      setBusy && setBusy(true);
+      setBusy &&
+        setBusy(true, null, {
+          op: "generate_dspico_artwork_batch",
+          label: "A buscar capas e ícones…",
+        });
       if (msg) msg.textContent = "A buscar capas e ícones DSPico…";
       const res = await fn.call(api, path);
       if (msg) msg.textContent = (res && (res.message || res.error)) || "";
@@ -252,7 +256,11 @@
         if (msg) msg.textContent = "API de lote TWiLight indisponível.";
         return;
       }
-      setBusy && setBusy(true);
+      setBusy &&
+        setBusy(true, null, {
+          op: "generate_twilight_artwork_batch",
+          label: "A buscar capas e ícones…",
+        });
       if (msg) msg.textContent = "A buscar capas e ícones TWiLight…";
       const res = await api.generate_twilight_artwork_batch(path);
       if (msg) msg.textContent = (res && (res.message || res.error)) || "";

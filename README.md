@@ -142,7 +142,7 @@ Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-h
 
 1. **Estado** — checklist do microSD (`_picoboot.nds`, `_pico/`, `Games/`, bios/emunand, emuladores).
 2. **Preparar SD** — descarrega e escreve **Pico Launcher** + **Pico Loader DSPICO** oficiais (SHA-256 pinado; só `github.com/LNH-team/`).
-3. **Jogos** — importar/remover ROMs em `Games/`; **Organizar pastas** limpa outros sistemas e coloca os jogos por franquia, plataforma, soltos em `Games/` ou na raiz ao lado do launcher (preserva `/ROMs/`, `_gba/`, `Emulators/`, `data/` dos emuladores). Clique num jogo para **capa/ícone** Pico Launcher (pesquisa GameTDB + Libretro, opções semelhantes, ficheiro manual → BMP em `/_pico/covers/` e `/_pico/icons/`).
+3. **Jogos** — importar/remover ROMs em `Games/`; **Organizar pastas** limpa outros sistemas e coloca os jogos por franquia, plataforma, soltos em `Games/` ou na raiz ao lado do launcher (preserva `/ROMs/`, `_gba/`, `Emulators/`, `data/` dos emuladores). Clique num jogo para **capa/ícone** Pico Launcher (pesquisa SteamGridDB + GameTDB + Libretro, opções semelhantes, ficheiro manual → BMP em `/_pico/covers/` e `/_pico/icons/`).
 4. **Emuladores** — seleccionar e instalar emuladores do guia [Pico-Launcher](https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/) (GBARunner, GameYob, nesDS, Atari, Sega, etc.): NDS em `/_pico/emulators/` (ou `/Emulators/` se só manual), pastas `/ROMs/…` e `fileAssociations` no `settings.json`. BIOS proprietária **não** é descarregada.
 5. **Emunand** — pastas oficiais + importar o *seu* `biosnds7.rom` / `TWLFontTable.dat` (sem download de BIOS).
 6. **Definições** — editar `/_pico/settings.json` (chaves documentadas no Usage do Launcher).
@@ -155,7 +155,7 @@ No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Prepa
 | Área | O que faz |
 |------|-----------|
 | **Preparar** | Passo 1 (Memory Pit + dumpTool), Passo 2 (TWiLight + Unlaunch), kernel GEi |
-| **Cartão** | Organizar ROMs, cheats, capas/ícones (GameTDB + Libretro), relatório, backup, limpeza, formatação, DCIM, cópia NAND |
+| **Cartão** | Organizar ROMs, cheats, capas/ícones (SteamGridDB + GameTDB + Libretro), relatório, backup, limpeza, formatação, DCIM, cópia NAND |
 | **Apps** | Catálogo homebrew: download + SHA-256, pastas/configs das guias GameBrew, instalação em `/roms/apps/` |
 
 Use o Assistente se ainda não tiver o hábito do fluxo completo; o modo avançado não “segura a mão” nas etapas críticas da mesma forma.
@@ -265,7 +265,8 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 | `core/exploits.py` | Passo 1 (Memory Pit + dumpTool) e Passo 2 (Unlaunch) |
 | `core/twilight.py` | TWiLight Menu++, kernels GEi / R4 |
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
-| `core/artwork.py` | Capas/ícones: GameTDB (NDS) + Libretro Thumbnails (multi-consola) |
+| `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB (NDS) + Libretro Thumbnails |
+| `core/steamgriddb.py` | Cliente SteamGridDB (chave em Definições / env `STEAMGRIDDB_API_KEY`) |
 | `core/boxart.py` | Compat: reexporta `core.artwork` |
 | `core/sd_utils.py` | Homebrew do catálogo, cheats, relatório de cluster, cópia de `nand.bin` |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |

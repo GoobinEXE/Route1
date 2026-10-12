@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://art.gametdb.com https://thumbnails.libretro.com https://cdn.jsdelivr.net; font-src 'self'; connect-src 'self'">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://art.gametdb.com https://thumbnails.libretro.com https://cdn.jsdelivr.net https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://s3.amazonaws.com; font-src 'self'; connect-src 'self'">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0F1116">
   <title>Route 1 Kit</title>
@@ -56,12 +58,14 @@
         </div>
         <div id="r1k-op-progress" class="r1k-op-progress hidden" role="status" aria-live="polite" aria-hidden="true">
           <div class="r1k-op-progress-meta">
-            <span id="r1k-op-progress-count" class="r1k-op-progress-count">0 / 0</span>
-            <span id="r1k-op-progress-label" class="r1k-op-progress-label">…</span>
+            <span id="r1k-op-progress-title" class="r1k-op-progress-title"></span>
+            <span id="r1k-op-progress-metrics" class="r1k-op-progress-metrics" aria-hidden="true"></span>
+            <button type="button" id="r1k-op-progress-cancel" class="r1k-op-progress-cancel hidden" onclick="cancelBusyOp()" title="Cancelar operação" aria-label="Cancelar operação">Cancelar</button>
           </div>
           <div class="wizard-progress r1k-op-progress-track" aria-hidden="true">
             <div id="r1k-op-progress-bar" class="wizard-progress-bar" style="width:0%"></div>
           </div>
+          <span id="r1k-op-progress-label" class="r1k-op-progress-label">…</span>
         </div>
         <div class="topbar-actions">
           <span id="drive-status-dot" class="status-dot status-dot--idle" aria-hidden="true"></span>
@@ -239,8 +243,25 @@
         <main id="view-settings" class="view-pane hidden" data-view-pane="settings">
     <header class="page-head">
       <h2 class="page-title">Definições e Sobre</h2>
-      <p class="page-sub">Aparência da aplicação, informação legal e versão.</p>
+      <p class="page-sub">Chave SteamGridDB (capas/ícones), aparência, informação legal e versão.</p>
     </header>
+    <section id="sgdb-settings-panel" class="panel p-5 space-y-3 mb-5" style="border-color: color-mix(in srgb, var(--c-accent) 45%, var(--c-line));">
+      <h3 class="section-label">SteamGridDB — chave API</h3>
+      <p class="text-[12px] text-fg-mute leading-relaxed">
+        Necessária para capas/ícones de jogos retro (GBA, GBC, SNES, etc.).
+        Crie uma chave gratuita em
+        <span class="text-fg">steamgriddb.com → Preferences → API</span>, cole abaixo e guarde.
+      </p>
+      <label class="block text-[12px] text-fg-mute" for="sgdb-api-key">Chave API</label>
+      <input id="sgdb-api-key" type="password" autocomplete="off" spellcheck="false"
+        class="w-full max-w-xl rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-fg"
+        placeholder="Cole a chave aqui" />
+      <p id="sgdb-api-status" class="text-[12px] text-fg-mute"></p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn-primary" id="sgdb-api-save">Guardar chave</button>
+        <button type="button" class="btn-ghost" id="sgdb-api-clear">Remover chave</button>
+      </div>
+    </section>
     <section class="panel p-5 space-y-3 mb-5">
       <h3 class="section-label">Aparência</h3>
       <p class="text-[12px] text-fg-mute">Os 7 temas da app (Studio, Catppuccin, Dracula, Game Boy).</p>
@@ -920,14 +941,14 @@
     <div class="dspico-art-body" id="dspico-art-body"></div>
   </aside>
 
-  <script src="js/events.js"></script>
-  <script src="js/shell.js"></script>
-  <script src="js/updates.js"></script>
-  <script src="js/utilidades.js"></script>
-  <script src="js/virtual-grid.js"></script>
-  <script src="app.js"></script>
-  <script src="rom_explorer.js"></script>
-  <script src="dspico.js"></script>
-  <script src="wizard.js"></script>
+  <script src="js/events.js?v=sgdb3"></script>
+  <script src="js/shell.js?v=sgdb3"></script>
+  <script src="js/updates.js?v=sgdb3"></script>
+  <script src="js/utilidades.js?v=sgdb3"></script>
+  <script src="js/virtual-grid.js?v=sgdb3"></script>
+  <script src="app.js?v=sgdb3"></script>
+  <script src="rom_explorer.js?v=sgdb3"></script>
+  <script src="dspico.js?v=sgdb3"></script>
+  <script src="wizard.js?v=sgdb3"></script>
 </body>
 </html>

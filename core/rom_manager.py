@@ -6,6 +6,7 @@ import base64
 import os
 import re
 import shutil
+import time
 from typing import Any, Optional
 
 from core.logging_util import emit_log
@@ -43,6 +44,26 @@ ARTWORK_KINDS = frozenset({"boxart", "icon"})
 MAX_ARTWORK_BYTES = 2 * 1024 * 1024
 MAX_PREVIEW_BYTES = 512 * 1024
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+
+# Índice de duplicatas TWiLight (realpath → (monotonic_ts, index)); TTL alinhado ao DSPico.
+_DUP_INDEX_TTL_S = 30.0
+_DUP_INDEX_CACHE: dict[str, tuple[float, dict[str, list[dict[str, Any]]]]] = {}
+
+_KNOWN_ROM_PARENTS = frozenset(
+    {v for v in PLATFORM_BY_EXT.values() if v} | set(TWILIGHT_ROM_FOLDERS) | {"dsiware"}
+)
+
+
+def invalidate_rom_dup_index(mount_path: Optional[str] = None) -> None:
+    """Invalida cache de duplicatas após mutações em /roms/."""
+    if mount_path is None:
+        _DUP_INDEX_CACHE.clear()
+        return
+    try:
+        key = os.path.realpath(mount_path)
+    except OSError:
+        key = mount_path
+    _DUP_INDEX_CACHE.pop(key, None)
 
 # Como o TWiLight Menu++ corre cada plataforma (texto PT para a gaveta).
 RUN_INFO_BY_PLATFORM = {
@@ -283,8 +304,12 @@ def _find_sidecars(rom_path: str, roms_root: str) -> list[dict[str, Any]]:
     return found
 
 
-def list_roms(mount_path: str) -> dict[str, Any]:
-    """Lista jogos/apps sob /roms/ (só leitura)."""
+def list_roms(mount_path: str, *, include_icons: bool = True) -> dict[str, Any]:
+    """Lista jogos/apps sob /roms/ (só leitura).
+
+    ``include_icons=False`` omite extracção de ícones NDS (caminhos internos /
+    duplicatas) — default True preserva o contrato da UI.
+    """
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente.", "roms": []}
 
@@ -292,6 +317,7 @@ def list_roms(mount_path: str) -> dict[str, Any]:
     if not os.path.isdir(roms_root):
         return {"success": True, "roms": [], "count": 0, "message": "Pasta /roms/ ainda não existe."}
 
+    known_parents = _KNOWN_ROM_PARENTS
     items: list[dict[str, Any]] = []
     for root, dirs, files in os.walk(roms_root, topdown=True):
         dirs[:] = [d for d in dirs if d not in SKIP_DIR_NAMES and not d.startswith(".")]
@@ -306,10 +332,7 @@ def list_roms(mount_path: str) -> dict[str, Any]:
             if PLATFORM_BY_EXT.get(ext) is None and ext not in (".ids", ".app", ".srl"):
                 # .bin/.rom ambíguos: só se já estiverem sob pasta de plataforma
                 parent = os.path.basename(root).lower()
-                known = {v for v in PLATFORM_BY_EXT.values() if v} | set(
-                    TWILIGHT_ROM_FOLDERS
-                ) | {"dsiware"}
-                if parent not in known:
+                if parent not in known_parents:
                     continue
 
             full = os.path.join(root, name)
@@ -341,7 +364,7 @@ def list_roms(mount_path: str) -> dict[str, Any]:
             sidecars = _find_sidecars(full, roms_root)
             display = clean_rom_filename(name, game_code)
             icon_url = None
-            if ext in (".nds", ".dsi", ".ids", ".app"):
+            if include_icons and ext in (".nds", ".dsi", ".ids", ".app"):
                 try:
                     from core.nds_icon import nds_icon_data_url
 
@@ -367,7 +390,6 @@ def list_roms(mount_path: str) -> dict[str, Any]:
 
     items.sort(key=lambda r: ((r.get("platform") or ""), (r.get("display_name") or "").lower()))
     return {"success": True, "roms": items, "count": len(items)}
-
 
 def _normalize_rel_dir(rel_dir) -> Optional[str]:
     """Normaliza pasta relativa sob /roms/; '' = raiz. None se inválido."""
@@ -769,6 +791,8 @@ def move_roms(
         + f" ➔ {dest_label}"
     )
     log(f"✅ {msg}")
+    if moved:
+        invalidate_rom_dup_index(mount_path)
     if moved == 0 and failures:
         return False, msg, {"moved": 0, "failures": failures}
     return True, msg, {
@@ -814,9 +838,21 @@ def _rom_dup_summary(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _index_roms_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]:
+def _index_roms_by_dup_key(
+    mount_path: str, *, use_cache: bool = True
+) -> dict[str, list[dict[str, Any]]]:
     """Indexa ROMs do cartão por chave de duplicata (ignora system)."""
-    listed = list_roms(mount_path)
+    try:
+        cache_key = os.path.realpath(mount_path)
+    except OSError:
+        cache_key = mount_path
+    now = time.monotonic()
+    if use_cache:
+        hit = _DUP_INDEX_CACHE.get(cache_key)
+        if hit and now - hit[0] < _DUP_INDEX_TTL_S:
+            return hit[1]
+
+    listed = list_roms(mount_path, include_icons=False)
     if not listed.get("success"):
         return {}
     index: dict[str, list[dict[str, Any]]] = {}
@@ -835,6 +871,7 @@ def _index_roms_by_dup_key(mount_path: str) -> dict[str, list[dict[str, Any]]]:
         if not key:
             continue
         index.setdefault(key, []).append(_rom_dup_summary(item))
+    _DUP_INDEX_CACHE[cache_key] = (now, index)
     return index
 
 
@@ -1162,6 +1199,16 @@ def import_roms(
     bytes_copied = 0
     replaced = 0
 
+    from core.progress import ProgressTracker
+
+    tracker = ProgressTracker(
+        "import_roms",
+        label="A iniciar…",
+        total_items=len(active_jobs),
+        total_bytes=total_bytes,
+    )
+    tracker.tick(force=True)
+
     try:
         for i, (
             src,
@@ -1175,6 +1222,11 @@ def import_roms(
             resolution,
             existing,
         ) in enumerate(active_jobs, start=1):
+            base_name = os.path.basename(src)
+            try:
+                src_size = max(0, int(os.path.getsize(src)))
+            except OSError:
+                src_size = 0
             if forced_dest:
                 dest_dir = forced_dest
             else:
@@ -1184,7 +1236,7 @@ def import_roms(
                         clean,
                         game_code=game_code,
                         raw_title=raw_title,
-                        original_name=os.path.basename(src),
+                        original_name=base_name,
                     )
                 dest_dir = rom_dest_dir(roms_root, platform, franchise, mode)
             os.makedirs(dest_dir, exist_ok=True)
@@ -1212,10 +1264,16 @@ def import_roms(
                     rel = os.path.relpath(dest, roms_root).replace("\\", "/")
                 except ValueError:
                     rel = os.path.basename(dest)
-                log(f"📥 [{i}/{len(active_jobs)}] {os.path.basename(src)} ➔ /roms/{rel}")
+                log(f"📥 [{i}/{len(active_jobs)}] {base_name} ➔ /roms/{rel}")
+                tracker.advance_item(
+                    bytes_delta=src_size or n, label=base_name, written=True
+                )
             except Exception as e:
                 failures += 1
-                log(f"⚠️ Falha ao copiar {os.path.basename(src)}: {e}")
+                log(f"⚠️ Falha ao copiar {base_name}: {e}")
+                tracker.advance_item(
+                    bytes_delta=src_size, label=base_name, failed=True
+                )
                 continue
 
             final_stem = os.path.splitext(os.path.basename(dest))[0]
@@ -1235,10 +1293,16 @@ def import_roms(
                     log(f"⚠️ Falha ao copiar save: {e}")
 
         sync_volume(mount_path)
+        tracker.finish(
+            f"{imported} ROM(s) importado(s)"
+            if imported
+            else "Importação concluída"
+        )
     except Exception as e:
         log(f"⚠️ Erro na importação — a reverter cópias deste lote…")
         undo.rollback(log_callback=log_callback, mount_path=mount_path)
         cleanup_expand_staging(expand_stats)
+        tracker.finish("Importação falhou")
         return False, f"Importação falhou: {e}", {"imported": 0}
 
     if imported == 0 and failures:
@@ -1260,6 +1324,8 @@ def import_roms(
     log(f"✅ {msg}")
     ok = imported > 0
     cleanup_expand_staging(expand_stats)
+    if imported:
+        invalidate_rom_dup_index(mount_path)
     return ok, msg, {
         "imported": imported,
         "saves": saves_copied,
@@ -1335,6 +1401,50 @@ def _is_png_file(path: str, max_bytes: int = MAX_ARTWORK_BYTES) -> tuple[bool, s
     if magic != PNG_MAGIC:
         return False, "Só são aceites ficheiros PNG."
     return True, ""
+
+
+def _read_image_as_png_bytes(
+    path: str,
+    max_bytes: int = MAX_ARTWORK_BYTES,
+    *,
+    kind: Optional[str] = None,
+) -> tuple[Optional[bytes], str]:
+    """Lê PNG/BMP e, se ``kind`` for boxart|icon, normaliza para TWiLight."""
+    if not isinstance(path, str) or not path.strip():
+        return None, "Caminho de imagem inválido."
+    if not os.path.isfile(path):
+        return None, "Ficheiro de imagem inexistente."
+    try:
+        size = os.path.getsize(path)
+    except OSError as e:
+        return None, f"Não foi possível ler a imagem: {e}"
+    if size <= 0:
+        return None, "Imagem vazia."
+    if size > max_bytes:
+        return None, f"Imagem demasiado grande (máx. {max_bytes // (1024 * 1024)} MB)."
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError as e:
+        return None, f"Não foi possível ler a imagem: {e}"
+    kind_n = (kind or "").strip().lower() if isinstance(kind, str) else ""
+    if kind_n in ARTWORK_KINDS:
+        try:
+            from core.pico_bmp import image_bytes_to_twilight_png
+
+            return image_bytes_to_twilight_png(raw, kind_n), ""
+        except ValueError as e:
+            return None, f"Imagem inválida: {e}"
+    if raw.startswith(PNG_MAGIC):
+        return raw, ""
+    if raw[:2] == b"BM":
+        try:
+            from core.pico_bmp import image_bytes_to_preview_png
+
+            return image_bytes_to_preview_png(raw, max_side=512), ""
+        except ValueError as e:
+            return None, f"BMP inválido: {e}"
+    return None, "Só são aceites ficheiros PNG ou BMP (não JPEG/WebP)."
 
 
 def _png_data_url(path: Optional[str]) -> Optional[str]:
@@ -1440,11 +1550,11 @@ def rom_details(mount_path: str, rel_path: str) -> dict[str, Any]:
         "run_info": run_info_for_platform(entry.get("platform")),
         "hints": {
             "boxart": (
-                "PNG recomendado ~128×115 (NDS) ou proporção de capa da plataforma. "
+                "Qualquer PNG/BMP: o app redimensiona para 128×115. "
                 "Guardado em /_nds/TWiLightMenu/boxart/."
             ),
             "icon": (
-                "PNG 32×32 com ≤15 cores + transparência para o TWiLight converter bem. "
+                "Qualquer PNG/BMP: o app ajusta para 32×32 com ≤16 cores + transparência. "
                 "Guardado em /_nds/TWiLightMenu/icons/{nome.ext}.png."
             ),
         },
@@ -1459,7 +1569,8 @@ def set_rom_artwork(
     log_callback=None,
 ) -> tuple[bool, str, dict]:
     """
-    Copia PNG do PC para boxart/ ou icons/ do TWiLight (verify + replace).
+    Grava PNG (ou BMP convertido) do PC em boxart/ ou icons/ do TWiLight.
+    Redimensiona e ajusta (capa ~128×115; ícone 32×32 ≤16 cores).
     kind: 'boxart' | 'icon'
     """
     log = lambda msg: emit_log(log_callback, msg)
@@ -1472,9 +1583,9 @@ def set_rom_artwork(
     if not full or not os.path.isfile(full):
         return False, "Jogo não encontrado em /roms/.", {}
 
-    ok_png, png_err = _is_png_file(source_path)
-    if not ok_png:
-        return False, png_err, {}
+    png_bytes, img_err = _read_image_as_png_bytes(source_path, kind=kind)
+    if not png_bytes:
+        return False, img_err or "Imagem inválida.", {}
 
     basename = os.path.basename(full)
     game_code = None
@@ -1486,11 +1597,21 @@ def set_rom_artwork(
     if not dest:
         return False, "Não foi possível determinar o destino da arte.", {}
 
+    partial = dest + ".partial"
     try:
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        copy_verified(source_path, dest, log_callback=log_callback)
+        with open(partial, "wb") as f:
+            f.write(png_bytes)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(partial, dest)
         sync_volume(mount_path)
     except Exception as e:
+        try:
+            if os.path.exists(partial):
+                os.remove(partial)
+        except OSError:
+            pass
         return False, f"Falha ao gravar arte: {e}", {}
 
     try:
@@ -1704,6 +1825,8 @@ def delete_roms(
     msg = "; ".join(parts) + "."
     log(f"✅ {msg}")
     ok = deleted > 0 or (not rel_paths)
+    if deleted:
+        invalidate_rom_dup_index(mount_path)
     if deleted == 0 and failures:
         return False, msg, {"deleted": 0, "failures": failures}
     return True, msg, {

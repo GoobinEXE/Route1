@@ -367,6 +367,120 @@ EMULATOR_CATALOG: list[dict[str, Any]] = [
 _CATALOG_BY_ID = {e["id"]: e for e in EMULATOR_CATALOG}
 _SAFE_REL_RE = re.compile(r"^[A-Za-z0-9._\-]+(?:/[A-Za-z0-9._\-]+)*$")
 
+# fileAssociations / extensão → pasta em Games/<plat>/ (layout platform).
+_ASSOC_TO_GAMES_PLATFORM: dict[str, str] = {
+    "gba": "gba",
+    "gb": "gb",
+    "gbc": "gbc",
+    "nes": "nes",
+    "a26": "2600",
+    "a52": "5200",
+    "a78": "7800",
+    "car": "800",
+    "xex": "800",
+    "atr": "800",
+    "atx": "800",
+    "gen": "genesis",
+    "smd": "genesis",
+    "md": "genesis",
+    "sms": "sms",
+    "gg": "gg",
+    "sg": "sms",
+    "sc": "sms",
+    "ngp": "ngp",
+    "ngc": "ngp",
+    "pce": "pce",
+    "iso": "pce",
+    "cue": "pce",
+    "col": "coleco",
+    "cas": "coleco",
+    "com": "coleco",
+    "cv": "coleco",
+    "ddp": "coleco",
+    "dsk": "coleco",
+    "mtx": "coleco",
+    "msx": "coleco",
+    "m5": "coleco",
+    "pen": "coleco",
+    "pv": "coleco",
+    "pv1": "coleco",
+    "int": "int",
+}
+
+# Emuladores manuais sem fileAssociations (SNEmulDS / NeoDS).
+_MANUAL_ROM_PLATFORM: dict[str, str] = {
+    ".sfc": "snes",
+    ".smc": "snes",
+    ".neo": "neogeo",
+}
+
+_ARCHIVE_PICKER_EXTS = ("zip", "7z", "7zip", "rar")
+_NDS_PICKER_EXTS = ("nds", "dsi", "ids", "srl", "app")
+
+
+def retro_platform_map() -> dict[str, str]:
+    """Extensão (.gba, …) → pasta Games/<plat>/ para todos os emuladores do catálogo."""
+    out: dict[str, str] = dict(_MANUAL_ROM_PLATFORM)
+    for entry in EMULATOR_CATALOG:
+        for assoc in (entry.get("associations") or {}):
+            key = (assoc or "").strip().lower().lstrip(".")
+            plat = _ASSOC_TO_GAMES_PLATFORM.get(key)
+            if not key or not plat:
+                continue
+            out[f".{key}"] = plat
+    return out
+
+
+def retro_rom_dirs_map() -> dict[str, str]:
+    """Extensão → pasta Sanrax /ROMs/… (legado / BIOS); primeira pasta de jogos do catálogo."""
+    out: dict[str, str] = {
+        ".sfc": "ROMs/SNES",
+        ".smc": "ROMs/SNES",
+        ".neo": "ROMs/NeoGeo",
+    }
+    for entry in EMULATOR_CATALOG:
+        rom_dirs = [
+            d
+            for d in (entry.get("rom_dirs") or [])
+            if isinstance(d, str) and d and not d.endswith("/BIOS")
+        ]
+        if not rom_dirs:
+            continue
+        primary = rom_dirs[0].replace("\\", "/")
+        for assoc in (entry.get("associations") or {}):
+            key = (assoc or "").strip().lower().lstrip(".")
+            if key:
+                out.setdefault(f".{key}", primary)
+    return out
+
+
+def dspico_rom_picker_extensions() -> list[str]:
+    """Extensões sem ponto para diálogos de import DSPico (NDS + retro + arquivos)."""
+    retro = sorted({e.lstrip(".") for e in retro_platform_map()})
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for ext in (*_NDS_PICKER_EXTS, *retro, *_ARCHIVE_PICKER_EXTS):
+        if ext in seen:
+            continue
+        seen.add(ext)
+        ordered.append(ext)
+    return ordered
+
+
+def dspico_rom_picker_filter_labels() -> tuple[str, ...]:
+    """Rótulos de filtro para pywebview (sem '/' no texto do rótulo)."""
+    all_exts = dspico_rom_picker_extensions()
+    star = " ".join(f"*.{e}" for e in all_exts)
+    retro = sorted({e.lstrip(".") for e in retro_platform_map()})
+    retro_star = " ".join(f"*.{e}" for e in retro)
+    return (
+        f"ROMs e arquivos ({star})",
+        "ROMs NDS DSi (*.nds *.dsi *.ids *.srl *.app)",
+        f"ROMs emuladores ({retro_star})",
+        "Arquivos (*.zip *.7z *.7zip *.rar)",
+        "Todos os ficheiros (*.*)",
+    )
+
 
 def _pin_ready(cache_key: str) -> bool:
     if cache_key not in DSPICO_EMU_CACHE_KEYS:

@@ -55,6 +55,32 @@ def test_icon_bmp_4bpp():
     assert (pw, ph) == (32, 32)
 
 
+def test_twilight_boxart_and_icon_normalize():
+    big = _solid_png(600, 900, (200, 40, 80, 255))
+    box = pico_bmp.image_bytes_to_twilight_png(big, "boxart")
+    assert box.startswith(b"\x89PNG")
+    bw, bh, _ = pico_bmp.decode_png_rgba(box)
+    assert (bw, bh) == (128, 115)
+
+    icon = pico_bmp.image_bytes_to_twilight_png(big, "icon")
+    assert icon.startswith(b"\x89PNG")
+    iw, ih, irgba = pico_bmp.decode_png_rgba(icon)
+    assert (iw, ih) == (32, 32)
+    # padding transparente nas margens (retrato → letterbox horizontal)
+    assert irgba[3] == 0
+
+
+def test_image_bytes_to_pico_bmp_accepts_oversized():
+    png = _solid_png(400, 300, (12, 34, 56, 255))
+    cover = pico_bmp.image_bytes_to_pico_bmp(png, "cover")
+    assert cover[:2] == b"BM"
+    cw, ch, _ = pico_bmp.decode_bmp_rgba(cover)
+    assert (cw, ch) == (128, 96)
+    icon = pico_bmp.image_bytes_to_pico_bmp(png, "icon")
+    iw, ih, _ = pico_bmp.decode_bmp_rgba(icon)
+    assert (iw, ih) == (32, 32)
+
+
 def test_search_name_variants_include_regions():
     names = pico_artwork._search_name_variants("Mario Kart DS", "Mario Kart DS.nds")
     assert any("Mario Kart DS" in n for n in names)
@@ -83,6 +109,7 @@ def test_get_and_set_dspico_artwork(fake_sd, monkeypatch, tmp_path):
     assert ok is True, msg
     dest = fake_sd / "_pico" / "covers" / "nds" / "AMCE.bmp"
     assert dest.is_file()
+    assert (fake_sd / "_pico" / "covers" / "user" / "Kart.nds.bmp").is_file()
 
     meta2 = pico_artwork.get_dspico_game_artwork(str(fake_sd), "Kart.nds")
     assert meta2["has_cover"] is True
@@ -95,6 +122,7 @@ def test_get_and_set_dspico_artwork(fake_sd, monkeypatch, tmp_path):
     )
     assert ok is True, msg
     assert (fake_sd / "_pico" / "icons" / "nds" / "AMCE.bmp").is_file()
+    assert (fake_sd / "_pico" / "icons" / "user" / "Kart.nds.bmp").is_file()
 
 
 def test_search_dspico_artwork_candidates(fake_sd, monkeypatch):
@@ -122,9 +150,9 @@ def test_search_dspico_artwork_candidates(fake_sd, monkeypatch):
     )
     assert data["success"] is True
     assert data["candidates"]
-    # Pesquisa não descarrega — preview é a URL remota allowlisted.
+    # Pesquisa sonda existência (HEAD) mas não descarrega o PNG.
     assert called["get"] == 0
-    assert called["exists"] == 0
+    assert called["exists"] > 0
     preview = data["candidates"][0]["preview"]
     assert preview.startswith("https://")
     assert data["candidates"][0]["url"] == preview
@@ -162,6 +190,53 @@ def test_browse_marks_cover(fake_sd):
     files = data["files"]
     assert files
     assert files[0]["has_cover"] is True
+    # Browse rápido: sem data-URL síncrono (UI pede previews à parte).
+    assert not files[0].get("cover")
+
+
+def test_get_dspico_game_previews_lazy(fake_sd):
+    from core import dspico
+
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    cover_dir = fake_sd / "_pico" / "covers" / "nds"
+    cover_dir.mkdir(parents=True)
+    png = _solid_png(64, 48)
+    w, h, rgba = pico_bmp.decode_png_rgba(png)
+    (cover_dir / "AMCE.bmp").write_bytes(pico_bmp.rgba_to_cover_bmp(w, h, rgba))
+
+    prev = pico_artwork.get_dspico_game_previews(str(fake_sd), ["Kart.nds"])
+    assert prev["success"] is True
+    entry = prev["previews"]["Kart.nds"]
+    assert entry["has_cover"] is True
+    assert isinstance(entry.get("cover"), str) and entry["cover"].startswith(
+        "data:image/png;base64,"
+    )
+
+
+def test_enrich_reuses_game_code(fake_sd, monkeypatch):
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    cover_dir = fake_sd / "_pico" / "covers" / "nds"
+    cover_dir.mkdir(parents=True)
+    png = _solid_png(64, 48)
+    w, h, rgba = pico_bmp.decode_png_rgba(png)
+    (cover_dir / "AMCE.bmp").write_bytes(pico_bmp.rgba_to_cover_bmp(w, h, rgba))
+
+    calls = {"n": 0}
+    real = pico_artwork.get_nds_header_info
+
+    def _count(*a, **k):
+        calls["n"] += 1
+        return real(*a, **k)
+
+    monkeypatch.setattr(pico_artwork, "get_nds_header_info", _count)
+    entry = {"rel_path": "Kart.nds", "area": "games", "game_code": "AMCE"}
+    pico_artwork.enrich_dspico_game_entry(str(fake_sd), entry, with_preview=False)
+    assert entry["has_cover"] is True
+    assert calls["n"] == 0
 
 
 def test_retro_artwork_user_bucket(fake_sd, monkeypatch, tmp_path):
@@ -214,6 +289,52 @@ def test_collect_candidates_include_jsdelivr(fake_sd, monkeypatch):
     assert any("cdn.jsdelivr.net" in i["url"] for i in items)
 
 
+def test_collect_candidates_genesis_not_nds():
+    items = pico_artwork._collect_candidate_urls(
+        kind="cover",
+        platform="genesis",
+        basename="Sonic (USA).md",
+        tid=None,
+        title="Sonic",
+        query="",
+    )
+    assert items
+    assert all("Nintendo%20DS" not in u["url"] and "Nintendo DS" not in u["url"] for u in items)
+    assert any("Mega%20Drive" in u["url"] or "Genesis" in u["url"] for u in items)
+
+
+def test_collect_candidates_gba_skips_gametdb_ds():
+    items = pico_artwork._collect_candidate_urls(
+        kind="cover",
+        platform="gba",
+        basename="Metroid.gba",
+        tid="AXVE",
+        title="Metroid",
+        query="",
+    )
+    assert items
+    assert not any(i["source"] == "gametdb" for i in items)
+    assert any("Game%20Boy%20Advance" in i["url"] for i in items)
+
+
+def test_search_filters_dead_urls(fake_sd, monkeypatch):
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+
+    def fake_exists(url):
+        return "AMCE" in url
+
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "_http_exists", fake_exists)
+    data = pico_artwork.search_dspico_artwork(
+        str(fake_sd), "Kart.nds", kind="cover", query=""
+    )
+    assert data["success"]
+    assert data["candidates"]
+    assert all("AMCE" in c["url"] for c in data["candidates"])
+
+
 def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypatch):
     games = fake_sd / "Games"
     games.mkdir()
@@ -221,15 +342,12 @@ def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypat
     make_nds(str(games / "Miss.nds"), title=b"MISSINGGAME", code=b"ZZZZ", maker=b"01")
 
     png = _solid_png(64, 48)
-    gets = {"n": 0, "exists": 0}
+    gets = {"n": 0}
 
-    def fake_exists(url):
-        gets["exists"] += 1
-        return False
-
-    def fake_get(url, timeout=None):
+    def fake_fetch(urls, **kwargs):
         gets["n"] += 1
-        if "AMCE" in url or "Kart" in url or "Mario" in url:
+        joined = " ".join(urls or [])
+        if "AMCE" in joined or "Kart" in joined or "Mario" in joined:
             return png
         return None
 
@@ -239,22 +357,44 @@ def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypat
     monkeypatch.setattr(
         pico_artwork, "sync_volume", lambda *a, **k: syncs.__setitem__("n", syncs["n"] + 1)
     )
-    monkeypatch.setattr(pico_artwork, "_http_exists", fake_exists)
-    monkeypatch.setattr(pico_artwork, "_http_get", fake_get)
+    monkeypatch.setattr(pico_artwork, "_fetch_first_ok", fake_fetch)
 
     res = pico_artwork.generate_dspico_artwork_batch(str(fake_sd), max_games=50)
     assert res["success"] is True
     assert res["written"] >= 1
     assert (fake_sd / "_pico" / "covers" / "nds" / "AMCE.bmp").is_file()
-    # Lote optimizado: sem HEAD; sync uma vez no fim
-    assert gets["exists"] == 0
+    # Lote optimizado: sync uma vez no fim; sem HEAD
     assert syncs["n"] == 1
+    assert gets["n"] >= 1
     missing = res.get("missing") or []
     assert any(
         (m.get("rel_path") or "").endswith("Miss.nds")
         and (m.get("missing_cover") or m.get("missing_icon"))
         for m in missing
     )
+
+
+def test_generate_dspico_artwork_batch_scans_retro_inside_games(fake_sd, monkeypatch):
+    games = fake_sd / "Games"
+    games.mkdir()
+    (games / "Tetris.gb").write_bytes(b"GBROM")
+
+    png = _solid_png(64, 48)
+    calls = {"n": 0}
+
+    def fake_fetch(urls, **kwargs):
+        calls["n"] += 1
+        return png
+
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "_fetch_first_ok", fake_fetch)
+
+    res = pico_artwork.generate_dspico_artwork_batch(str(fake_sd), max_games=10)
+    assert res["success"] is True
+    assert calls["n"] >= 1
+    assert res["written"] >= 1
+    assert (fake_sd / "_pico" / "covers" / "user" / "Tetris.gb.bmp").is_file()
 
 
 def test_batch_candidate_urls_capped():
@@ -283,7 +423,7 @@ def test_dspico_batch_emits_progress(fake_sd, monkeypatch):
 
     monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
     monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
-    monkeypatch.setattr(pico_artwork, "_http_get", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "_fetch_first_ok", lambda *a, **k: None)
     monkeypatch.setattr(pico_artwork, "_emit_batch_progress", fake_emit)
 
     res = pico_artwork.generate_dspico_artwork_batch(str(fake_sd), max_games=10)
@@ -301,7 +441,51 @@ def test_generate_dspico_covers_batch_alias(fake_sd, monkeypatch):
     make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
     monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
     monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
-    monkeypatch.setattr(pico_artwork, "_http_get", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "_fetch_first_ok", lambda *a, **k: None)
     res = pico_artwork.generate_dspico_covers_batch(str(fake_sd), max_games=10)
     assert res["success"] is True
     assert "missing" in res
+
+
+def test_dspico_batch_skips_complete_and_cancel(fake_sd, monkeypatch):
+    from core import progress
+
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Done.nds"), title=b"DONEGAME01", code=b"DONE", maker=b"01")
+    make_nds(str(games / "Todo.nds"), title=b"TODOGAME01", code=b"TODO", maker=b"01")
+    make_nds(str(games / "Next.nds"), title=b"NEXTGAME01", code=b"NEXT", maker=b"01")
+
+    cover = fake_sd / "_pico" / "covers" / "nds"
+    icon = fake_sd / "_pico" / "icons" / "nds"
+    cover.mkdir(parents=True)
+    icon.mkdir(parents=True)
+
+    def fake_resolve(mount, basename, tid, kind):
+        if (tid or "").upper() == "DONE" or basename == "Done":
+            path = cover / "DONE.bmp" if kind == "cover" else icon / "DONE.bmp"
+            return str(path)
+        return None
+
+    progress.begin_operation("dspico_artwork_batch")
+    calls = {"n": 0}
+
+    def fake_fetch(urls, **kwargs):
+        calls["n"] += 1
+        progress.request_cancel()
+        return None
+
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+    monkeypatch.setattr(pico_artwork, "resolve_existing_art", fake_resolve)
+    monkeypatch.setattr(pico_artwork, "_fetch_first_ok", fake_fetch)
+
+    try:
+        res = pico_artwork.generate_dspico_artwork_batch(str(fake_sd), max_games=10)
+    finally:
+        progress.end_operation()
+
+    assert res["success"] is False
+    assert res.get("cancelled") is True
+    assert res["skipped"] >= 2
+    assert calls["n"] >= 1
