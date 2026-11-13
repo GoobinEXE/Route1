@@ -3,7 +3,7 @@ let selectedDrive = null;
 let lastLogIndex = 0;
 let apiReady = false;
 let busy = false;
-/** Soft busy: spinner/CTA sem bloquear tabs nem Actualizar (leituras / UI leve). */
+/** Soft busy: spinner/CTA sem bloquear tabs nem Atualizar (leituras / UI leve). */
 let softBusy = false;
 let logPollTimer = null;
 let logPollInFlight = false;
@@ -213,7 +213,7 @@ function setBusy(isBusy, sourceBtn, options) {
       btn.classList.remove("opacity-50", "pointer-events-none");
       return;
     }
-    // Soft busy: tabs + Actualizar continuam usáveis (USB MSC / listagens).
+    // Soft busy: tabs + Atualizar continuam usáveis (USB MSC / listagens).
     if (softBusy && (isNavTab || isRefresh)) {
       btn.disabled = false;
       btn.classList.remove("opacity-50", "pointer-events-none");
@@ -729,7 +729,7 @@ async function runMountOp(options = {}) {
         "• REMOVER pastas/ficheiros de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
         "• manter: _picoboot.nds, _pico/, Games/, Emulators/, _gba/, data/, emunand e snemul.cfg\n" +
         "  (ROMs/ só se tiver BIOS — jogos retro migram para Games/)\n\n" +
-        "Esta acção é destrutiva para conteúdo que não seja DSPico.\n\n" +
+        "Esta ação é destrutiva para conteúdo que não seja DSPico.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };

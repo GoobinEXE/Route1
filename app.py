@@ -466,7 +466,7 @@ class Api:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum ficheiro válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -524,7 +524,7 @@ class Api:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum ficheiro válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -905,7 +905,7 @@ class Api:
                 continue
             clean_ids.append(eid)
         if not clean_ids:
-            return _reject("Seleccione pelo menos um emulador.")
+            return _reject("Selecione pelo menos um emulador.")
         success, msg, details = do_install_dspico_emulators(
             mount_path, clean_ids, log_callback=add_log
         )
@@ -1233,7 +1233,7 @@ class Api:
                 continue
             cleaned.append(p.replace("\\", "/").lstrip("/"))
         if not cleaned:
-            return _reject("Nenhum jogo seleccionado.")
+            return _reject("Nenhum jogo selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1331,7 +1331,7 @@ class Api:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum ficheiro válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1396,7 +1396,7 @@ class Api:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum ficheiro válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1442,7 +1442,7 @@ class Api:
                 continue
             cleaned_rels.append(p.replace("\\", "/").lstrip("/"))
         if not cleaned_rels:
-            return _reject("Nenhum jogo seleccionado.")
+            return _reject("Nenhum jogo selecionado.")
 
         backup = ""
         if mode == "backup":
@@ -1638,7 +1638,7 @@ class Api:
         add_log(msg)
         return _api_result(success, msg)
 
-    # --- Actualizações DSPico / Utilidades / prefs --------------------------
+    # --- Atualizações DSPico / Utilidades / prefs --------------------------
 
     def check_dspico_updates(self, mount_path=""):
         from core.updates import check_dspico_updates as _check

@@ -2,6 +2,14 @@
  * Área exclusiva DSPico — fontes só LNH-team.
  * Depende de getApi / selectedDrive / runMountOp / escapeHtml / setBusy (app.js).
  */
+
+/** Ícones de estado (SVG, traço 2px, herdam a cor do texto). */
+function stateIcon(ok) {
+  const body = ok
+    ? '<circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/>'
+    : '<circle cx="8" cy="8" r="6.5" stroke-dasharray="2.4 2.2"/>';
+  return `<svg class="state-icon" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg><span class="sr-only">${ok ? "Presente:" : "Em falta:"}</span>`;
+}
 const Dspico = (() => {
   let section = "cartao";
   let gamesCwd = "";
@@ -165,7 +173,7 @@ const Dspico = (() => {
   function needDriveHtml() {
     return `
       <section class="panel p-5">
-        <p class="opt-does">Seleccione o <strong>microSD do cartucho DSPico</strong> na barra de cima.</p>
+        <p class="opt-does">Selecione o <strong>microSD do cartucho DSPico</strong> na barra de cima.</p>
         <p class="opt-when mt-1">Não é o SD lateral do DSi — é o cartão dentro do cartucho Slot-1.</p>
       </section>`;
   }
@@ -240,7 +248,7 @@ const Dspico = (() => {
         <section class="panel p-5 space-y-4">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h3 class="text-sm font-semibold text-fg">Estado do microSD</h3>
+              <h3 class="section-label">Estado do microSD</h3>
               <p class="text-[12px] text-fg-mute mt-1">
                 Pacote: ${
                   data.markers_ok
@@ -250,15 +258,15 @@ const Dspico = (() => {
                 · Jogos em <code>Games/</code>: ${escapeHtml(String(data.games_count || 0))}
               </p>
             </div>
-            <button type="button" class="btn-ghost !text-[11px]" id="dspico-refresh-status">Actualizar</button>
+            <button type="button" class="btn-ghost !text-[11px]" id="dspico-refresh-status">Atualizar</button>
           </div>
           <ul class="space-y-2">
             ${checklist
               .map((c) => {
                 const opt = c.optional ? ' <span class="text-fg-mute">(opcional)</span>' : "";
-                const icon = c.ok ? "✅" : c.optional ? "○" : "○";
+                const icon = stateIcon(!!c.ok);
                 const cls = c.ok ? "text-ok" : "text-fg-mute";
-                return `<li class="text-[13px] ${cls}">${icon} ${escapeHtml(
+                return `<li class="state-row text-[13px] ${cls}">${icon} ${escapeHtml(
                   c.label || c.id
                 )}${opt}</li>`;
               })
@@ -350,7 +358,7 @@ const Dspico = (() => {
     el.innerHTML = `
       <section class="panel p-5 space-y-4">
         <div>
-          <h3 class="text-sm font-semibold text-fg">Preparar microSD</h3>
+          <h3 class="section-label">Preparar microSD</h3>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
             Descarrega e verifica (SHA-256) o <strong>Pico Launcher</strong> e o
             <strong>Pico Loader DSPICO</strong> oficiais e escreve
@@ -360,7 +368,7 @@ const Dspico = (() => {
         <div class="note">
           O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado na app.
         </div>
-        <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / actualizar pacote oficial</button>
+        <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / atualizar pacote oficial</button>
         <div class="enhanced-card">
           <h4>Depois: Pico Launcher Enhanced <span class="enhanced-tag">Recomendado</span><span class="enhanced-tag enhanced-tag--warn">Não oficial</span></h4>
           <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de ecrã e,
@@ -380,7 +388,7 @@ const Dspico = (() => {
         if (
           !confirm(
             "Escrever o pacote oficial DSPico neste microSD?\n\n" +
-              "Serão actualizados _picoboot.nds e a pasta _pico/."
+              "Serão atualizados _picoboot.nds e a pasta _pico/."
           )
         ) {
           return;
@@ -405,7 +413,7 @@ const Dspico = (() => {
     return `
         <section class="panel p-5 space-y-3" id="dspico-organize-panel">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Organizar pastas</h3>
+            <h3 class="section-label">Organizar pastas</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Remove conteúdo de outros sistemas (TWiLight, GEi, R4, hiya, …) e deixa
               só o necessário para o DSPico. Jogos NDS e ROMs retro seguem o mesmo layout;
@@ -447,7 +455,7 @@ const Dspico = (() => {
           </div>
           <button type="button" class="btn-primary" id="dspico-btn-organize">Organizar pastas</button>
           <p class="text-[11px] text-fg-mute">
-            Esta acção apaga pastas de outros sistemas. Saves vão com cada jogo.
+            Esta ação apaga pastas de outros sistemas. Saves vão com cada jogo.
             Apps/homebrew → <code>Games/Apps/</code>. Retro de todos os emuladores
             (GB, GBA, NES, Genesis, Atari, Coleco, …) segue o mesmo layout —
             sem pasta <code>ROMs/</code> para jogos (<code>ROMs/BIOS</code> preservada).
@@ -962,7 +970,7 @@ const Dspico = (() => {
   async function addGames() {
     const m = mount();
     if (!m) {
-      alert("Seleccione o microSD primeiro.");
+      alert("Selecione o microSD primeiro.");
       return;
     }
     if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
@@ -986,7 +994,7 @@ const Dspico = (() => {
       if (picked.cancelled) return;
       const paths = picked.paths || [];
       if (!paths.length) {
-        appendLog("Nenhum ficheiro seleccionado.", "warn");
+        appendLog("Nenhum ficheiro selecionado.", "warn");
         return;
       }
       await importPaths(paths);
@@ -1276,7 +1284,7 @@ const Dspico = (() => {
   async function runDspicoArtworkBatch() {
     const m = mount();
     if (!m) {
-      alert("Seleccione um cartão.");
+      alert("Selecione um cartão.");
       return;
     }
     if (typeof busy !== "undefined" && busy) {
@@ -1716,7 +1724,7 @@ const Dspico = (() => {
   async function openDspicoDupesSheet() {
     const m = mount();
     if (!m) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (typeof busy !== "undefined" && busy) {
@@ -1946,7 +1954,7 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Emuladores (Pico-Launcher)</h3>
+            <h3 class="section-label">Emuladores (Pico-Launcher)</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Copia NDS para <code>/_pico/emulators/</code> (ou <code>/Emulators/</code> se manual),
               cria <code>/ROMs/…</code> e configura <code>fileAssociations</code>.
@@ -1960,11 +1968,11 @@ const Dspico = (() => {
               : `<div class="note note--warn">Nenhum emulador com pin disponível neste build.</div>`
           }
           <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-popular">Seleccionar populares</button>
+            <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-popular">Selecionar populares</button>
             <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-clear">Limpar</button>
             <button type="button" class="btn-primary" id="dspico-emu-install" ${
               available.length ? "" : "disabled"
-            }>Instalar seleccionados</button>
+            }>Instalar selecionados</button>
           </div>
           <div id="dspico-emu-result" class="text-[12px] text-fg-mute hidden"></div>
         </section>`;
@@ -1993,7 +2001,7 @@ const Dspico = (() => {
             el.querySelectorAll(".dspico-emu-cb:checked")
           ).map((c) => c.value);
           if (!ids.length) {
-            alert("Seleccione pelo menos um emulador.");
+            alert("Selecione pelo menos um emulador.");
             return;
           }
           if (
@@ -2072,7 +2080,7 @@ const Dspico = (() => {
     el.innerHTML = `
       <section class="panel p-5 space-y-4">
         <div>
-          <h3 class="text-sm font-semibold text-fg">Emunand / DSiWare</h3>
+          <h3 class="section-label">Emunand / DSiWare</h3>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
             Conforme o README do Pico Loader: DSiWare e ROMs com secure area encriptada
             precisam de <code>/_pico/biosnds7.rom</code> (BIOS ARM7 de <strong>DS</strong>, não DSi)
@@ -2080,12 +2088,12 @@ const Dspico = (() => {
           </p>
         </div>
         <ul class="text-[12px] space-y-1">
-          <li>${files.biosnds7 ? "✅" : "○"} <code>_pico/biosnds7.rom</code></li>
-          <li>${files.twl_font ? "✅" : "○"} <code>sys/TWLFontTable.dat</code></li>
-          <li>${emu.photo ? "✅" : "○"} <code>photo/</code></li>
-          <li>${emu.shared1 ? "✅" : "○"} <code>shared1/</code></li>
-          <li>${emu.shared2_0000 ? "✅" : "○"} <code>shared2/0000/</code></li>
-          <li>${emu.sys ? "✅" : "○"} <code>sys/</code></li>
+          <li class="state-row ${files.biosnds7 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!files.biosnds7)} <code>_pico/biosnds7.rom</code></li>
+          <li class="state-row ${files.twl_font ? "text-ok" : "text-fg-mute"}">${stateIcon(!!files.twl_font)} <code>sys/TWLFontTable.dat</code></li>
+          <li class="state-row ${emu.photo ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.photo)} <code>photo/</code></li>
+          <li class="state-row ${emu.shared1 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.shared1)} <code>shared1/</code></li>
+          <li class="state-row ${emu.shared2_0000 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.shared2_0000)} <code>shared2/0000/</code></li>
+          <li class="state-row ${emu.sys ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.sys)} <code>sys/</code></li>
         </ul>
         <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
           <button type="button" class="btn-secondary" id="dspico-emunand-skel">Criar pastas emunand</button>
@@ -2158,7 +2166,7 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Pico Launcher — settings.json</h3>
+            <h3 class="section-label">Pico Launcher: settings.json</h3>
             <p class="text-[12px] text-fg-mute mt-1">Ficheiro <code>/_pico/settings.json</code> (chaves documentadas no Usage oficial).</p>
           </div>
           <label class="block text-[12px]">
@@ -2229,7 +2237,7 @@ const Dspico = (() => {
   async function renderFirmware(gen, m) {
     const el = document.getElementById("dspico-section-firmware");
     if (!el) return;
-    // Firmware não precisa do SD seleccionado, mas mostramos contexto
+    // Firmware não precisa do SD selecionado, mas mostramos contexto
     el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A procurar RPI-RP2…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
@@ -2259,7 +2267,7 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Firmware do cartucho (RP2040)</h3>
+            <h3 class="section-label">Firmware do cartucho (RP2040)</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               O firmware <strong>não</strong> vai no microSD. Em BOOTSEL aparece o volume
               <code>RPI-RP2</code>. Só gravamos o <code>.uf2</code> oficial pinado de
@@ -2269,7 +2277,7 @@ const Dspico = (() => {
           <ol class="guide-list list-decimal text-[12px] text-fg-soft space-y-1">
             <li>Retire o microSD do cartucho (ou use BOOTSEL se o firmware já estiver instalado).</li>
             <li>Ligue o DSPico ao PC por USB até aparecer <code>RPI-RP2</code>.</li>
-            <li>Actualize a lista abaixo e grave o UF2 oficial (quando disponível nas releases LNH).</li>
+            <li>Atualize a lista abaixo e grave o UF2 oficial (quando disponível nas releases LNH).</li>
           </ol>
           <div class="note ${ready ? "note--ok" : "note--warn"}">
             ${
@@ -2298,7 +2306,7 @@ const Dspico = (() => {
           const sel = document.getElementById("dspico-rp2-select");
           const path = sel && sel.value;
           if (!path) {
-            alert("Nenhum volume RPI-RP2 seleccionado.");
+            alert("Nenhum volume RPI-RP2 selecionado.");
             return;
           }
           if (

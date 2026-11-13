@@ -22,7 +22,7 @@ _GITHUB_RELEASE_TAG_RE = re.compile(
     r"/releases/tag/([A-Za-z0-9_.\-]+)$"
 )
 
-# URLs exactas que a UI pode abrir no browser do sistema (allowlist).
+# URLs exatas que a UI pode abrir no browser do sistema (allowlist).
 EXTERNAL_URL_ALLOWLIST = frozenset(
     {
         REPO_URL,
@@ -88,7 +88,7 @@ def _pinned_github_release_pages() -> frozenset:
 
 
 def is_allowed_external_url(url: str) -> bool:
-    """Allowlist exacta + GameBrew wiki + repos/releases GitHub pinados."""
+    """Allowlist exata + GameBrew wiki + repos/releases GitHub pinados."""
     if not isinstance(url, str):
         return False
     cleaned = url.strip()

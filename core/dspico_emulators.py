@@ -711,7 +711,7 @@ def install_dspico_emulators(
     emulator_ids,
     log_callback=None,
 ) -> tuple[bool, str, dict]:
-    """Instala emuladores seleccionados no microSD DSPico."""
+    """Instala emuladores selecionados no microSD DSPico."""
     log = lambda msg: emit_log(log_callback, msg)
 
     if not isinstance(mount_path, str) or not mount_path.strip():
@@ -735,7 +735,7 @@ def install_dspico_emulators(
         if isinstance(x, str) and x.strip():
             raw_ids.append(x.strip())
     if not raw_ids:
-        return False, "Seleccione pelo menos um emulador.", {}
+        return False, "Selecione pelo menos um emulador.", {}
 
     # Dedup preserving order
     seen = set()
@@ -762,7 +762,7 @@ def install_dspico_emulators(
             return False, f"Destino NDS inválido: {entry['nds_dest']!r}", {}
         selected.append(entry)
 
-    # SNEmulDS 0.6a e 0.6d partilham o mesmo ficheiro — o último seleccionado ganha
+    # SNEmulDS 0.6a e 0.6d partilham o mesmo ficheiro — o último selecionado ganha
     snemul = [e for e in selected if e["id"].startswith("snemulds_")]
     if len(snemul) > 1:
         keep = snemul[-1]["id"]

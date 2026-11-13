@@ -7,17 +7,19 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://art.gametdb.com https://thumbnails.libretro.com https://cdn.jsdelivr.net https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://s3.amazonaws.com; font-src 'self'; connect-src 'self'">
   <meta name="color-scheme" content="dark light">
-  <meta name="theme-color" content="#0F1116">
+  <meta name="theme-color" content="#E2E6EA">
   <title>Route Pico</title>
   <link rel="icon" type="image/svg+xml" href="assets/logo-small.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
   <link rel="apple-touch-icon" href="assets/app-icon-256.png">
-  <link rel="stylesheet" href="themes.css?v=rp3">
-  <link rel="stylesheet" href="tailwind.css">
-  <link rel="stylesheet" href="style.css?v=rp3">
-  <link rel="stylesheet" href="app.css?v=rp3">
-  <script src="theme.js?v=rp3"></script>
+  <link rel="stylesheet" href="themes.css?v=rp5">
+  <link rel="stylesheet" href="tailwind.css?v=rp9">
+  <link rel="stylesheet" href="style.css?v=rp5">
+  <link rel="stylesheet" href="app.css?v=rp5">
+  <link rel="stylesheet" href="skins.css?v=rp14">
+  <script src="theme-data.js?v=rp5"></script>
+  <script src="theme.js?v=rp5"></script>
 </head>
 <body class="bg-bg text-fg min-h-screen font-sans antialiased selection:bg-accent/30 selection:text-fg">
   <div class="app-shell">
@@ -26,7 +28,7 @@
         <img src="assets/logo.svg" alt="" width="32" height="32" class="rounded-[8px] brand-mark">
         <div class="min-w-0">
           <div class="brand-name text-[14px] font-semibold leading-none">Route Pico</div>
-          <div class="text-[10px] text-fg-mute mt-1 truncate">DSPico · Pico Launcher</div>
+          <div class="brand-sub text-fg-mute mt-1 truncate">DSPico · Pico Launcher</div>
         </div>
       </div>
       <nav class="sidebar-nav" role="navigation">
@@ -44,7 +46,7 @@
       <header class="app-topbar">
         <div class="topbar-drive">
           <span id="drive-role-badge" class="chip chip--idle">Sem volume</span>
-          <select id="drive-select" onchange="onDriveSelected(false)" class="field-select topbar-select" aria-label="Unidade seleccionada">
+          <select id="drive-select" onchange="onDriveSelected(false)" class="field-select topbar-select" aria-label="Unidade selecionada">
             <option value="">Procurando unidades externas…</option>
           </select>
           <div id="drive-info-badge" class="hidden topbar-stats">
@@ -81,27 +83,42 @@
 
       <div class="app-content">
         <main id="view-home" class="view-pane" data-view-pane="home">
-    <section class="hero-grid">
-      <article class="hero-card hero-card--dspico">
-        <div class="hero-kicker">Prioridade</div>
-        <h2 class="hero-title">DSPico</h2>
+    <section class="panel home-main" aria-labelledby="home-dspico-title">
+      <div class="home-main-copy">
+        <h2 id="home-dspico-title" class="hero-title">DSPico</h2>
         <p class="hero-copy">Prepare o microSD do cartucho, organize jogos e capas e acompanhe favoritos e tempo de jogo no RouteDex.</p>
-        <p id="home-drive-summary" class="hero-copy text-fg-mute">Nenhuma unidade seleccionada.</p>
-        <div class="hero-actions">
-          <button type="button" class="btn-primary" onclick="R1K.shell.go('dspico','cartao')">Abrir DSPico</button>
-          <button type="button" class="btn-ghost" onclick="R1K.shell.go('dspico','games')">Jogos</button>
-          <button type="button" class="btn-ghost" onclick="R1K.shell.go('dspico','routedex')">RouteDex</button>
+      </div>
+      <div class="home-card">
+        <p id="home-drive-summary" class="home-card-name">Nenhuma unidade selecionada.</p>
+        <div id="home-drive-usage" class="home-usage hidden">
+          <div class="home-usage-bar" role="meter" aria-label="Espaço usado no cartão" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="home-usage-fill"></span></div>
+          <p id="home-usage-text" class="home-usage-text"></p>
         </div>
-      </article>
-      <article class="hero-card hero-card--softmod">
-        <div class="hero-kicker">Mais ferramentas</div>
-        <h2 class="hero-title">DSi e outros flashcards</h2>
-        <p class="hero-copy">Softmod do DSi (exploit da câmara, Unlaunch, TWiLight, hiyaCFW), flashcards R4/GEi e biblioteca TWiLight.</p>
-        <div class="hero-actions">
-          <button type="button" class="btn-primary" onclick="R1K.shell.go('tools','softmod')">Softmod DSi</button>
-          <button type="button" class="btn-ghost" onclick="R1K.shell.go('tools','flashcards')">Flashcards R4/GEi</button>
-        </div>
-      </article>
+      </div>
+      <div class="hero-actions">
+        <button type="button" class="btn-primary" onclick="R1K.shell.go('dspico','cartao')">Abrir DSPico</button>
+        <button type="button" class="btn-ghost" onclick="R1K.shell.go('dspico','games')">Jogos</button>
+        <button type="button" class="btn-ghost" onclick="R1K.shell.go('dspico','routedex')">RouteDex</button>
+      </div>
+    </section>
+    <section class="panel home-more" aria-labelledby="home-more-title">
+      <div class="min-w-0">
+        <h2 id="home-more-title" class="home-more-title">Mais ferramentas</h2>
+        <p class="hero-copy">Softmod do DSi, flashcards R4/GEi, biblioteca TWiLight e manutenção do cartão.</p>
+      </div>
+      <div class="home-more-list">
+        <button type="button" class="home-more-link" onclick="R1K.shell.go('tools','softmod')"><span>Softmod DSi</span><svg class="wizard-goal-chev" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg></button>
+        <button type="button" class="home-more-link" onclick="R1K.shell.go('tools','flashcards')"><span>Flashcards R4/GEi</span><svg class="wizard-goal-chev" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg></button>
+        <button type="button" class="home-more-link" onclick="R1K.shell.go('tools','card')"><span>Manutenção</span><svg class="wizard-goal-chev" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg></button>
+      </div>
+    </section>
+    <section class="panel home-steps" aria-labelledby="home-steps-title">
+      <h2 id="home-steps-title" class="home-steps-title">Primeiros passos com o DSPico</h2>
+      <ol>
+        <li><span class="home-step-title">Escolha o microSD</span><span class="home-step-text">Ligue o cartão ao computador e selecione-o na barra de cima.</span></li>
+        <li><span class="home-step-title">Grave o pacote oficial</span><span class="home-step-text">Em DSPico → Cartão, o app instala o Pico Launcher e o Pico Loader do LNH team.</span></li>
+        <li><span class="home-step-title">Copie os jogos</span><span class="home-step-text">Os .nds ficam em Games/; capas e pastas organizam-se no separador Jogos.</span></li>
+      </ol>
     </section>
 </main>
 
@@ -181,14 +198,14 @@
           <h2 class="text-sm font-semibold text-fg">Identificar o DSi</h2>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed max-w-2xl">
             Confirme câmera, firmware e tipo de cartão no console antes de gravar o SD.
-            A versão da Câmera (com/sem Facebook) escolhe o ficheiro do exploit — não é rede social.
+            A versão da Câmera (com/sem Facebook) escolhe o ficheiro do exploit; não tem nada a ver com a rede social.
           </p>
         </div>
         <button type="button" onclick="toggleIdGuide()" class="btn-ghost !px-2.5 !py-1.5 text-[11px]">Fechar</button>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <article class="guide-card">
+        <article class="guide-step">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">1</span>
             <h3 class="text-[13px] font-semibold text-fg">Câmera: com ou sem Facebook?</h3>
@@ -200,15 +217,15 @@
           </ol>
           <div class="mt-3 space-y-2">
             <div class="note note--ok">
-              <strong>Com Facebook</strong> — aparece o ícone do Facebook. Use no Passo 1. Típico de EUA/Europa (câmera ~1.4+).
+              <strong>Com Facebook</strong>: aparece o ícone do Facebook. Use no Passo 1. Típico de EUA/Europa (câmera ~1.4+).
             </div>
             <div class="note note--warn">
-              <strong>Sem Facebook</strong> — sem ícone/opção Facebook. Comum em 1.0–1.3 e na maioria dos DSi japoneses.
+              <strong>Sem Facebook</strong>: sem ícone/opção Facebook. Comum em 1.0–1.3 e na maioria dos DSi japoneses.
             </div>
           </div>
         </article>
 
-        <article class="guide-card">
+        <article class="guide-step">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">2</span>
             <h3 class="text-[13px] font-semibold text-fg">Versão do sistema</h3>
@@ -224,31 +241,31 @@
           </div>
         </article>
 
-        <article class="guide-card">
+        <article class="guide-step">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">3</span>
             <h3 class="text-[13px] font-semibold text-fg">Modelo e região</h3>
           </div>
           <ul class="guide-list">
-            <li><strong>DSi</strong> — corpo menor; slot SD na lateral.</li>
-            <li><strong>DSi XL / LL</strong> — telas maiores; mesmo softmod.</li>
-            <li><strong>Etiqueta traseira</strong> — <code>TWL-001</code> (DSi) ou <code>UTL-001</code> (XL).</li>
-            <li><strong>Menu em japonês</strong> — forte indício de região J (geralmente Sem Facebook).</li>
-            <li><strong>DS / DS Lite / 3DS</strong> — <span class="text-warn">não usam este softmod</span>.</li>
+            <li><strong>DSi</strong>: corpo menor; slot SD na lateral.</li>
+            <li><strong>DSi XL / LL</strong>: telas maiores; mesmo softmod.</li>
+            <li><strong>Etiqueta traseira</strong>: <code>TWL-001</code> (DSi) ou <code>UTL-001</code> (XL).</li>
+            <li><strong>Menu em japonês</strong>: forte indício de região J (geralmente Sem Facebook).</li>
+            <li><strong>DS / DS Lite / 3DS</strong>: <span class="text-warn">não usam este softmod</span>.</li>
           </ul>
         </article>
 
-        <article class="guide-card">
+        <article class="guide-step">
           <div class="flex items-center gap-2.5 mb-2.5">
             <span class="step-num">4</span>
             <h3 class="text-[13px] font-semibold text-fg">Softmod ou Flashcard?</h3>
           </div>
           <div class="space-y-2">
             <div class="note note--ok">
-              <strong>SD do DSi (slot lateral)</strong> — Passos 1–3: exploit, Unlaunch, TWiLight, hiyaCFW.
+              <strong>SD do DSi (slot lateral)</strong>: Passos 1–3: exploit, Unlaunch, TWiLight, hiyaCFW.
             </div>
             <div class="note note--warn">
-              <strong>MicroSD do cartucho</strong> — kernel GEi / R4 / DSPico. Não substitui o Unlaunch.
+              <strong>MicroSD do cartucho</strong>: kernel GEi / R4 / DSPico. Não substitui o Unlaunch.
             </div>
             <div class="note">
               Confira o nome no plástico/PCB. Clones “R4” pedem o kernel do clone.
@@ -262,14 +279,14 @@
       </p>
     </section>
       <div id="wizard-root" class="panel p-5 sm:p-6"></div>
-      <details class="panel p-5 manual-steps">
+      <details class="manual-steps">
         <summary class="section-label cursor-pointer">Passos manuais (já sabe o que gravar)</summary>
         <div class="mt-4 space-y-6">
       <!-- Bloco SD do DSi -->
       <section class="prepare-block">
         <div class="prepare-block-head">
           <span class="path-badge path-badge--dsi">SD do DSi</span>
-          <h3 class="prepare-block-title">Slot lateral — softmod</h3>
+          <h3 class="prepare-block-title">Slot lateral: softmod</h3>
           <p class="prepare-block-sub">
             Cartão do slot lateral do DSi. Faça os passos por ordem na primeira instalação.
             O Unlaunch é a única etapa que grava na memória interna da consola (no DSi, não neste ecrã).
@@ -293,7 +310,7 @@
             <details class="gloss">
               <summary>O que é Memory Pit?</summary>
               <div class="gloss-body">
-                Exploit que abre ao ver o Álbum da Câmera com o cartão SD. O ficheiro tem de corresponder à versão da app Câmera (com ou sem Facebook) — não é rede social.
+                Exploit que abre ao ver o Álbum da Câmera com o cartão SD. O ficheiro tem de corresponder à versão da app Câmera (com ou sem Facebook), não é rede social.
               </div>
             </details>
 
@@ -326,7 +343,7 @@
               <span class="opt-writes-label">Vai escrever no cartão</span>
               <ul class="opt-writes">
                 <li><code>pit.bin</code> (Memory Pit)</li>
-                <li><code>boot.nds</code> — dumpTool</li>
+                <li><code>boot.nds</code>: dumpTool</li>
                 <li><code>unlaunch-installer.dsi</code> (para o Passo 2)</li>
               </ul>
             </div>
@@ -343,7 +360,7 @@
               <p class="opt-does mt-1.5">
                 Depois do dump da NAND no DSi: instala o TWiLight Menu++ e coloca o instalador seguro do Unlaunch no SD.
               </p>
-              <p class="opt-when mt-1">Quando usar: após o Passo 1 e o backup no DSi. No update, actualiza o menu sem reinstalar Unlaunch no consol.</p>
+              <p class="opt-when mt-1">Quando usar: após o Passo 1 e o backup no DSi. No update, atualiza o menu sem reinstalar Unlaunch no consol.</p>
             </div>
             <details class="gloss">
               <summary>O que é Unlaunch?</summary>
@@ -383,13 +400,13 @@
               </div>
             </details>
             <div class="note note--warn">
-              Detecta automaticamente <code>DT*/nand.bin</code> no cartão seleccionado. Pode demorar vários minutos.
+              Detecta automaticamente <code>DT*/nand.bin</code> no cartão selecionado. Pode demorar vários minutos.
             </div>
             <button type="button" onclick="runAction('setup-hiya')" class="btn-primary btn-primary--ok">Escrever hiyaCFW no SD</button>
           </section>
         </div>
       </section>
-      <section class="panel p-5 space-y-3">
+      <section class="manual-extra space-y-3">
         <h3 class="section-label">Softmod extra</h3>
         <p class="text-[11px] text-fg-mute -mt-1 mb-1">
           <span class="path-badge path-badge--dsi">SD do DSi</span>
@@ -427,7 +444,7 @@
           <span class="path-badge path-badge--flash">MicroSD do cartucho</span>
           <h3 class="prepare-block-title">Flashcard Slot-1</h3>
           <p class="prepare-block-sub">
-            MicroSD que fica <em>dentro</em> do cartucho — não é o SD lateral do DSi. Não substitui Unlaunch.
+            MicroSD que fica <em>dentro</em> do cartucho, não o SD lateral do DSi. Não substitui Unlaunch.
           </p>
         </div>
 
@@ -475,7 +492,7 @@
         <div class="note">
           <strong>R4 / clones:</strong> use o
           <button type="button" class="text-accent-fg font-medium" onclick="R1K.shell.go('tools','softmod')">Assistente</button>
-          (Criar ou Actualizar flashcard → R4) para escolher a pasta do kernel do clone exacto.
+          (Criar ou atualizar flashcard → R4) para escolher a pasta do kernel do clone exato.
         </div>
       </section>
     </div>
@@ -484,7 +501,7 @@
       <section class="panel p-5 space-y-3">
         <div>
           <h3 class="section-label">Jogos no cartão</h3>
-          <p class="text-[11px] text-fg-mute -mt-1 mb-0">Explorador de <code>/roms/</code> — arraste entre pastas ou solte ficheiros do computador.</p>
+          <p class="text-[11px] text-fg-mute -mt-1 mb-0">Explorador de <code>/roms/</code>: arraste entre pastas ou solte ficheiros do computador.</p>
         </div>
 
         <div class="rom-x-root" id="rom-x-root">
@@ -514,9 +531,9 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                 <span class="rom-x-toolbtn-label">Capas lote</span>
               </button>
-              <button type="button" class="rom-x-toolbtn" onclick="RomExplorer.refresh()" title="Actualizar" aria-label="Actualizar">
+              <button type="button" class="rom-x-toolbtn" onclick="RomExplorer.refresh()" title="Atualizar" aria-label="Atualizar">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v6h6M20 20v-6h-6M5 19a9 9 0 0014-7 9 9 0 00-4-7M19 5a9 9 0 00-14 7 9 9 0 004 7"/></svg>
-                <span class="rom-x-toolbtn-label">Actualizar</span>
+                <span class="rom-x-toolbtn-label">Atualizar</span>
               </button>
               <button type="button" class="rom-x-toolbtn" onclick="RomExplorer.mkdir()" title="Nova pasta" aria-label="Nova pasta">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
@@ -530,7 +547,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
                 <span class="rom-x-toolbtn-label">Duplicatas</span>
               </button>
-              <button type="button" class="rom-x-toolbtn rom-x-toolbtn--danger" id="rom-x-remove" onclick="RomExplorer.openDeleteSheet()" title="Remover seleccionados" aria-label="Remover seleccionados" disabled>
+              <button type="button" class="rom-x-toolbtn rom-x-toolbtn--danger" id="rom-x-remove" onclick="RomExplorer.openDeleteSheet()" title="Remover selecionados" aria-label="Remover selecionados" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 <span class="rom-x-toolbtn-label">Remover</span>
               </button>
@@ -555,7 +572,7 @@
 
             <div id="rom-x-delete-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="rom-x-sheet-title">
               <div class="rom-x-sheet">
-                <p class="rom-x-sheet-title" id="rom-x-sheet-title">Remover jogos seleccionados</p>
+                <p class="rom-x-sheet-title" id="rom-x-sheet-title">Remover jogos selecionados</p>
                 <p class="rom-x-sheet-count" id="rom-x-sheet-count"></p>
                 <p class="text-[11px] font-medium text-fg-soft mb-2">O que fazer com os saves?</p>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -614,7 +631,7 @@
           </div>
 
           <div id="rom-x-batch-missing" class="hidden space-y-2 mt-2"></div>
-          <div class="rom-x-status" id="rom-x-status" aria-live="polite">Seleccione um cartão SD.</div>
+          <div class="rom-x-status" id="rom-x-status" aria-live="polite">Selecione um cartão SD.</div>
 
           <div id="rom-x-tip" class="rom-x-tip hidden" role="tooltip" aria-hidden="true"></div>
 
@@ -639,7 +656,7 @@
       </section>
       <section class="panel p-5 space-y-3">
         <h3 class="section-label">Conteúdo</h3>
-        <p class="text-[11px] text-fg-mute -mt-1 mb-1">Organizar e enriquecer o que já está no cartão seleccionado.</p>
+        <p class="text-[11px] text-fg-mute -mt-1 mb-1">Organizar e enriquecer o que já está no cartão selecionado.</p>
         <div class="mb-3">
           <p class="text-[11px] font-medium text-fg-soft mb-2">Como organizar os jogos</p>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2" id="organize-layout-choices">
@@ -647,7 +664,7 @@
               <input type="radio" name="organize-layout" value="console" checked>
               <span>
                 <span class="choice-title">Por consola</span>
-                <span class="choice-sub"><code>/roms/nds/</code> — padrão TWiLight</span>
+                <span class="choice-sub"><code>/roms/nds/</code> (padrão TWiLight)</span>
               </span>
             </label>
             <label class="choice">
@@ -704,7 +721,7 @@
           <div>
             <h3 class="section-label">Apps homebrew</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed max-w-2xl">
-              Instala homebrew no cartão seleccionado (pasta <code class="text-accent-fg">/roms/apps/</code>).
+              Instala homebrew no cartão selecionado (pasta <code class="text-accent-fg">/roms/apps/</code>).
               Downloads oficiais com SHA-256; ao instalar aplica-se a guia GameBrew/README.
             </p>
           </div>
@@ -732,7 +749,7 @@
     <div id="tools-pane-card" class="hidden space-y-4" role="tabpanel">
       <section class="panel p-5 space-y-3">
         <h3 class="section-label">Manutenção</h3>
-        <p class="text-[11px] text-fg-mute -mt-1 mb-1">Inspeccionar, copiar ou limpar o volume — formatação apaga tudo.</p>
+        <p class="text-[11px] text-fg-mute -mt-1 mb-1">Inspeccionar, copiar ou limpar o volume. Formatar apaga tudo.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button type="button" onclick="runAction('sd-report')" class="action-row">
             <div class="action-row-main">
@@ -757,7 +774,7 @@
               <svg class="w-4 h-4 text-ok shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               <span class="action-row-body">
                 <span class="action-row-title">Limpar metadados do sistema</span>
-                <span class="action-row-does">Remove <code>._*</code>, <code>.DS_Store</code> e residual do macOS — não apaga jogos.</span>
+                <span class="action-row-does">Remove <code>._*</code>, <code>.DS_Store</code> e resíduos do macOS; não apaga jogos.</span>
               </span>
             </div>
           </button>
@@ -766,7 +783,7 @@
               <svg class="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
               <span class="action-row-body">
                 <span class="action-row-title">Formatar FAT32</span>
-                <span class="action-row-does">MBR · cluster 32&nbsp;KB. <strong>Apaga tudo</strong> no volume seleccionado.</span>
+                <span class="action-row-does">MBR · cluster 32&nbsp;KB. <strong>Apaga tudo</strong> no volume selecionado.</span>
               </span>
             </div>
             <div class="action-row-meta">
@@ -784,7 +801,7 @@
       <p class="page-sub">Chave SteamGridDB (capas/ícones), aparência, informação legal e versão.</p>
     </header>
     <section id="sgdb-settings-panel" class="panel p-5 space-y-3 mb-5" style="border-color: color-mix(in srgb, var(--c-accent) 45%, var(--c-line));">
-      <h3 class="section-label">SteamGridDB — chave API</h3>
+      <h3 class="section-label">SteamGridDB: chave API</h3>
       <p class="text-[12px] text-fg-mute leading-relaxed">
         Necessária para capas/ícones de jogos retro (GBA, GBC, SNES, etc.).
         Crie uma chave gratuita em
@@ -846,14 +863,14 @@
   </aside>
 
   <script src="js/events.js?v=sgdb3"></script>
-  <script src="js/shell.js?v=rp3"></script>
+  <script src="js/shell.js?v=rp5"></script>
   <script src="js/updates.js?v=rp4"></script>
   <script src="js/launcher-extras.js?v=rp3"></script>
   <script src="js/virtual-grid.js?v=sgdb3"></script>
   <script src="app.js?v=rp3"></script>
   <script src="rom_explorer.js?v=sgdb3"></script>
-  <script src="js/routedex.js?v=rp4"></script>
-  <script src="dspico.js?v=rp3"></script>
-  <script src="wizard.js?v=rp3"></script>
+  <script src="js/routedex.js?v=rp6"></script>
+  <script src="dspico.js?v=rp5"></script>
+  <script src="wizard.js?v=rp5"></script>
 </body>
 </html>

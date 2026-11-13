@@ -845,10 +845,10 @@ def _write_pico_bmp(
     if len(rel_paths) > 1:
         return (
             True,
-            f"{label.capitalize()} actualizada em {len(rel_paths)} destino(s).",
+            f"{label.capitalize()} atualizada em {len(rel_paths)} destino(s).",
             stats,
         )
-    return True, f"{label.capitalize()} actualizada em /{rel_dest}.", stats
+    return True, f"{label.capitalize()} atualizada em /{rel_dest}.", stats
 
 
 def _batch_candidate_urls(

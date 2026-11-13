@@ -132,7 +132,7 @@ def _write_json_atomic(path: str, data: dict[str, Any], undo: UndoStack) -> None
 
 
 def list_pico_themes(mount_path: str) -> dict[str, Any]:
-    """Lista temas válidos em /_pico/themes e tema activo em settings.json."""
+    """Lista temas válidos em /_pico/themes e tema ativo em settings.json."""
     try:
         root = _themes_root(mount_path)
         os.makedirs(root, exist_ok=True)
@@ -166,7 +166,7 @@ def list_pico_themes(mount_path: str) -> dict[str, Any]:
 
 
 def set_pico_theme(mount_path: str, theme_folder: str) -> tuple[bool, str, dict[str, Any]]:
-    """Define o tema activo no /_pico/settings.json (campo theme)."""
+    """Define o tema ativo no /_pico/settings.json (campo theme)."""
     stats: dict[str, Any] = {}
     try:
         folder = _safe_theme_folder(theme_folder or "")
@@ -185,7 +185,7 @@ def set_pico_theme(mount_path: str, theme_folder: str) -> tuple[bool, str, dict[
             return False, msg, stats
         sync_volume(mount_path)
         stats["theme"] = folder
-        return True, f"Tema activo definido para '{folder}'.", stats
+        return True, f"Tema ativo definido para '{folder}'.", stats
     except Exception as e:
         return False, redact_text(e), stats
 

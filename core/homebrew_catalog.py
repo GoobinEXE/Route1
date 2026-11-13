@@ -131,7 +131,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "fastvideo_ds",
         "title": "FastVideoDSPlayer 2",
-        "description": "Fork actualizado do FastVideoDS Player (.fv).",
+        "description": "Fork atualizado do FastVideoDS Player (.fv).",
         "category": "media",
         "author": "Mathos42",
         "version": "1.7",

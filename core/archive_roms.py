@@ -1,4 +1,4 @@
-"""Extracção segura de ROMs a partir de .zip / .7z / .rar para importação."""
+"""Extração segura de ROMs a partir de .zip / .7z / .rar para importação."""
 
 from __future__ import annotations
 

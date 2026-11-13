@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "static/skins.css"
+        ],
+        "createdAt": "2026-11-13T17:06:15.111Z",
+        "reason": "Brief pinned by the user: theme grounds reproduce the user's console-menu reference images (DS Lite grid paper, Wii pinstripes, DSi bands); see .impeccable/surfaces/static-index-html.md"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "static/skins.css"
+        ],
+        "createdAt": "2026-11-13T17:06:15.126Z",
+        "reason": "Brief pinned by the user: theme grounds reproduce the user's console-menu reference images (DS Lite grid paper, Wii pinstripes, DSi bands); see .impeccable/surfaces/static-index-html.md"
+      },
+      {
+        "rule": "marquee",
+        "value": "*",
+        "files": [
+          "static/style.css"
+        ],
+        "createdAt": "2026-11-13T17:06:15.139Z",
+        "reason": "Indeterminate progress bar while a disk operation runs: conveys loading state, not decoration"
+      }
+    ]
+  }
+}

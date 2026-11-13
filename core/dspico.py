@@ -1287,7 +1287,7 @@ def check_dspico_import_conflicts(
     from core.archive_roms import cleanup_expand_staging, expand_rom_sources
 
     if not isinstance(source_paths, list) or not source_paths:
-        return {"success": False, "error": "Nenhum ficheiro seleccionado.", "conflicts": []}
+        return {"success": False, "error": "Nenhum ficheiro selecionado.", "conflicts": []}
     dest_norm = _normalize_rel_dir(dest_rel_dir)
     if dest_norm is None:
         return {"success": False, "error": "Pasta de destino inválida.", "conflicts": []}
@@ -1372,7 +1372,7 @@ def import_dspico_games(
 
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(source_paths, list) or not source_paths:
-        return False, "Nenhum ficheiro seleccionado.", {}
+        return False, "Nenhum ficheiro selecionado.", {}
 
     resolutions = normalize_conflict_resolutions(conflict_resolutions)
     if resolutions is None:
@@ -1664,7 +1664,7 @@ def delete_dspico_games(
 ) -> tuple[bool, str, dict]:
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
 
     removed = 0
     errors: list[str] = []
@@ -1709,7 +1709,7 @@ def delete_dspico_retro_roms(
     """Apaga ROMs retro sob /ROMs/ (paths relativos ao mount ou a ROMs/)."""
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
     removed = 0
     errors: list[str] = []
     for rel in rel_paths:
@@ -1748,7 +1748,7 @@ def move_dspico_games(
     if dest_norm is None:
         return False, "Destino inválido.", {}
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
 
     games_root = _games_root(mount_path)
     if dest_norm:
@@ -2517,7 +2517,7 @@ def set_dspico_settings(
                 os.remove(bak)
             except OSError:
                 pass
-        log("✅ settings.json actualizado.")
+        log("✅ settings.json atualizado.")
         return True, "Definições Pico Launcher guardadas."
     except Exception as e:
         try:

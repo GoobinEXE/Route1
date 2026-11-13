@@ -11,7 +11,7 @@
   async function writeOp(fn) {
     const path = drivePath();
     if (!path) {
-      alert("Seleccione o microSD do DSPico na barra de cima.");
+      alert("Selecione o microSD do DSPico na barra de cima.");
       return null;
     }
     try {

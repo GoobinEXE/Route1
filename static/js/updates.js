@@ -33,7 +33,7 @@
       const api = typeof waitForApi === "function" ? await waitForApi() : window.pywebview && pywebview.api;
       if (!api || typeof api.check_dspico_updates !== "function") {
         el.innerHTML =
-          '<p class="text-[12px] text-fg-mute">API de actualizações indisponível nesta build. Use Preparar SD com os pins oficiais.</p>';
+          '<p class="text-[12px] text-fg-mute">API de atualizações indisponível nesta build. Use Preparar SD com os pins oficiais.</p>';
         return;
       }
       const path = drivePath();
@@ -167,7 +167,7 @@
     const path = drivePath();
     const v = variant || "official";
     if (!path) {
-      alert("Seleccione o microSD do DSPico.");
+      alert("Selecione o microSD do DSPico.");
       return;
     }
     if (v === "enhanced") {

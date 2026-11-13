@@ -102,13 +102,28 @@
   function updateHomeDrive() {
     const el = $("home-drive-summary");
     if (!el) return;
-    if (typeof selectedDrive !== "undefined" && selectedDrive) {
-      const role = driveRoleLabel();
-      const size = selectedDrive.total_size_gb != null ? `${selectedDrive.total_size_gb} GB` : "?";
-      el.textContent = `${role}: ${selectedDrive.name || selectedDrive.mount_path} · ${selectedDrive.fs_type || "?"} · ${size}`;
-    } else {
-      el.textContent = "Nenhuma unidade seleccionada. Ligue o microSD e escolha-o na barra de cima.";
+    const usage = $("home-drive-usage");
+    const d = typeof selectedDrive !== "undefined" ? selectedDrive : null;
+    if (!d) {
+      el.textContent = "Nenhuma unidade selecionada. Ligue o microSD e escolha-o na barra de cima.";
+      if (usage) usage.classList.add("hidden");
+      return;
     }
+    el.textContent = `${driveRoleLabel()} · ${d.name || d.mount_path} · ${d.fs_type || "formato desconhecido"}`;
+    const total = Number(d.total_size_gb);
+    const free = Number(d.free_size_gb);
+    if (!usage || !(total > 0) || !(free >= 0)) {
+      if (usage) usage.classList.add("hidden");
+      return;
+    }
+    const used = Math.max(0, Math.min(100, Math.round(((total - free) / total) * 100)));
+    usage.classList.remove("hidden");
+    const fill = $("home-usage-fill");
+    if (fill) fill.style.width = `${used}%`;
+    const meter = usage.querySelector('[role="meter"]');
+    if (meter) meter.setAttribute("aria-valuenow", String(used));
+    const text = $("home-usage-text");
+    if (text) text.textContent = `${free.toFixed(1)} GB livres de ${total.toFixed(1)} GB · ${used}% usado`;
   }
 
   function driveRoleLabel() {
@@ -291,7 +306,7 @@
         res.prefs.steamgriddb_configured === true;
       if (configured) {
         input.placeholder = "Chave guardada — cole outra para substituir";
-        setSgdbStatus("SteamGridDB activo (fonte principal de capas/ícones).", true);
+        setSgdbStatus("SteamGridDB ativo (fonte principal de capas/ícones).", true);
       } else {
         input.placeholder = "Cole a chave aqui";
         setSgdbStatus(

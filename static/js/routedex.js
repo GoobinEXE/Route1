@@ -106,10 +106,10 @@ const RouteDex = (() => {
       <section class="panel p-5 space-y-4">
         <div class="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h3 class="text-sm font-semibold text-fg">RouteDex</h3>
+            <h3 class="section-label">RouteDex</h3>
             <p class="text-[12px] text-fg-mute mt-1">A sua biblioteca do Pico Launcher, lida e escrita direto no microSD.</p>
           </div>
-          <button type="button" class="btn-ghost !text-[11px]" id="routedex-reload">Actualizar</button>
+          <button type="button" class="btn-ghost !text-[11px]" id="routedex-reload">Atualizar</button>
         </div>
         <div class="routedex-tabs" role="tablist">${tabs}</div>
         <div id="routedex-body"></div>
@@ -189,8 +189,8 @@ const RouteDex = (() => {
     const div = document.createElement("div");
     div.className = "routedex-row";
     div.innerHTML = `
-      <button type="button" class="routedex-flag routedex-flag--fav${fav}" data-act="favorite" title="Favorito" aria-pressed="${!!g.favorite}">♥</button>
-      <button type="button" class="routedex-flag routedex-flag--done${done}" data-act="completed" title="Concluído" aria-pressed="${!!g.completed}">✓</button>
+      <button type="button" class="routedex-flag routedex-flag--fav${fav}" data-act="favorite" title="Favorito" aria-pressed="${!!g.favorite}" aria-label="Favorito"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.5S2 10 2 5.9A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.4C14 10 8 13.5 8 13.5z"/></svg></button>
+      <button type="button" class="routedex-flag routedex-flag--done${done}" data-act="completed" title="Concluído" aria-pressed="${!!g.completed}" aria-label="Concluído"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg></button>
       <span class="routedex-name" title="${esc(g.rel)}">${esc(g.name)}</span>
       <span class="routedex-sys">${esc(g.system === "retro" ? (g.name.split(".").pop() || "").toUpperCase() : g.system.toUpperCase())}</span>
       <span class="routedex-meta">${esc(meta.join(" · "))}</span>

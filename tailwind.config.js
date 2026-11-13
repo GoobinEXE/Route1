@@ -1,21 +1,20 @@
 /** @type {import('tailwindcss').Config} */
 
 // Todas as cores vêm dos tokens definidos em static/themes.css (triplas RGB),
-// para que cada tema (dark, light, Catppuccin, Dracula) redefina a paleta sem
+// para que cada tema (7 temas × original/claro/noturno) redefina a paleta sem
 // recompilar o Tailwind. `<alpha-value>` mantém utilitários como `bg-accent/10`.
 const token = (name) => `rgb(var(--c-${name}) / <alpha-value>)`;
 
 module.exports = {
   content: [
     "./static/index.html",
-    "./static/app.js",
-    "./static/wizard.js",
-    "./static/theme.js",
+    "./static/*.js",
+    "./static/js/*.js",
   ],
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Sora", "system-ui", "sans-serif"],
+        sans: ["Nunito", "ui-rounded", "system-ui", "sans-serif"],
         mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       colors: {

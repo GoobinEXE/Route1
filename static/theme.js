@@ -1,210 +1,183 @@
 /**
  * Temas — Route Pico
  *
- * Carregado no <head> (síncrono) para aplicar `data-theme` / `data-scheme`
- * em <html> antes do primeiro paint e evitar flash. As cores em si vivem em
- * themes.css; este ficheiro só escolhe o tema, persiste a preferência e
- * desenha o menu no header.
+ * Dois eixos: o tema (sete, inspirados em menus de consolas) e o modo
+ * (Original, Claro = Catppuccin Latte, Noturno = Catppuccin Mocha, ou Sistema).
+ * Carregado no <head> depois de theme-data.js (gerado por tools/build_themes.py)
+ * para aplicar data-family / data-mode / data-scheme antes do primeiro paint.
+ * As cores vivem em themes.css; a assinatura de cada tema em skins.css.
  */
 const Theme = (() => {
-  const STORAGE_KEY = "route_1_kit_theme";
-  const DEFAULT_THEME = "dark";
+  const STORAGE_KEY = "route_pico_theme_v2";
+  const LEGACY_KEY = "route_1_kit_theme";
+  const DATA = window.R1K_THEME_DATA || { families: [], defaultFamily: "dupla", defaultMode: "original" };
+  const FAMILIES = Object.fromEntries(DATA.families.map((f) => [f.id, f]));
+  const MODES = [
+    { id: "original", label: "Original" },
+    { id: "light", label: "Claro" },
+    { id: "dark", label: "Noturno" },
+    { id: "auto", label: "Sistema" },
+  ];
+  const MODE_IDS = MODES.map((m) => m.id);
 
-  // swatch: [fundo, painel, accent] — usado só para a pré-visualização no menu.
-  const THEMES = {
-    dark: {
-      label: "Escuro",
-      group: "Studio",
-      scheme: "dark",
-      swatch: ["#0F1116", "#171A21", "#6D8BFF"],
-    },
-    light: {
-      label: "Claro",
-      group: "Studio",
-      scheme: "light",
-      swatch: ["#F3F4F7", "#FFFFFF", "#2F5BEA"],
-    },
-    "catppuccin-latte": {
-      label: "Latte",
-      group: "Catppuccin",
-      scheme: "light",
-      swatch: ["#E6E9EF", "#EFF1F5", "#1E66F5"],
-    },
-    "catppuccin-frappe": {
-      label: "Frappé",
-      group: "Catppuccin",
-      scheme: "dark",
-      swatch: ["#292C3C", "#303446", "#8CAAEE"],
-    },
-    "catppuccin-macchiato": {
-      label: "Macchiato",
-      group: "Catppuccin",
-      scheme: "dark",
-      swatch: ["#1E2030", "#24273A", "#8AADF4"],
-    },
-    "catppuccin-mocha": {
-      label: "Mocha",
-      group: "Catppuccin",
-      scheme: "dark",
-      swatch: ["#181825", "#1E1E2E", "#89B4FA"],
-    },
-    dracula: {
-      label: "Dracula",
-      group: "Dracula",
-      scheme: "dark",
-      swatch: ["#21222C", "#282A36", "#BD93F9"],
-    },
-    gameboy: {
-      label: "Game Boy · DS Lite",
-      group: "Retro",
-      scheme: "light",
-      swatch: ["#E3E7EC", "#9BBC0F", "#306230"],
-    },
-  };
-
-  // "system" segue prefers-color-scheme e alterna entre Studio Escuro/Claro.
-  const SYSTEM = "system";
-  const GROUP_ORDER = ["Studio", "Catppuccin", "Dracula", "Retro"];
-
-  let preference = DEFAULT_THEME; // o que o utilizador escolheu (pode ser "system")
+  let pref = { family: DATA.defaultFamily, mode: DATA.defaultMode };
   let menuOpen = false;
+  let listHost = null;
+
+  function systemDark() {
+    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  /** Converte a preferência do tema antigo (um só eixo) para tema + modo. */
+  function migrate(old) {
+    const dark = ["dark", "catppuccin-frappe", "catppuccin-macchiato", "catppuccin-mocha", "dracula"];
+    if (old === "catppuccin-latte") return { family: DATA.defaultFamily, mode: "light" };
+    if (dark.includes(old)) return { family: DATA.defaultFamily, mode: "dark" };
+    if (old === "system") return { family: DATA.defaultFamily, mode: "auto" };
+    return null;
+  }
 
   function readStored() {
     try {
-      const v = localStorage.getItem(STORAGE_KEY);
-      if (v === SYSTEM || THEMES[v]) return v;
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const v = JSON.parse(raw);
+        if (v && FAMILIES[v.family] && MODE_IDS.includes(v.mode)) return v;
+      }
+      const legacy = migrate(localStorage.getItem(LEGACY_KEY));
+      if (legacy) return legacy;
     } catch (e) {
       /* storage indisponível */
     }
-    return DEFAULT_THEME;
+    return { family: DATA.defaultFamily, mode: DATA.defaultMode };
   }
 
-  function systemPrefersLight() {
-    return (
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-color-scheme: light)").matches
-    );
+  function resolvedMode(p) {
+    if (p.mode === "auto") return systemDark() ? "dark" : "light";
+    return p.mode;
   }
 
-  function resolve(pref) {
-    if (pref === SYSTEM) return systemPrefersLight() ? "light" : "dark";
-    return THEMES[pref] ? pref : DEFAULT_THEME;
-  }
-
-  function applyToDocument(id) {
+  function apply() {
+    const fam = FAMILIES[pref.family] || FAMILIES[DATA.defaultFamily];
+    if (!fam) return;
+    const mode = resolvedMode(pref);
+    const meta = fam.modes[mode];
     const root = document.documentElement;
-    const def = THEMES[id];
-    root.setAttribute("data-theme", id);
-    root.setAttribute("data-scheme", def.scheme);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", def.swatch[1]);
+    root.setAttribute("data-family", fam.id);
+    root.setAttribute("data-mode", mode);
+    root.setAttribute("data-scheme", meta.scheme);
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute("content", meta.swatch[0]);
   }
 
-  function set(pref, { persist = true } = {}) {
-    preference = pref === SYSTEM || THEMES[pref] ? pref : DEFAULT_THEME;
-    applyToDocument(resolve(preference));
+  function set(next = {}, { persist = true } = {}) {
+    if (next.family && FAMILIES[next.family]) pref.family = next.family;
+    if (next.mode && MODE_IDS.includes(next.mode)) pref.mode = next.mode;
+    apply();
     if (persist) {
       try {
-        localStorage.setItem(STORAGE_KEY, preference);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(pref));
       } catch (e) {
         /* ignorar */
       }
     }
-    renderMenu();
+    renderAll();
   }
 
   function current() {
-    return resolve(preference);
+    return { family: pref.family, mode: resolvedMode(pref), preference: pref.mode };
   }
 
-  /* ---------- menu ---------- */
+  /* ---------- seletor (menu do topo e Definições usam o mesmo) ---------- */
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  }
 
   function swatchHtml(colors) {
     return `<span class="theme-swatch" aria-hidden="true">${colors
-      .map((c) => `<span style="background:${c}"></span>`)
+      .map((c) => `<span style="background:${esc(c)}"></span>`)
       .join("")}</span>`;
   }
 
-  const CHECK_SVG =
-    '<svg class="check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3 3 7-7"/></svg>';
-
-  function itemHtml(id, label, colors) {
-    const checked = preference === id;
-    return `
-      <button type="button" class="theme-item" role="menuitemradio" aria-checked="${checked}"
-              data-theme-id="${id}">
-        ${swatchHtml(colors)}
-        <span>${label}</span>
-        ${CHECK_SVG}
-      </button>`;
+  function pickerHtml(role) {
+    const mode = resolvedMode(pref);
+    const radio = role === "menu" ? "menuitemradio" : "radio";
+    const fams = DATA.families
+      .map((f) => {
+        const on = f.id === pref.family;
+        return `<button type="button" class="theme-item" role="${radio}" aria-checked="${on}" data-family-id="${esc(f.id)}">
+          ${swatchHtml(f.modes[mode].swatch)}
+          <span class="theme-item-text"><span class="theme-item-label">${esc(f.label)}</span><span class="theme-item-hint">${esc(f.hint)}</span></span>
+        </button>`;
+      })
+      .join("");
+    const modes = MODES.map(
+      (m) =>
+        `<button type="button" class="theme-mode" role="${radio}" aria-checked="${m.id === pref.mode}" data-mode-id="${m.id}">${m.label}</button>`
+    ).join("");
+    return `<div class="theme-group" id="theme-group-family-${role}">Tema</div>
+      <div class="theme-families" role="group" aria-labelledby="theme-group-family-${role}">${fams}</div>
+      <div class="theme-group" id="theme-group-mode-${role}">Modo</div>
+      <div class="theme-modes" role="group" aria-labelledby="theme-group-mode-${role}">${modes}</div>`;
   }
 
-  /** Mesma lista para o menu do topo e para Definições → Aparência. */
-  function itemsHtml() {
-    const systemColors = systemPrefersLight() ? THEMES.light.swatch : THEMES.dark.swatch;
-    let html = `<div class="theme-group">Aparência</div>${itemHtml(
-      SYSTEM,
-      "Automático (sistema)",
-      systemColors
-    )}`;
-
-    GROUP_ORDER.forEach((group) => {
-      const ids = Object.keys(THEMES).filter((k) => THEMES[k].group === group);
-      if (!ids.length) return;
-      html += `<div class="theme-group">${group}</div>`;
-      ids.forEach((id) => {
-        html += itemHtml(id, THEMES[id].label, THEMES[id].swatch);
-      });
-    });
-
-    return html;
+  function bind(root, onPick) {
+    root.querySelectorAll("[data-family-id]").forEach((b) =>
+      b.addEventListener("click", () => {
+        set({ family: b.getAttribute("data-family-id") });
+        if (onPick) onPick(b);
+      })
+    );
+    root.querySelectorAll("[data-mode-id]").forEach((b) =>
+      b.addEventListener("click", () => {
+        set({ mode: b.getAttribute("data-mode-id") });
+        if (onPick) onPick(b);
+      })
+    );
   }
 
-  function bindItems(root, onPick) {
-    root.querySelectorAll("[data-theme-id]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        set(btn.getAttribute("data-theme-id"));
-        if (onPick) onPick();
-      });
-    });
-  }
-
-  let listHost = null;
-
-  /** Renderiza a lista de temas num contentor da página (Definições). */
   function renderList(host) {
     if (host) listHost = host;
     if (!listHost) return;
-    listHost.setAttribute("role", "radiogroup");
-    listHost.setAttribute("aria-label", "Tema da app");
-    listHost.innerHTML = itemsHtml().replace(/role="menuitemradio"/g, 'role="radio"');
-    bindItems(listHost);
+    listHost.setAttribute("aria-label", "Tema e modo da app");
+    listHost.innerHTML = pickerHtml("list");
+    bind(listHost);
   }
 
-  function renderMenu() {
+  function renderMenu(focusSame) {
     const menu = document.getElementById("theme-menu");
-    if (listHost) renderList();
     if (!menu) return;
-    menu.innerHTML = itemsHtml();
-    bindItems(menu, closeMenu);
-
+    const prevKey = focusSame && document.activeElement && (document.activeElement.dataset.familyId || document.activeElement.dataset.modeId);
+    menu.innerHTML = pickerHtml("menu");
+    bind(menu, () => {});
+    if (prevKey) {
+      const again = menu.querySelector(`[data-family-id="${prevKey}"], [data-mode-id="${prevKey}"]`);
+      if (again) again.focus();
+    }
     const trigger = document.getElementById("btn-theme");
     if (trigger) {
-      const label = preference === SYSTEM ? "Automático" : THEMES[current()].label;
+      const fam = FAMILIES[pref.family];
+      const label = `${fam ? fam.label : ""} · ${MODES.find((m) => m.id === pref.mode).label}`;
       trigger.setAttribute("title", `Tema: ${label}`);
       trigger.setAttribute("aria-label", `Tema: ${label}. Alterar tema`);
     }
+  }
+
+  function renderAll() {
+    renderMenu(menuOpen);
+    if (listHost) renderList();
   }
 
   function openMenu() {
     const menu = document.getElementById("theme-menu");
     const trigger = document.getElementById("btn-theme");
     if (!menu || !trigger) return;
-    renderMenu();
+    renderMenu(false);
     menu.classList.remove("hidden");
     trigger.setAttribute("aria-expanded", "true");
     menuOpen = true;
-    const active = menu.querySelector('[aria-checked="true"]') || menu.querySelector(".theme-item");
+    const active = menu.querySelector('.theme-item[aria-checked="true"]') || menu.querySelector(".theme-item");
     if (active) active.focus();
   }
 
@@ -231,31 +204,29 @@ const Theme = (() => {
     if (!menuOpen) return;
     const menu = document.getElementById("theme-menu");
     if (!menu) return;
-    const items = Array.from(menu.querySelectorAll(".theme-item"));
+    const items = Array.from(menu.querySelectorAll(".theme-item, .theme-mode"));
     const idx = items.indexOf(document.activeElement);
-
     if (ev.key === "Escape") {
       ev.preventDefault();
       closeMenu();
       document.getElementById("btn-theme")?.focus();
-    } else if (ev.key === "ArrowDown") {
+    } else if (ev.key === "ArrowDown" || ev.key === "ArrowRight") {
       ev.preventDefault();
       items[(idx + 1) % items.length]?.focus();
-    } else if (ev.key === "ArrowUp") {
+    } else if (ev.key === "ArrowUp" || ev.key === "ArrowLeft") {
       ev.preventDefault();
       items[(idx - 1 + items.length) % items.length]?.focus();
     }
   }
 
   function init() {
-    renderMenu();
+    renderMenu(false);
     document.addEventListener("click", onDocumentClick);
     document.addEventListener("keydown", onKeydown);
-
     if (typeof window.matchMedia === "function") {
-      const mq = window.matchMedia("(prefers-color-scheme: light)");
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
       const onChange = () => {
-        if (preference === SYSTEM) set(SYSTEM, { persist: false });
+        if (pref.mode === "auto") set({}, { persist: false });
       };
       if (mq.addEventListener) mq.addEventListener("change", onChange);
       else if (mq.addListener) mq.addListener(onChange);
@@ -263,26 +234,17 @@ const Theme = (() => {
   }
 
   // Aplicação imediata (antes do primeiro paint).
-  preference = readStored();
-  applyToDocument(resolve(preference));
+  pref = readStored();
+  apply();
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+  else init();
 
   function list() {
-    return Object.keys(THEMES).map((id) => ({
-      id,
-      label: THEMES[id].label,
-      group: THEMES[id].group,
-      scheme: THEMES[id].scheme,
-    }));
+    return DATA.families.map((f) => ({ id: f.id, label: f.label, hint: f.hint }));
   }
 
   return {
-    THEMES,
     set,
     current,
     list,
@@ -290,7 +252,7 @@ const Theme = (() => {
     toggleMenu,
     closeMenu,
     get preference() {
-      return preference;
+      return { ...pref };
     },
   };
 })();

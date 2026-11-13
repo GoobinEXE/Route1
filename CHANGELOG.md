@@ -21,6 +21,9 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ### Adicionado
 
+- **Temas novos**: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D e Híbrido, inspirados em menus de consolas, cada um com paleta original e modos Claro (Catppuccin Latte), Noturno (Catppuccin Mocha) ou Sistema; fonte arredondada Nunito; cada tema tem o seu fundo e a sua forma de marcar a seleção, e o foco do teclado tem contorno próprio
+- **Início** centrado no DSPico: estado e espaço usado do microSD, atalhos para Jogos e RouteDex, primeiros passos e entrada para Mais ferramentas
+- Interface mais limpa: títulos de secção em frase normal, ícones desenhados em vez de emojis no estado do microSD e no RouteDex, objetivos do assistente em lista, grafia atual (atualizar, selecionar, ativo)
 - **Fontes oficiais**: PicoDex, Pico Launcher, Pico Loader e as duas variantes Enhanced num registo único, com versões fixadas, verificação semanal e PR automático; os dados da PicoDex podem ser atualizados em Verificar atualizações
 - **RouteDex** (DSPico → RouteDex): favoritos, concluídos, partidas e tempo de jogo do Pico Launcher Enhanced, com edição à mão
 - **Saúde do cartão**: versão do Pico Loader e do launcher, ficheiros em falta ou de releases misturadas, saves sem jogo ou em duplicado, capas órfãs e lixo do macOS (com cópia no computador antes de remover)

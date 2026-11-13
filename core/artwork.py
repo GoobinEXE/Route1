@@ -830,7 +830,7 @@ def install_artwork(mount_path: str, log_callback=None) -> tuple[bool, str]:
         "No TWiLight Menu++, ative capas/ícones personalizados nas definições "
         "se ainda não estiver ativo."
     )
-    msg = str(res.get("message") or "Capas e ícones actualizados.")
+    msg = str(res.get("message") or "Capas e ícones atualizados.")
     if imported:
         msg = f"{msg} ({imported} importada(s) localmente)."
     written = int(res.get("written") or 0)
@@ -1447,7 +1447,7 @@ def apply_rom_artwork_url(
     except ValueError:
         rel_dest = os.path.basename(dest)
     label = "capa" if kind_n == "boxart" else "ícone"
-    msg = f"{label.capitalize()} actualizada em /{rel_dest}."
+    msg = f"{label.capitalize()} atualizada em /{rel_dest}."
     log(f"✅ {msg}")
     stats["path"] = rel_dest
     stats["kind"] = kind_n

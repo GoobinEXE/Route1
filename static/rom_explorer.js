@@ -203,7 +203,7 @@ const RomExplorer = (() => {
     const label = btn.querySelector(".rom-x-toolbtn-label");
     const text = n > 0 ? `Remover (${n})` : "Remover";
     if (label) label.textContent = text;
-    btn.title = n > 0 ? `Remover ${n} seleccionado(s)` : "Remover seleccionados";
+    btn.title = n > 0 ? `Remover ${n} selecionado(s)` : "Remover selecionados";
     btn.setAttribute("aria-label", btn.title);
   }
 
@@ -216,7 +216,7 @@ const RomExplorer = (() => {
     const el = document.getElementById("rom-x-status");
     if (!el) return;
     if (!mount()) {
-      el.textContent = "Seleccione um cartão SD.";
+      el.textContent = "Selecione um cartão SD.";
       return;
     }
     if (isSearching()) {
@@ -233,7 +233,7 @@ const RomExplorer = (() => {
     const path = cwd ? `/roms/${cwd}/` : "/roms/";
     el.innerHTML =
       `<strong>${total}</strong> itens` +
-      (sel ? ` · <strong>${sel}</strong> seleccionados` : "") +
+      (sel ? ` · <strong>${sel}</strong> selecionados` : "") +
       ` · <span title="${escapeHtml(path)}">${escapeHtml(path)}</span>`;
   }
 
@@ -429,7 +429,7 @@ const RomExplorer = (() => {
 
     if (!mount()) {
       el.innerHTML = emptyHtml(
-        "Nenhum cartão seleccionado",
+        "Nenhum cartão selecionado",
         "Escolha um volume SD acima para explorar <code>/roms/</code>."
       );
       updateRemoveBtn();
@@ -1250,7 +1250,7 @@ const RomExplorer = (() => {
 
   async function batchArtwork() {
     if (!mount()) {
-      appendLog("Seleccione um cartão SD.", "warn");
+      appendLog("Selecione um cartão SD.", "warn");
       return;
     }
     if (busy) {
@@ -1361,7 +1361,7 @@ const RomExplorer = (() => {
         picked.path
       );
       if (result && result.success) {
-        appendLog(result.message || "Arte actualizada.", "success");
+        appendLog(result.message || "Arte atualizada.", "success");
         invalidateCatalog();
         await openDrawer(drawerRel);
         await refresh();
@@ -1589,7 +1589,7 @@ const RomExplorer = (() => {
 
   async function handleDropTo(destRel, ev) {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     const internal = parseInternalDrag(ev);
@@ -1817,7 +1817,7 @@ const RomExplorer = (() => {
 
   async function openDupesSheet() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (busy) {
@@ -1965,7 +1965,7 @@ const RomExplorer = (() => {
 
   async function addFiles() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (busy) {
@@ -1991,7 +1991,7 @@ const RomExplorer = (() => {
 
   async function mkdir() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     const name = prompt("Nome da nova pasta:");
@@ -2041,7 +2041,7 @@ const RomExplorer = (() => {
     ensureSheetBindings();
     const filesOnly = selectedFilesOnly();
     if (!filesOnly.length) {
-      alert("Seleccione pelo menos um jogo (ficheiros, não pastas).");
+      alert("Selecione pelo menos um jogo (ficheiros, não pastas).");
       return;
     }
     const sheet = document.getElementById("rom-x-delete-sheet");

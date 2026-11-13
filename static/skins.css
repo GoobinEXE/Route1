@@ -1,0 +1,369 @@
+/* ==========================================================================
+   Route Pico — peles dos temas
+   Carregado depois de style.css e app.css. Cores só por tokens (themes.css,
+   gerado por tools/build_themes.py); cada tema contribui com o chão, o
+   acabamento dos painéis e o gesto de seleção. Layout, navegação e controlos
+   são iguais em todos os temas.
+   ========================================================================== */
+
+/* ---------- base comum ---------- */
+
+html { font-family: var(--font-sans); }
+body {
+  font-family: var(--font-sans);
+  background-color: rgb(var(--c-bg));
+  background-image: none;
+  font-feature-settings: "kern", "tnum" 0;
+}
+
+::selection { background: rgb(var(--c-select) / 0.32); color: rgb(var(--c-fg)); }
+* { scrollbar-color: rgb(var(--c-line-strong)) transparent; scrollbar-width: thin; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: rgb(var(--c-line-strong)); border-radius: 999px; border: 3px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-track { background: transparent; }
+
+:focus-visible { outline: 2px solid rgb(var(--c-fg)); outline-offset: 3px; }
+:is(.nav-item, .adv-tab, .routedex-tab, .theme-item, .theme-mode, .home-more-link, .btn-primary, .btn-ghost, .btn-icon, .routedex-flag, .routedex-link):focus-visible {
+  outline: 2px solid rgb(var(--c-fg));
+  outline-offset: 4px;
+}
+input, select, textarea { caret-color: rgb(var(--c-accent-fg)); }
+
+.page-title { font-size: 26px; font-weight: 800; letter-spacing: -0.015em; }
+.page-sub { font-size: 14px; line-height: 1.5; }
+.section-label { font-size: 15px; font-weight: 800; letter-spacing: 0; text-transform: none; color: rgb(var(--c-fg)); }
+.hero-title { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.hero-copy { font-size: 14px; line-height: 1.5; }
+
+/* Superfícies */
+.panel,
+.hero-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid rgb(var(--c-line));
+  background: rgb(var(--c-surface));
+  box-shadow: var(--shadow-panel);
+}
+.hero-card { padding: 24px; min-height: 0; gap: 12px; }
+.hero-card:hover { transform: none; border-color: rgb(var(--c-line-strong)); box-shadow: var(--shadow-hover); }
+.hero-card--dspico,
+.hero-card--softmod { background: rgb(var(--c-surface)); }
+.hero-card--dspico { border-color: rgb(var(--c-accent) / 0.45); }
+.drive-panel::before { display: none; }
+.note { border-radius: var(--radius); }
+
+/* Botões: cápsulas, como os botões dos menus das consolas */
+.btn-primary,
+.btn-ghost,
+.btn-icon,
+.hb-chip,
+.chip { border-radius: 999px; }
+.btn-primary {
+  width: auto;
+  padding: 0.62rem 1.25rem;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  background: rgb(var(--c-accent));
+  color: rgb(var(--c-on-accent));
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 2px 5px rgb(0 0 0 / 0.16);
+  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.btn-primary:hover { background: rgb(var(--c-accent-strong)); box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 10px rgb(0 0 0 / 0.20); }
+.btn-primary:active { transform: translateY(1px); box-shadow: var(--shadow-press); }
+.wizard-cta, .btn-primary.w-full { width: 100%; }
+.btn-ghost {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  color: rgb(var(--c-fg));
+  background: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-line-strong));
+}
+.btn-ghost:hover { background: rgb(var(--c-surface-2)); border-color: rgb(var(--c-select)); }
+.btn-ghost:active { transform: translateY(1px); }
+.btn-icon { background: rgb(var(--c-surface)); border-color: rgb(var(--c-line-strong)); }
+button:disabled, .btn-primary:disabled, .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.field-select { border-radius: var(--radius); border-color: rgb(var(--c-line-strong)); background-color: rgb(var(--c-surface)); font-weight: 600; }
+.field-select:focus { border-color: rgb(var(--c-select)); box-shadow: 0 0 0 3px rgb(var(--c-select) / 0.25); }
+
+/* Shell */
+.app-sidebar { background: rgb(var(--c-surface)); backdrop-filter: none; border-right: 1px solid rgb(var(--c-line)); }
+.app-topbar { background: rgb(var(--c-surface)); backdrop-filter: none; }
+.brand-name { font-weight: 800; letter-spacing: -0.01em; }
+.nav-item { font-size: 14px; font-weight: 700; border-radius: var(--radius); padding: 10px 14px; color: rgb(var(--c-fg-soft)); position: relative; }
+.nav-item:hover { background: rgb(var(--c-surface-2)); color: rgb(var(--c-fg)); }
+.nav-item--muted { opacity: 1; font-size: 13px; }
+.nav-section { margin: 16px 14px 4px; }
+
+.adv-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border-radius: 999px;
+  background: rgb(var(--c-surface-2));
+  border: 1px solid rgb(var(--c-line));
+}
+.adv-tab { font-size: 13px; font-weight: 700; padding: 0.5rem 1rem; border-radius: 999px; color: rgb(var(--c-fg-soft)); position: relative; }
+.adv-tab:hover { background: rgb(var(--c-surface)); color: rgb(var(--c-fg)); }
+.routedex-tabs { border-radius: 999px; padding: 3px; }
+.routedex-tab { font-size: 13px; font-weight: 700; border-radius: 999px; position: relative; color: rgb(var(--c-fg-soft)); }
+.routedex-tab:hover { background: rgb(var(--c-surface)); color: rgb(var(--c-fg)); }
+/* Abas internas: seleção discreta, a assinatura fica para a navegação principal. */
+.routedex-tab--active { background: rgb(var(--c-surface)); color: rgb(var(--c-fg)); box-shadow: 0 0 0 1px rgb(var(--c-line-strong)); }
+
+/* Seleção-assinatura: um só seletor partilhado, redefinido por tema abaixo. */
+.nav-item--active,
+.adv-tab--active,
+.theme-item[aria-checked="true"],
+.theme-mode[aria-checked="true"] {
+  color: rgb(var(--c-fg));
+  background: rgb(var(--c-surface));
+  box-shadow: 0 0 0 2px rgb(var(--c-select));
+  transition: box-shadow var(--dur) var(--ease), background var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+
+/* Seletor de tema (menu do topo e Definições) */
+.theme-menu { width: 320px; padding: 8px; border-radius: var(--radius-lg); max-height: min(80vh, 640px); overflow: auto; }
+.theme-group { font-size: 13px; font-weight: 800; padding: 10px 10px 6px; text-transform: none; letter-spacing: 0; color: rgb(var(--c-fg-soft)); }
+.theme-families { display: grid; gap: 4px; }
+.theme-item { gap: 12px; padding: 8px 10px; border-radius: var(--radius); font-size: 13px; color: rgb(var(--c-fg)); }
+.theme-item-text { display: flex; flex-direction: column; min-width: 0; }
+.theme-item-label { font-weight: 800; }
+.theme-item-hint { font-size: 12px; color: rgb(var(--c-fg-mute)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.theme-swatch { width: 44px; height: 30px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid rgb(var(--c-line-strong)); box-shadow: none; }
+.theme-swatch span { display: block; }
+.theme-modes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 999px; background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); }
+.theme-mode { appearance: none; border: 0; background: transparent; padding: 7px 4px; border-radius: 999px; font: inherit; font-size: 12px; font-weight: 800; color: rgb(var(--c-fg-soft)); cursor: pointer; }
+.theme-mode:hover { color: rgb(var(--c-fg)); background: rgb(var(--c-surface)); }
+.theme-list { max-width: 420px; }
+
+.activity-drawer { border-top-left-radius: var(--radius-lg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item--active, .adv-tab--active { transition: none; transform: none !important; }
+}
+
+/* ==========================================================================
+   Dupla Tela — papel quadriculado, moldura azul dupla
+   ========================================================================== */
+html[data-family="dupla"] body {
+  background-image:
+    linear-gradient(rgb(var(--c-line) / 0.55) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--c-line) / 0.55) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+html[data-family="dupla"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  background: rgb(var(--c-select) / 0.10);
+  box-shadow: inset 0 0 0 2px rgb(var(--c-select)), 0 0 0 2px rgb(var(--c-surface)), 0 0 0 4px rgb(var(--c-select));
+}
+
+/* ==========================================================================
+   Câmera Dupla — faixas suaves, etiqueta preenchida com bico
+   ========================================================================== */
+html[data-family="camera"] body {
+  background-image: repeating-linear-gradient(180deg, transparent 0 22px, rgb(var(--c-surface-2) / 0.55) 22px 44px);
+}
+html[data-family="camera"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  background: rgb(var(--c-select-fill));
+  color: rgb(var(--c-on-select));
+  box-shadow: 0 2px 6px rgb(var(--c-select) / 0.3);
+}
+html[data-family="camera"] :is(.nav-item--active, .theme-item[aria-checked="true"]) .theme-item-hint { color: rgb(var(--c-on-select)); }
+html[data-family="camera"] .adv-tab--active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  width: 12px;
+  height: 7px;
+  transform: translateX(-50%);
+  background: rgb(var(--c-select-fill));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+html[data-family="camera"] .nav-item--active::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -6px;
+  width: 7px;
+  height: 12px;
+  transform: translateY(-50%);
+  background: rgb(var(--c-select-fill));
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* ==========================================================================
+   Canais — risca fina prateada, aros largos, anel ciano
+   ========================================================================== */
+html[data-family="canais"] body {
+  background-image: repeating-linear-gradient(180deg, transparent 0 3px, rgb(var(--c-line) / 0.5) 3px 4px);
+}
+html[data-family="canais"] :is(.panel, .hero-card) { border-width: 2px; border-color: rgb(var(--c-line)); }
+html[data-family="canais"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  box-shadow: inset 0 0 0 2px rgb(var(--c-select)), 0 2px 8px rgb(var(--c-select) / 0.25);
+}
+html[data-family="canais"] .nav-item { border-radius: 999px; }
+
+/* ==========================================================================
+   Tablet de Sala — vidro claro, cartão realçado
+   ========================================================================== */
+html[data-family="tablet"] body {
+  background-image:
+    linear-gradient(45deg, rgb(var(--c-line) / 0.32) 1px, transparent 1px),
+    linear-gradient(-45deg, rgb(var(--c-line) / 0.32) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+html[data-family="tablet"] :is(.panel, .hero-card) { background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface-2))); }
+html[data-family="tablet"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  box-shadow: 0 0 0 4px rgb(var(--c-select)), 0 6px 14px rgb(var(--c-select) / 0.25);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   Cubo — índigo com grelha, painéis biselados, moldura dourada
+   ========================================================================== */
+html[data-family="cubo"] body {
+  background-image:
+    linear-gradient(rgb(var(--c-line) / 0.45) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--c-line) / 0.45) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+html[data-family="cubo"] :is(.panel, .hero-card) {
+  background: linear-gradient(180deg, rgb(var(--c-surface-2)), rgb(var(--c-surface)) 60%);
+  border-color: rgb(var(--c-line-strong));
+}
+html[data-family="cubo"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  background: linear-gradient(180deg, rgb(var(--c-select) / 0.24), rgb(var(--c-select) / 0.08));
+  box-shadow: inset 0 0 0 2px rgb(var(--c-select)), 0 2px 6px rgb(0 0 0 / 0.3);
+}
+
+/* ==========================================================================
+   Estéreo 3D — blocos em relevo, cantos verdes
+   ========================================================================== */
+html[data-family="cubos3d"] body {
+  background-image: conic-gradient(rgb(var(--c-select) / 0.07) 25%, transparent 0 50%, rgb(var(--c-select) / 0.07) 0 75%, transparent 0);
+  background-size: 96px 96px;
+}
+html[data-family="cubos3d"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  --b: rgb(var(--c-select));
+  box-shadow: 0 2px 6px rgb(var(--c-select) / 0.22);
+  background-color: rgb(var(--c-select) / 0.10);
+  background-image:
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b)),
+    linear-gradient(var(--b), var(--b)), linear-gradient(var(--b), var(--b));
+  background-repeat: no-repeat;
+  background-size: 14px 4px, 4px 14px, 14px 4px, 4px 14px, 14px 4px, 4px 14px, 14px 4px, 4px 14px;
+  border-radius: 4px;
+  background-position: top left, top left, top right, top right, bottom left, bottom left, bottom right, bottom right;
+}
+
+/* ==========================================================================
+   Híbrido — cinza limpo, anel duplo
+   ========================================================================== */
+html[data-family="hibrido"] :is(.nav-item--active, .adv-tab--active, .theme-item[aria-checked="true"], .theme-mode[aria-checked="true"]) {
+  background: rgb(var(--c-select) / 0.14);
+  box-shadow: inset 0 0 0 1px rgb(var(--c-select)), 0 0 0 3px rgb(var(--c-surface)), 0 0 0 6px rgb(var(--c-select));
+}
+html[data-family="hibrido"] .page-title { font-weight: 700; }
+
+/* Escala pequena +1px: a Nunito tem altura-x menor que a fonte anterior e
+   nada funcional fica abaixo de 11px. */
+.text-\[10px\] { font-size: 11px; }
+.text-\[11px\], .\!text-\[11px\] { font-size: 12px !important; }
+.text-\[12px\] { font-size: 13px; }
+.text-\[13px\] { font-size: 14px; }
+.stat-pill, .chip { font-size: 12px; }
+
+/* Espaço para a seleção-assinatura não ser cortada pelos contentores com scroll. */
+.sidebar-nav { padding: 6px; margin: -6px; gap: 6px; }
+.adv-tabs { overflow: visible; }
+
+/* Início: DSPico domina; o estado do cartão vive dentro dele. */
+#view-home:not(.hidden) { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.home-main { padding: 28px; display: grid; gap: 18px; }
+.home-main .hero-title { font-size: 34px; margin: 0; }
+.home-main .hero-copy { max-width: 52ch; margin: 6px 0 0; color: rgb(var(--c-fg-soft)); }
+.home-card { padding: 16px 0; border-top: 1px solid rgb(var(--c-line)); border-bottom: 1px solid rgb(var(--c-line)); display: grid; gap: 10px; max-width: 560px; }
+.home-card-name { margin: 0; font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); overflow-wrap: anywhere; }
+.home-usage { display: grid; gap: 6px; }
+.home-usage.hidden { display: none; }
+.home-usage-bar { height: 12px; border-radius: 999px; background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); overflow: hidden; }
+.home-usage-bar span { display: block; height: 100%; width: 0; border-radius: 999px; background: rgb(var(--c-select)); transition: width 400ms var(--ease); }
+.home-usage-text { margin: 0; font-size: 13px; color: rgb(var(--c-fg-soft)); font-variant-numeric: tabular-nums; }
+.home-main .hero-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.home-more-list { display: grid; border-top: 1px solid rgb(var(--c-line)); }
+.home-more-link {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  width: 100%; padding: 12px 6px; border: 0; border-bottom: 1px solid rgb(var(--c-line));
+  background: transparent; color: rgb(var(--c-fg)); font: inherit; font-size: 14px; font-weight: 800;
+  text-align: left; cursor: pointer; transition: background var(--dur) var(--ease);
+}
+.home-more-link:hover { background: rgb(var(--c-surface-2)); }
+.home-more-link:hover .wizard-goal-chev { color: rgb(var(--c-fg)); }
+/* Primeiros passos: faixa larga sob os dois painéis. */
+.home-steps { grid-column: 1 / -1; padding: 22px 24px; display: grid; gap: 14px; }
+.home-steps-title { margin: 0; font-size: 18px; font-weight: 800; color: rgb(var(--c-fg)); }
+.home-steps ol { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; counter-reset: passo; }
+.home-steps li { counter-increment: passo; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; row-gap: 4px; align-content: start; }
+.home-steps li::before { content: counter(passo); grid-row: span 2; width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: rgb(var(--c-on-select)); background: rgb(var(--c-select-fill)); }
+.home-step-title { font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); }
+.home-step-text { font-size: 13px; line-height: 1.5; color: rgb(var(--c-fg-soft)); }
+.home-more { padding: 22px; display: grid; gap: 14px; }
+.home-more-title { margin: 0; font-size: 18px; font-weight: 800; color: rgb(var(--c-fg)); }
+.home-more .hero-copy { margin: 6px 0 0; color: rgb(var(--c-fg-soft)); }
+
+/* Barra de cima: o seletor mostra nome, tamanho e formato; o espaço livre vive no Início. */
+#info-fs, #info-size, #info-free { display: none; }
+#drive-role-badge, .stat-pill { white-space: nowrap; }
+.topbar-stats { flex-wrap: nowrap; }
+
+/* Guia de identificação: passos planos dentro do painel (sem cartão dentro de cartão). */
+.guide-step { padding: 4px 0 4px 16px; border-left: 1px solid rgb(var(--c-line)); }
+/* Passos manuais: linha expansível, não um segundo painel. */
+.manual-steps { border-top: 1px solid rgb(var(--c-line)); padding-top: 14px; }
+.manual-steps > summary { font-size: 14px; font-weight: 800; color: rgb(var(--c-fg)); padding: 6px 0; }
+.manual-extra { padding-top: 8px; border-top: 1px solid rgb(var(--c-line)); }
+input::placeholder, textarea::placeholder { color: rgb(var(--c-fg-mute)); opacity: 1; }
+.brand-sub { font-size: 12px; font-weight: 600; }
+
+/* Janelas estreitas: barra lateral mais curta, rótulos inteiros. */
+@media (max-width: 1060px) {
+  .app-shell { grid-template-columns: 176px 1fr; }
+  .app-content { padding: 18px 16px 24px; }
+  #drive-role-badge { display: none; }
+  #view-home:not(.hidden) { grid-template-columns: 1fr; }
+  .home-steps ol { grid-template-columns: 1fr; gap: 14px; }
+}
+@media (max-width: 860px) {
+  .app-shell { grid-template-columns: 156px 1fr; }
+  .sidebar-brand .brand-name, .nav-item { font-size: 13px; padding: 9px 10px; }
+  .nav-item::first-letter { font-size: inherit; }
+  .brand-sub { display: none; }
+}
+
+/* Ícones de estado e marcas do RouteDex (SVG, traço 2px). */
+.state-row { display: flex; align-items: center; gap: 8px; }
+.state-icon { flex-shrink: 0; }
+.routedex-flag { display: inline-grid; place-items: center; border-radius: 999px; color: rgb(var(--c-fg-mute)); }
+.routedex-flag svg { display: block; }
+.routedex-flag--fav.routedex-flag--on svg { fill: currentColor; }
+
+/* Assistente: objetivos como linhas de uma lista, só o risco em destaque. */
+.wizard-goal-list { display: grid; border-top: 1px solid rgb(var(--c-line)); }
+.wizard-goal-list .wizard-goal {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 8px; border: 0; border-bottom: 1px solid rgb(var(--c-line));
+  border-radius: 0; background: transparent; box-shadow: none; transform: none; text-align: left;
+}
+.wizard-goal-list .wizard-goal:hover { background: rgb(var(--c-surface-2)); box-shadow: none; transform: none; }
+.wizard-goal-text { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.wizard-goal-title { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); }
+.wizard-goal .opt-does { margin: 0; font-size: 13px; color: rgb(var(--c-fg-soft)); }
+.wizard-goal .opt-when { margin: 0; font-size: 12px; color: rgb(var(--c-fg-mute)); }
+.wizard-goal-chev { flex-shrink: 0; color: rgb(var(--c-fg-mute)); }
+.wizard-goal:hover .wizard-goal-chev { color: rgb(var(--c-fg)); }

@@ -307,7 +307,7 @@ def _find_sidecars(rom_path: str, roms_root: str) -> list[dict[str, Any]]:
 def list_roms(mount_path: str, *, include_icons: bool = True) -> dict[str, Any]:
     """Lista jogos/apps sob /roms/ (só leitura).
 
-    ``include_icons=False`` omite extracção de ícones NDS (caminhos internos /
+    ``include_icons=False`` omite extração de ícones NDS (caminhos internos /
     duplicatas) — default True preserva o contrato da UI.
     """
     if not os.path.isdir(mount_path):
@@ -698,7 +698,7 @@ def move_roms(
         return False, "Pasta de destino inválida.", {}
 
     if not isinstance(rel_paths, (list, tuple)) or not rel_paths:
-        return False, "Nenhum item seleccionado.", {}
+        return False, "Nenhum item selecionado.", {}
 
     roms_root = _roms_root(mount_path)
     if dest_norm:
@@ -1031,7 +1031,7 @@ def check_rom_import_conflicts(
                 "conflicts": [],
             }
     if not isinstance(host_paths, (list, tuple)) or not host_paths:
-        return {"success": False, "error": "Nenhum ficheiro seleccionado.", "conflicts": []}
+        return {"success": False, "error": "Nenhum ficheiro selecionado.", "conflicts": []}
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente.", "conflicts": []}
 
@@ -1122,7 +1122,7 @@ def import_roms(
             return False, f"Destino /roms/{dest_norm}/ inexistente.", {}
 
     if not isinstance(host_paths, (list, tuple)) or not host_paths:
-        return False, "Nenhum ficheiro seleccionado.", {}
+        return False, "Nenhum ficheiro selecionado.", {}
 
     roms_root = _roms_root(mount_path)
     os.makedirs(roms_root, exist_ok=True)
@@ -1620,7 +1620,7 @@ def set_rom_artwork(
         rel_asset = os.path.basename(dest)
 
     label = "capa" if kind == "boxart" else "ícone"
-    msg = f"{label.capitalize()} actualizada ➔ /{rel_asset}"
+    msg = f"{label.capitalize()} atualizada ➔ /{rel_asset}"
     log(f"✅ {msg}")
     return True, msg, {
         "kind": kind,
@@ -1688,7 +1688,7 @@ def delete_roms(
         return False, f"Modo de save inválido: {save_mode!r}.", {}
 
     if not isinstance(rel_paths, (list, tuple)) or not rel_paths:
-        return False, "Nenhum jogo seleccionado.", {}
+        return False, "Nenhum jogo selecionado.", {}
 
     roms_root = _roms_root(mount_path)
     if not os.path.isdir(roms_root):

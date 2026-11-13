@@ -62,7 +62,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
                 "title": "Formatar em FAT32",
                 "where": "PC",
                 "bodyKind": "format",
-                "warning": "Apaga todos os dados do MicroSD seleccionado.",
+                "warning": "Apaga todos os dados do MicroSD selecionado.",
             }
         )
         steps.append(
@@ -72,7 +72,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
                 "where": "PC",
                 "bodyKind": "reinsert",
                 "warning": (
-                    "Após formatar, actualize a lista e seleccione o MicroSD de novo."
+                    "Após formatar, atualize a lista e selecione o MicroSD de novo."
                 ),
             }
         )
@@ -139,7 +139,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
         done = [
             "Ejete o MicroSD com segurança no sistema operativo.",
             f"Coloque-o no cartucho {brand_label} e ligue o DSi/DS.",
-            "Se o menu não abrir, confirme que o kernel é do clone exacto.",
+            "Se o menu não abrir, confirme que o kernel é do clone exato.",
         ]
     steps.append(
         {

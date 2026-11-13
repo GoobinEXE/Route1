@@ -517,11 +517,11 @@ const Wizard = (() => {
               Cartucho Slot-1 (GEi, R4 ou DSPico). O microSD fica <em>dentro</em> do cartucho — não é o SD lateral do DSi.
             </p>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="wizard-goal-list">
             ${goalCard(
               "flash-update",
               "Atualizar kernel ou pacote",
-              "O microSD já tem kernel/pacote e quer actualizar GEi, R4 ou DSPico.",
+              "O microSD já tem kernel/pacote e quer atualizar GEi, R4 ou DSPico.",
               "Não formata o cartão."
             )}
             ${goalCard(
@@ -542,7 +542,7 @@ const Wizard = (() => {
               DS / DS Lite / 3DS não usam este caminho.
             </p>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="wizard-goal-list">
             ${goalCard(
               "sd-new",
               "Instalar softmod completo",
@@ -552,14 +552,14 @@ const Wizard = (() => {
             ${goalCard(
               "sd-update",
               "Atualizar menu / hiyaCFW",
-              "Já tem Unlaunch e TWiLight: actualizar o menu, hiyaCFW ou organizar jogos.",
+              "Já tem Unlaunch e TWiLight: atualizar o menu, hiyaCFW ou organizar jogos.",
               "Não reinstala o Unlaunch."
             )}
           </div>
         </section>
 
         <p class="text-[11px] text-fg-mute leading-relaxed">
-          Se já souber exactamente o que gravar, use os
+          Se já souber exatamente o que gravar, use os
           <button type="button" class="text-accent-fg font-medium" onclick="Wizard.openManualSteps()">passos manuais</button>
           abaixo.
         </p>
@@ -568,20 +568,18 @@ const Wizard = (() => {
   }
 
   function goalCard(id, title, does, note) {
-    const isFlash = id.startsWith("flash");
     const risk =
       id === "flash-new" || id === "sd-new"
-        ? `<span class="risk-chip mt-2 inline-flex">${id === "flash-new" ? "Apaga o cartão" : "Risco Unlaunch"}</span>`
+        ? `<span class="risk-chip">${id === "flash-new" ? "Apaga o cartão" : "Risco Unlaunch"}</span>`
         : "";
     return `
       <button type="button" class="wizard-goal" onclick="Wizard.startGoal('${id}')">
-        <div class="flex items-center gap-2 flex-wrap">
-          ${pathBadge(isFlash ? "flash" : "dsi")}
-          <h3 class="text-[14px] font-semibold text-fg">${title}</h3>
-        </div>
-        <p class="opt-does">${does}</p>
-        <p class="opt-when"><span class="font-medium text-fg-soft">Nota:</span> ${note}</p>
-        ${risk}
+        <span class="wizard-goal-text">
+          <span class="wizard-goal-title">${title}${risk}</span>
+          <span class="opt-does">${does}</span>
+          <span class="opt-when">${note}</span>
+        </span>
+        <svg class="wizard-goal-chev" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
       </button>
     `;
   }
@@ -604,7 +602,7 @@ const Wizard = (() => {
         </button>
         <button type="button" class="wizard-goal" onclick="Wizard.chooseBrand('r4')">
           <h3 class="text-[14px] font-semibold">R4 / clone R4</h3>
-          <p class="opt-does">Copia o firmware do modelo exacto a partir de uma pasta em Downloads.</p>
+          <p class="opt-does">Copia o firmware do modelo exato a partir de uma pasta em Downloads.</p>
           <p class="opt-when">Quando usar: R4, R4i, etc. Extraia o zip oficial do clone para Downloads.</p>
         </button>
         <button type="button" class="wizard-goal sm:col-span-2" onclick="Wizard.chooseBrand('dspico')">
@@ -678,14 +676,14 @@ const Wizard = (() => {
         "Sistema de ficheiros do cartão. A Câmera do DSi e a maioria dos flashcards só funcionam bem em FAT32 (não exFAT)."
       )}
       <div class="note note--warn mt-3">
-        <strong>Atenção:</strong> formatar apaga <em>todos</em> os dados do volume seleccionado.
+        <strong>Atenção:</strong> formatar apaga <em>todos</em> os dados do volume selecionado.
         Confirme que é o MicroSD do cartucho — não o disco do sistema. No Windows pode ser necessário Administrador.
       </div>
       ${drivePanelHtml()}
       <ol class="guide-list list-decimal">
-        <li>Confirme o volume seleccionado abaixo.</li>
+        <li>Confirme o volume selecionado abaixo.</li>
         <li>Clique em Formatar FAT32 e confirme o diálogo.</li>
-        <li>Aguarde terminar — a seguir terá de re-seleccionar a unidade.</li>
+        <li>Aguarde terminar — a seguir terá de re-selecionar a unidade.</li>
       </ol>
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-format">Formatar FAT32 (apaga o cartão)</button>
     `;
@@ -877,7 +875,7 @@ const Wizard = (() => {
         ${
           isDspico
             ? "Descarrega (se necessário), verifica e copia o pacote DSPico oficial para o MicroSD do cartucho."
-            : "Copia e verifica os arquivos do kernel para o MicroSD seleccionado."
+            : "Copia e verifica os arquivos do kernel para o MicroSD selecionado."
         }
       </p>
       ${writesList(writes)}
@@ -1093,7 +1091,7 @@ const Wizard = (() => {
               selectedDrive.mount_path) ||
             null;
           if (!mount) {
-            alert("Seleccione o microSD primeiro.");
+            alert("Selecione o microSD primeiro.");
             return;
           }
           const res = await api.import_dspico_games(mount, paths, "");
@@ -1450,7 +1448,7 @@ const Wizard = (() => {
         "dumpTool movido para <code>dumptool.nds</code> (se existir)",
       ])}
       <div class="note note--warn">
-        Se o firmware do DSi for exactamente <strong>1.4.2</strong>, o guia oficial recomenda atualizar o sistema nas Definições antes do Unlaunch. Não automatizamos esse passo.
+        Se o firmware do DSi for exatamente <strong>1.4.2</strong>, o guia oficial recomenda atualizar o sistema nas Definições antes do Unlaunch. Não automatizamos esse passo.
       </div>
       ${drivePanelHtml()}
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-s2">Escrever Passo 2 no SD</button>
@@ -1512,13 +1510,13 @@ const Wizard = (() => {
     el.innerHTML = `
       <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
       <p class="opt-does">
-        Actualiza o TWiLight Menu++ no cartão. <strong>Não</strong> reinstala o Unlaunch na consola.
+        Atualiza o TWiLight Menu++ no cartão. <strong>Não</strong> reinstala o Unlaunch na consola.
       </p>
       <div class="note note--warn">
         <strong>Não</strong> abra o instalador Unlaunch no DSi se a console já arranca no menu ou no Filemenu.
       </div>
       ${writesList([
-        "Ficheiros do TWiLight Menu++ actualizados",
+        "Ficheiros do TWiLight Menu++ atualizados",
         "Pode colocar de novo <code>unlaunch-installer.dsi</code> — ignore-o no DSi",
       ])}
       ${drivePanelHtml()}

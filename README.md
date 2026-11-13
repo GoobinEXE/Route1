@@ -396,7 +396,7 @@ O símbolo é uma **placa de rota** com o número **1**, silhueta de cartão SD 
 python tools/build_icons.py
 ```
 
-Temas da app: tokens em `static/themes.css` + `static/theme.js` (7 temas). Temas Pico Launcher: `/_pico/themes/` em DSPico → Launcher.
+Temas da app: sete temas inspirados em menus de consolas (Dupla Tela é o padrão), cada um com paleta Original e modos Claro (Catppuccin Latte) e Noturno (Catppuccin Mocha); escolhem-se no botão de tema da barra de cima ou em Definições. As paletas vivem em `tools/build_themes.py` (gera `static/themes.css` e `static/theme-data.js`, com contraste AA verificado) e a assinatura visual de cada tema em `static/skins.css`. Temas Pico Launcher: `/_pico/themes/` em DSPico → Launcher.
 
 ### Invariantes (não negociáveis)
 

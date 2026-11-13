@@ -1,4 +1,4 @@
-"""Extracção do ícone 32×32 do banner NDS/DSi (stdlib only → PNG)."""
+"""Extração do ícone 32×32 do banner NDS/DSi (stdlib only → PNG)."""
 
 from __future__ import annotations
 

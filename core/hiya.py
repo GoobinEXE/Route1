@@ -80,7 +80,7 @@ def ensure_twlmagician_tools(log_callback=None) -> dict[str, str]:
     Garante tools pinados do TWLMagician (twltool / 7za|7z / fatcat / ndsblc).
 
     O release macOS é só o GUI PyInstaller — as tools vêm de Darwin/ no
-    repositório (pins SHA-256). A extracção da NAND usa fatcat (o 7za
+    repositório (pins SHA-256). A extração da NAND usa fatcat (o 7za
     standalone no Darwin não abre .img de NAND como arquivo).
     """
     system = platform.system()
@@ -391,7 +391,7 @@ def _decrypt_and_extract_sdnand(
     log_callback=None,
 ) -> str:
     """
-    nandcrypt + extracção da partição TWLN via fatcat (offset 1109504).
+    nandcrypt + extração da partição TWLN via fatcat (offset 1109504).
 
     No Darwin o 7za pinado não abre .img de NAND como arquivo; o TWLMagician
     oficial usa fatcat neste passo.

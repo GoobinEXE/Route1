@@ -1,231 +1,533 @@
-/* ==========================================================================
-   Route Pico — Design tokens & temas
-   --------------------------------------------------------------------------
-   Todos os componentes consomem apenas estes tokens. Cada tema redefine as
-   variáveis em `html[data-theme="…"]`. Cores em triplas RGB ("r g b") para o
-   Tailwind poder aplicar opacidade (`bg-accent/10`) e o CSS usar
-   `rgb(var(--c-x) / 0.5)`.
-
-   Tokens
-     --c-bg            fundo da janela
-     --c-surface       painéis / cartões
-     --c-surface-2     campos, chips e áreas rebaixadas dentro de um painel
-     --c-line          bordas padrão
-     --c-line-strong   bordas em hover / divisórias fortes
-     --c-fg            texto principal
-     --c-fg-soft       texto secundário
-     --c-fg-mute       legendas / metadados
-     --c-accent        cor da marca (ações primárias, foco, progresso)
-     --c-accent-strong accent em hover
-     --c-accent-fg     accent usado como texto/ícone sobre superfícies (contraste garantido)
-     --c-on-accent     texto sobre o accent
-     --c-ok / --c-warn / --c-danger   estados semânticos
-   ========================================================================== */
+/* GERADO por tools/build_themes.py — não editar à mão.
+   Sete temas × três modos (original, claro = Catppuccin Latte, noturno = Catppuccin Mocha).
+   Cores em triplas RGB para o Tailwind aplicar opacidade (bg-accent/10) e o CSS usar
+   rgb(var(--c-x) / 0.5). A assinatura visual de cada tema está em static/skins.css. */
 
 :root {
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 16px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --font-sans: "Sora", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --dur: 180ms;
+  --font-sans: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* --------------------------------------------------------------------------
-   Studio Dark — padrão
-   -------------------------------------------------------------------------- */
-:root,
-html[data-theme="dark"] {
-  color-scheme: dark;
-  --c-bg: 15 17 22;
-  --c-surface: 23 26 33;
-  --c-surface-2: 30 34 43;
-  --c-line: 42 47 58;
-  --c-line-strong: 58 65 80;
-  --c-fg: 232 234 240;
-  --c-fg-soft: 180 186 199;
-  --c-fg-mute: 131 140 160;
-  --c-accent: 109 139 255;
-  --c-accent-strong: 134 160 255;
-  --c-accent-fg: 109 139 255;
-  --c-on-accent: 11 14 22;
-  --c-ok: 61 214 140;
-  --c-warn: 240 179 92;
-  --c-danger: 242 109 109;
+:root, html[data-family="dupla"] {
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 18px;
 }
 
-/* --------------------------------------------------------------------------
-   Studio Light
-   -------------------------------------------------------------------------- */
-html[data-theme="light"] {
+:root, html[data-family="dupla"][data-mode="original"] {
   color-scheme: light;
-  --c-bg: 243 244 247;
+  --c-bg: 226 230 234;
   --c-surface: 255 255 255;
-  --c-surface-2: 245 246 249;
-  --c-line: 225 228 235;
-  --c-line-strong: 201 206 217;
-  --c-fg: 20 22 27;
-  --c-fg-soft: 61 68 82;
-  --c-fg-mute: 110 118 132;
-  --c-accent: 47 91 234;
-  --c-accent-strong: 34 71 201;
-  --c-accent-fg: 34 71 201;
-  --c-on-accent: 255 255 255;
-  --c-ok: 15 138 99;
-  --c-warn: 179 102 26;
-  --c-danger: 201 58 58;
+  --c-surface-2: 241 243 245;
+  --c-line: 205 211 218;
+  --c-line-strong: 141 149 158;
+  --c-fg: 29 33 38;
+  --c-fg-soft: 59 66 74;
+  --c-fg-mute: 89 97 107;
+  --c-accent: 47 125 225;
+  --c-accent-strong: 40 108 194;
+  --c-accent-fg: 39 102 184;
+  --c-on-accent: 17 20 23;
+  --c-select: 47 125 225;
+  --c-select-fill: 47 125 225;
+  --c-on-select: 20 20 20;
+  --c-ok: 25 118 51;
+  --c-warn: 153 85 8;
+  --c-danger: 193 44 57;
 }
 
-/* --------------------------------------------------------------------------
-   Catppuccin — https://catppuccin.com/palette
-   bg = mantle · surface = base · surface-2 = surface0 (crust no Latte)
-   line = surface1 · fg = text · accent = blue · hover = lavender
-   ok = green · warn = peach · danger = red · on-accent = crust/base
-   -------------------------------------------------------------------------- */
-html[data-theme="catppuccin-latte"] {
+html[data-family="dupla"][data-mode="light"] {
   color-scheme: light;
   --c-bg: 230 233 239;
   --c-surface: 239 241 245;
   --c-surface-2: 220 224 232;
   --c-line: 204 208 218;
-  --c-line-strong: 188 192 204;
-  --c-fg: 76 79 105;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
   --c-fg-soft: 92 95 119;
-  --c-fg-mute: 108 111 133;
+  --c-fg-mute: 95 98 117;
   --c-accent: 30 102 245;
-  --c-accent-strong: 114 135 253;
-  --c-accent-fg: 30 102 245;
-  --c-on-accent: 239 241 245;
-  --c-ok: 64 160 43;
-  --c-warn: 254 100 11;
-  --c-danger: 210 15 57;
+  --c-accent-strong: 26 88 211;
+  --c-accent-fg: 26 90 216;
+  --c-on-accent: 255 255 255;
+  --c-select: 30 102 245;
+  --c-select-fill: 30 102 245;
+  --c-on-select: 255 255 255;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
 }
 
-html[data-theme="catppuccin-frappe"] {
-  color-scheme: dark;
-  --c-bg: 41 44 60;
-  --c-surface: 48 52 70;
-  --c-surface-2: 65 69 89;
-  --c-line: 81 87 109;
-  --c-line-strong: 98 104 128;
-  --c-fg: 198 208 245;
-  --c-fg-soft: 181 191 226;
-  --c-fg-mute: 165 173 206;
-  --c-accent: 140 170 238;
-  --c-accent-strong: 186 187 241;
-  --c-accent-fg: 140 170 238;
-  --c-on-accent: 35 38 52;
-  --c-ok: 166 209 137;
-  --c-warn: 239 159 118;
-  --c-danger: 231 130 132;
-}
-
-html[data-theme="catppuccin-macchiato"] {
-  color-scheme: dark;
-  --c-bg: 30 32 48;
-  --c-surface: 36 39 58;
-  --c-surface-2: 54 58 79;
-  --c-line: 73 77 100;
-  --c-line-strong: 91 96 120;
-  --c-fg: 202 211 245;
-  --c-fg-soft: 184 192 224;
-  --c-fg-mute: 165 173 203;
-  --c-accent: 138 173 244;
-  --c-accent-strong: 183 189 248;
-  --c-accent-fg: 138 173 244;
-  --c-on-accent: 24 25 38;
-  --c-ok: 166 218 149;
-  --c-warn: 245 169 127;
-  --c-danger: 237 135 150;
-}
-
-html[data-theme="catppuccin-mocha"] {
+html[data-family="dupla"][data-mode="dark"] {
   color-scheme: dark;
   --c-bg: 24 24 37;
   --c-surface: 30 30 46;
   --c-surface-2: 49 50 68;
   --c-line: 69 71 90;
-  --c-line-strong: 88 91 112;
+  --c-line-strong: 103 106 125;
   --c-fg: 205 214 244;
   --c-fg-soft: 186 194 222;
   --c-fg-mute: 166 173 200;
   --c-accent: 137 180 250;
-  --c-accent-strong: 180 190 254;
+  --c-accent-strong: 154 190 251;
   --c-accent-fg: 137 180 250;
-  --c-on-accent: 17 17 27;
+  --c-on-accent: 24 24 37;
+  --c-select: 137 180 250;
+  --c-select-fill: 137 180 250;
+  --c-on-select: 20 20 20;
   --c-ok: 166 227 161;
   --c-warn: 250 179 135;
   --c-danger: 243 139 168;
 }
 
-/* --------------------------------------------------------------------------
-   Dracula — https://draculatheme.com/contribute
-   bg = #21222c · surface = background #282a36 · surface-2 = #343746
-   line = current line #44475a · accent = purple · ok = green
-   warn = orange · danger = red
-   -------------------------------------------------------------------------- */
-html[data-theme="dracula"] {
-  color-scheme: dark;
-  --c-bg: 33 34 44;
-  --c-surface: 40 42 54;
-  --c-surface-2: 52 55 70;
-  --c-line: 68 71 90;
-  --c-line-strong: 98 114 164;
-  --c-fg: 248 248 242;
-  --c-fg-soft: 191 194 212;
-  --c-fg-mute: 144 153 190;
-  --c-accent: 189 147 249;
-  --c-accent-strong: 211 181 255;
-  --c-accent-fg: 189 147 249;
-  --c-on-accent: 33 34 44;
-  --c-ok: 80 250 123;
-  --c-warn: 255 184 108;
-  --c-danger: 255 85 85;
+html[data-family="camera"] {
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
 }
 
-/* --------------------------------------------------------------------------
-   Game Boy · DS Lite (retro)
-   Painéis = LCD do Game Boy DMG (#9BBC0F / #8BAC0F / #306230 / #0F380F);
-   fundo e cromo = carcaça "Polar White" do DS Lite; estados = LEDs do DS Lite
-   (energia verde, carga laranja, bateria fraca vermelho), escurecidos para
-   manter contraste sobre o verde do LCD. A "pele" (gradientes, moldura da tela,
-   botões em pílula) está em style.css → skin: Game Boy · DS Lite.
-   -------------------------------------------------------------------------- */
-html[data-theme="gameboy"] {
+html[data-family="camera"][data-mode="original"] {
   color-scheme: light;
-  --c-bg: 227 231 236;
-  --c-surface: 155 188 15;
-  --c-surface-2: 139 172 15;
-  --c-line: 107 139 20;
-  --c-line-strong: 48 98 48;
-  --c-fg: 15 56 15;
-  --c-fg-soft: 30 74 30;
-  --c-fg-mute: 48 98 48;
-  --c-accent: 48 98 48;
-  --c-accent-strong: 15 56 15;
-  --c-accent-fg: 31 79 31;
-  --c-on-accent: 234 243 194;
-  --c-ok: 14 90 74;
-  --c-warn: 138 61 5;
-  --c-danger: 143 26 26;
+  --c-bg: 233 236 239;
+  --c-surface: 255 255 255;
+  --c-surface-2: 242 244 246;
+  --c-line: 211 216 221;
+  --c-line-strong: 143 149 156;
+  --c-fg: 37 42 47;
+  --c-fg-soft: 65 71 78;
+  --c-fg-mute: 93 100 108;
+  --c-accent: 31 143 179;
+  --c-accent-strong: 27 123 154;
+  --c-accent-fg: 25 114 143;
+  --c-on-accent: 22 25 28;
+  --c-select: 62 159 211;
+  --c-select-fill: 62 159 211;
+  --c-on-select: 20 20 20;
+  --c-ok: 37 121 55;
+  --c-warn: 160 89 11;
+  --c-danger: 198 50 57;
 }
 
-/* --------------------------------------------------------------------------
-   Derivados por esquema (claro / escuro)
-   -------------------------------------------------------------------------- */
-:root,
-html[data-scheme="dark"] {
-  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 1px 2px rgb(0 0 0 / 0.35), 0 10px 30px rgb(0 0 0 / 0.28);
-  --shadow-hover: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 36px rgb(0 0 0 / 0.36);
-  --shadow-menu: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 12px 40px rgb(0 0 0 / 0.55);
-  --glow-alpha: 0.16;
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23A3ABBF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+html[data-family="camera"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 21 131 138;
+  --c-accent-strong: 18 113 119;
+  --c-accent-fg: 17 110 115;
+  --c-on-accent: 255 255 255;
+  --c-select: 32 159 181;
+  --c-select-fill: 32 159 181;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
 }
 
-html[data-scheme="light"] {
-  --shadow-panel: 0 1px 2px rgb(20 22 26 / 0.04), 0 8px 24px rgb(20 22 26 / 0.06);
-  --shadow-hover: 0 2px 4px rgb(20 22 26 / 0.05), 0 14px 32px rgb(20 22 26 / 0.09);
-  --shadow-menu: 0 2px 6px rgb(20 22 26 / 0.06), 0 16px 48px rgb(20 22 26 / 0.14);
+html[data-family="camera"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 148 226 213;
+  --c-accent-strong: 163 230 219;
+  --c-accent-fg: 148 226 213;
+  --c-on-accent: 24 24 37;
+  --c-select: 116 199 236;
+  --c-select-fill: 116 199 236;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+html[data-family="canais"] {
+  --radius-sm: 14px;
+  --radius: 18px;
+  --radius-lg: 26px;
+}
+
+html[data-family="canais"][data-mode="original"] {
+  color-scheme: light;
+  --c-bg: 238 240 242;
+  --c-surface: 255 255 255;
+  --c-surface-2: 245 246 248;
+  --c-line: 213 217 222;
+  --c-line-strong: 143 149 155;
+  --c-fg: 51 56 62;
+  --c-fg-soft: 74 80 87;
+  --c-fg-mute: 100 107 115;
+  --c-accent: 31 176 230;
+  --c-accent-strong: 27 151 198;
+  --c-accent-fg: 20 116 152;
+  --c-on-accent: 31 34 37;
+  --c-select: 52 190 237;
+  --c-select-fill: 52 190 237;
+  --c-on-select: 20 20 20;
+  --c-ok: 37 124 61;
+  --c-warn: 162 92 12;
+  --c-danger: 202 51 63;
+}
+
+html[data-family="canais"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 45 165 185;
+  --c-accent-strong: 39 142 159;
+  --c-accent-fg: 22 108 123;
+  --c-on-accent: 46 47 63;
+  --c-select: 4 165 229;
+  --c-select-fill: 4 165 229;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
+}
+
+html[data-family="canais"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 116 199 236;
+  --c-accent-strong: 135 207 239;
+  --c-accent-fg: 116 199 236;
+  --c-on-accent: 24 24 37;
+  --c-select: 137 220 235;
+  --c-select-fill: 137 220 235;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+html[data-family="tablet"] {
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+}
+
+html[data-family="tablet"][data-mode="original"] {
+  color-scheme: light;
+  --c-bg: 230 233 236;
+  --c-surface: 251 252 253;
+  --c-surface-2: 240 242 244;
+  --c-line: 212 217 222;
+  --c-line-strong: 140 146 154;
+  --c-fg: 39 43 48;
+  --c-fg-soft: 65 71 78;
+  --c-fg-mute: 92 99 107;
+  --c-accent: 20 169 220;
+  --c-accent-strong: 17 145 189;
+  --c-accent-fg: 13 113 147;
+  --c-on-accent: 23 26 29;
+  --c-select: 35 184 232;
+  --c-select-fill: 35 184 232;
+  --c-on-select: 20 20 20;
+  --c-ok: 37 120 54;
+  --c-warn: 156 87 9;
+  --c-danger: 193 48 62;
+}
+
+html[data-family="tablet"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 4 165 229;
+  --c-accent-strong: 3 142 197;
+  --c-accent-fg: 3 106 147;
+  --c-on-accent: 46 47 63;
+  --c-select: 4 165 229;
+  --c-select-fill: 4 165 229;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
+}
+
+html[data-family="tablet"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 137 220 235;
+  --c-accent-strong: 154 225 238;
+  --c-accent-fg: 137 220 235;
+  --c-on-accent: 24 24 37;
+  --c-select: 137 220 235;
+  --c-select-fill: 137 220 235;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+html[data-family="cubo"] {
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+
+html[data-family="cubo"][data-mode="original"] {
+  color-scheme: dark;
+  --c-bg: 15 12 46;
+  --c-surface: 27 23 82;
+  --c-surface-2: 37 31 104;
+  --c-line: 58 50 146;
+  --c-line-strong: 103 94 192;
+  --c-fg: 236 233 255;
+  --c-fg-soft: 201 195 242;
+  --c-fg-mute: 162 155 220;
+  --c-accent: 157 140 255;
+  --c-accent-strong: 171 156 255;
+  --c-accent-fg: 157 140 255;
+  --c-on-accent: 15 12 46;
+  --c-select: 242 194 48;
+  --c-select-fill: 242 194 48;
+  --c-on-select: 20 20 20;
+  --c-ok: 95 208 141;
+  --c-warn: 243 162 79;
+  --c-danger: 255 113 132;
+}
+
+html[data-family="cubo"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 136 57 239;
+  --c-accent-strong: 117 49 206;
+  --c-accent-fg: 126 53 222;
+  --c-on-accent: 255 255 255;
+  --c-select: 223 142 29;
+  --c-select-fill: 223 142 29;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
+}
+
+html[data-family="cubo"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 203 166 247;
+  --c-accent-strong: 210 178 248;
+  --c-accent-fg: 203 166 247;
+  --c-on-accent: 24 24 37;
+  --c-select: 249 226 175;
+  --c-select-fill: 249 226 175;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+html[data-family="cubos3d"] {
+  --radius-sm: 12px;
+  --radius: 16px;
+  --radius-lg: 22px;
+}
+
+html[data-family="cubos3d"][data-mode="original"] {
+  color-scheme: light;
+  --c-bg: 227 228 232;
+  --c-surface: 250 250 251;
+  --c-surface-2: 239 239 242;
+  --c-line: 208 210 216;
+  --c-line-strong: 142 144 151;
+  --c-fg: 44 47 52;
+  --c-fg-soft: 69 72 78;
+  --c-fg-mute: 95 99 106;
+  --c-accent: 226 104 26;
+  --c-accent-strong: 194 89 22;
+  --c-accent-fg: 165 76 19;
+  --c-on-accent: 26 28 31;
+  --c-select: 47 191 113;
+  --c-select-fill: 47 191 113;
+  --c-on-select: 20 20 20;
+  --c-ok: 31 116 63;
+  --c-warn: 153 84 9;
+  --c-danger: 191 45 53;
+}
+
+html[data-family="cubos3d"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 254 105 18;
+  --c-accent-strong: 218 90 15;
+  --c-accent-fg: 170 67 7;
+  --c-on-accent: 46 47 63;
+  --c-select: 64 160 43;
+  --c-select-fill: 64 160 43;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
+}
+
+html[data-family="cubos3d"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 250 179 135;
+  --c-accent-strong: 251 190 152;
+  --c-accent-fg: 250 179 135;
+  --c-on-accent: 24 24 37;
+  --c-select: 166 227 161;
+  --c-select-fill: 166 227 161;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+html[data-family="hibrido"] {
+  --radius-sm: 10px;
+  --radius: 14px;
+  --radius-lg: 20px;
+}
+
+html[data-family="hibrido"][data-mode="original"] {
+  color-scheme: light;
+  --c-bg: 235 235 235;
+  --c-surface: 255 255 255;
+  --c-surface-2: 244 244 244;
+  --c-line: 217 217 217;
+  --c-line-strong: 147 147 147;
+  --c-fg: 45 45 45;
+  --c-fg-soft: 69 69 69;
+  --c-fg-mute: 95 95 95;
+  --c-accent: 215 40 61;
+  --c-accent-strong: 185 34 52;
+  --c-accent-fg: 204 38 58;
+  --c-on-accent: 255 255 255;
+  --c-select: 22 195 224;
+  --c-select-fill: 22 195 224;
+  --c-on-select: 20 20 20;
+  --c-ok: 32 121 65;
+  --c-warn: 160 88 10;
+  --c-danger: 196 32 47;
+}
+
+html[data-family="hibrido"][data-mode="light"] {
+  color-scheme: light;
+  --c-bg: 230 233 239;
+  --c-surface: 239 241 245;
+  --c-surface-2: 220 224 232;
+  --c-line: 204 208 218;
+  --c-line-strong: 135 138 147;
+  --c-fg: 66 69 91;
+  --c-fg-soft: 92 95 119;
+  --c-fg-mute: 95 98 117;
+  --c-accent: 210 15 57;
+  --c-accent-strong: 181 13 49;
+  --c-accent-fg: 197 14 54;
+  --c-on-accent: 255 255 255;
+  --c-select: 4 165 229;
+  --c-select-fill: 4 165 229;
+  --c-on-select: 20 20 20;
+  --c-ok: 45 112 30;
+  --c-warn: 170 67 7;
+  --c-danger: 197 14 54;
+}
+
+html[data-family="hibrido"][data-mode="dark"] {
+  color-scheme: dark;
+  --c-bg: 24 24 37;
+  --c-surface: 30 30 46;
+  --c-surface-2: 49 50 68;
+  --c-line: 69 71 90;
+  --c-line-strong: 103 106 125;
+  --c-fg: 205 214 244;
+  --c-fg-soft: 186 194 222;
+  --c-fg-mute: 166 173 200;
+  --c-accent: 243 139 168;
+  --c-accent-strong: 245 155 180;
+  --c-accent-fg: 243 139 168;
+  --c-on-accent: 24 24 37;
+  --c-select: 137 220 235;
+  --c-select-fill: 137 220 235;
+  --c-on-select: 20 20 20;
+  --c-ok: 166 227 161;
+  --c-warn: 250 179 135;
+  --c-danger: 243 139 168;
+}
+
+/* Sombras por esquema (data-scheme é escrito pelo theme.js a partir do modo). */
+:root, html[data-scheme="light"] {
+  --shadow-panel: 0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06);
+  --shadow-hover: 0 2px 4px rgb(20 22 26 / 0.06), 0 12px 28px rgb(20 22 26 / 0.10);
+  --shadow-menu: 0 2px 6px rgb(20 22 26 / 0.08), 0 18px 48px rgb(20 22 26 / 0.16);
+  --shadow-press: 0 1px 1px rgb(20 22 26 / 0.10);
   --glow-alpha: 0.08;
-  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236E7684' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%236E7684' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+html[data-scheme="dark"] {
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.32), 0 10px 28px rgb(0 0 0 / 0.30);
+  --shadow-hover: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 3px 6px rgb(0 0 0 / 0.38), 0 16px 36px rgb(0 0 0 / 0.36);
+  --shadow-menu: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 14px 44px rgb(0 0 0 / 0.55);
+  --shadow-press: 0 1px 1px rgb(0 0 0 / 0.40);
+  --glow-alpha: 0.16;
+  --select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' stroke='%23B4BCD0' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }

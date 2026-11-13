@@ -113,7 +113,7 @@ Detalhe e exemplos: `.cursor/rules/` — não duplicar aqui; cumprir sempre.
 
 - Preferir mudanças mínimas e alinhadas ao estilo existente (nomes, helpers de `app.py` / `core/` / `services/`).
 - UI 100% **offline**: sem CDN, sem fetch remoto na UI (downloads oficiais só via `core/cache.py` com pins).
-- Temas da app: tokens em `themes.css` + entrada em `THEMES` (`theme.js`); CSS consome `--c-*`.
+- Temas da app: sete temas (Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D, Híbrido) × modos Original / Claro (Catppuccin Latte) / Noturno (Catppuccin Mocha) / Sistema. Paletas em `tools/build_themes.py`, que gera `static/themes.css` + `static/theme-data.js` e falha se alguma combinação não passar em WCAG AA (`tests/test_themes.py`); nunca editar os gerados à mão. A assinatura de cada tema (chão, acabamento, gesto de seleção) fica em `static/skins.css`; layout, navegação e controlos são iguais em todos. Fonte da UI: Nunito embutida. Nada de logótipos, ícones, fontes ou nomes de marcas da Nintendo.
 - Navegação: sidebar Início / DSPico / Mais ferramentas / Definições, com abas em DSPico e Mais ferramentas (`docs/ui-parity.md`); cada painel vive no HTML da sua vista; um só seletor de cartão (barra de cima) e um só log (gaveta Atividade); wizards em `services/wizard_flow.py`.
 - DSPico (pacote/firmware): só downloads `DSPICO_CACHE_KEYS` / `github.com/LNH-team/`; jogos NDS/DSi em `Games/`; UF2 só com `dspico_firmware_uf2_ready()`.
 - DSPico Enhanced: só por escolha explícita (`variant="enhanced"`), pins `DSPICO_ENHANCED_CACHE_KEYS`, aviso `ENHANCED_DISCLAIMER` visível; o oficial continua o padrão e há sempre «Voltar ao oficial».
