@@ -368,10 +368,13 @@ _CATALOG_BY_ID = {e["id"]: e for e in EMULATOR_CATALOG}
 _SAFE_REL_RE = re.compile(r"^[A-Za-z0-9._\-]+(?:/[A-Za-z0-9._\-]+)*$")
 
 # fileAssociations / extensão → pasta em Games/<plat>/ (layout platform).
+# Para os sistemas que a PicoDex conhece, a pasta é a dela (core.picodex_rules,
+# systems.ts: gb+gbc em gb/, Mega Drive em gen/, ws+wsc em ws/); estas linhas
+# só valem para os sistemas que a PicoDex não cobre.
 _ASSOC_TO_GAMES_PLATFORM: dict[str, str] = {
     "gba": "gba",
     "gb": "gb",
-    "gbc": "gbc",
+    "gbc": "gb",
     "nes": "nes",
     "a26": "2600",
     "a52": "5200",
@@ -380,9 +383,9 @@ _ASSOC_TO_GAMES_PLATFORM: dict[str, str] = {
     "xex": "800",
     "atr": "800",
     "atx": "800",
-    "gen": "genesis",
-    "smd": "genesis",
-    "md": "genesis",
+    "gen": "gen",
+    "smd": "gen",
+    "md": "gen",
     "sms": "sms",
     "gg": "gg",
     "sg": "sms",
@@ -428,6 +431,12 @@ def retro_platform_map() -> dict[str, str]:
             if not key or not plat:
                 continue
             out[f".{key}"] = plat
+    from core.picodex_rules import games_dir_by_extension
+
+    # PicoDex tem prioridade nos sistemas que define (incl. .agb, .ws, .wsc).
+    for ext, games_dir in games_dir_by_extension().items():
+        if games_dir != "nds":
+            out[ext] = games_dir
     return out
 
 

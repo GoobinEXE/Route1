@@ -46,7 +46,11 @@ O separador **DSPico → RouteDex** lê e escreve diretamente no microSD, sem br
 - **Pastas:** `banner.bnr` (ícone e nome mostrado), `cover.bmp` de pasta.
 - **Fundos noturnos** dos temas (`*_night.bin`) e **cheats** (`usrcheat.dat` importado de um ficheiro seu, validado antes de ir para o cartão).
 
-O RouteDex é um port nativo das regras do [PicoDex](https://github.com/rasalopa/picodex) de rasalopa (licença MIT; aviso em [`docs/licenses/`](docs/licenses/)).
+O RouteDex é um port nativo das regras do [PicoDex](https://github.com/rasalopa/picodex) de rasalopa (licença MIT; aviso em [`docs/licenses/`](docs/licenses/)). Onde o app e a PicoDex fazem a mesma coisa, vale a regra da PicoDex: pastas por sistema em `Games/` (`nds`, `gba`, `gb`, `gen`, `sms`, `gg`, `nes`, `snes`, `ws`, `ngp`), onde gravar capas e ícones, escolha de capas no catálogo libretro-thumbnails (primeira fonte, antes de SteamGridDB e GameTDB) e versão do Pico Loader pelo manifesto que a própria PicoDex mantém.
+
+## Fontes oficiais
+
+O Route Pico usa e atualiza-se a partir de cinco repositórios, e só deles: [PicoDex](https://github.com/rasalopa/picodex), [Pico Launcher](https://github.com/LNH-team/pico-launcher), [Pico Loader](https://github.com/LNH-team/pico-loader), [Pico Launcher Enhanced](https://github.com/rasalopa/pico-launcher-enhanced) e [Pico Loader Enhanced](https://github.com/rasalopa/pico-loader). As versões em uso e os SHA-256 ficam em `core/data/upstreams.lock.json`; `tools/sync_upstreams.py --apply` traz as releases mais recentes e o workflow semanal abre um PR com elas. No app, **Verificar atualizações** compara o cartão com a versão da app e com a release mais recente de cada fonte, e permite atualizar os dados da PicoDex sem nova versão do Route Pico.
 
 ## Route Pico no console (em desenvolvimento)
 
@@ -172,17 +176,16 @@ Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-h
 6. **Definições** — editar `/_pico/settings.json` (chaves documentadas no Usage do Launcher).
 7. **Firmware** — detectar volume `RPI-RP2` e gravar `.uf2` **apenas** se existir asset pinado em [dspico-firmware](https://github.com/LNH-team/dspico-firmware/releases). Enquanto as releases LNH não publicarem o UF2, o botão fica desactivado (o GUIDE oficial manda compilar); builds de terceiros não são aceites.
 
-## Modo avançado (visão geral)
+## Navegação
 
-No cabeçalho, **Modo avançado** abre o painel clássico, com secções **Preparar**, **Cartão** e **Apps**:
+A barra lateral tem quatro entradas: **Início**, **DSPico**, **Mais ferramentas** e **Definições**. O cartão escolhe-se uma vez, no seletor da barra de cima. Pelo teclado, as setas mudam de aba, Alt+1 a Alt+4 mudam de vista e Esc fecha a gaveta Atividade, que abre sozinha durante operações.
 
-| Área | O que faz |
+| Vista | Abas |
 |------|-----------|
-| **Preparar** | Passo 1 (Memory Pit + dumpTool), Passo 2 (TWiLight + Unlaunch), kernel GEi |
-| **Cartão** | Organizar ROMs, cheats, capas/ícones (SteamGridDB + GameTDB + Libretro), relatório, backup, limpeza, formatação, DCIM, cópia NAND |
-| **Apps** | Catálogo homebrew: download + SHA-256, pastas/configs das guias GameBrew, instalação em `/roms/apps/` |
+| **DSPico** | Cartão (estado, atualizações, preparar SD) · Jogos · RouteDex · Launcher (`settings.json`, temas, fundos noturnos) · Emuladores e apps · Avançado (emunand, firmware) |
+| **Mais ferramentas** | Softmod DSi (assistente e passos manuais: Passo 1, Passo 2, hiyaCFW, extras) · Flashcards R4/GEi · Biblioteca TWiLight (`/roms/`, organizar, cheats, capas) · Apps homebrew · Manutenção do cartão (relatório, backup, limpeza, formatação) |
 
-Use o Assistente se ainda não tiver o hábito do fluxo completo; o modo avançado não “segura a mão” nas etapas críticas da mesma forma.
+Use o Assistente se ainda não tiver o hábito do fluxo completo; os passos manuais não “seguram a mão” nas etapas críticas da mesma forma.
 
 ---
 
@@ -269,7 +272,7 @@ Secção destinada a desenvolvedores, mantenedores e utilizadores avançados. Li
 | Camada | Papel |
 |--------|--------|
 | **Shell** | Python 3.10+ + pywebview (janela nativa; sem servidor HTTP) |
-| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar DSPico / Softmod / Utilidades |
+| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar Início / DSPico / Mais ferramentas / Definições |
 | **Bridge** | `Api` em `app.py` (`js_api`) + `services/FilePickerPort` / `web_events` |
 | **Core** | Módulos em `core/` (discos, exploits, TWiLight, ROMs, cache, sdio, validate, …) |
 
@@ -393,7 +396,7 @@ O símbolo é uma **placa de rota** com o número **1**, silhueta de cartão SD 
 python tools/build_icons.py
 ```
 
-Temas da app: tokens em `static/themes.css` + `static/theme.js` (7 temas). Temas Pico Launcher: `/_pico/themes/` via Utilidades.
+Temas da app: tokens em `static/themes.css` + `static/theme.js` (7 temas). Temas Pico Launcher: `/_pico/themes/` em DSPico → Launcher.
 
 ### Invariantes (não negociáveis)
 

@@ -9,7 +9,6 @@ const RouteDex = (() => {
     ["health", "Saúde do cartão"],
     ["shots", "Capturas"],
     ["folders", "Pastas"],
-    ["night", "Fundos noturnos"],
     ["cheats", "Cheats"],
   ];
   let tab = "library";
@@ -154,7 +153,6 @@ const RouteDex = (() => {
     else if (tab === "health") await drawHealth(my);
     else if (tab === "shots") await drawShots(my);
     else if (tab === "folders") await drawFolders(my);
-    else if (tab === "night") await drawNight(my);
     else if (tab === "cheats") await drawCheats(my);
   }
 
@@ -356,7 +354,12 @@ const RouteDex = (() => {
         refreshLibraryList();
       };
     const go = b.querySelector("#routedex-go-updates");
-    if (go) go.onclick = () => window.R1K && R1K.updates && R1K.updates.check();
+    if (go)
+      go.onclick = () => {
+        if (!(window.R1K && R1K.shell && R1K.updates)) return;
+        R1K.shell.go("dspico", "cartao");
+        R1K.updates.check();
+      };
     const prune = b.querySelector("#routedex-prune");
     if (prune)
       prune.onclick = async () => {
@@ -382,7 +385,8 @@ const RouteDex = (() => {
     const ver = cands.length ? cands[cands.length - 1] : "";
     const behind = ld.releases_behind ? ` · ${ld.releases_behind} release(s) atrás de ${esc(ld.latest_known)}` : " · em dia";
     const builds = (ld.builds || []).length ? ` · build ${esc(ld.builds.join("/"))}` : "";
-    return `<span class="text-ok">Pico Loader ${esc(ver)}</span>${variant}<span class="text-fg-mute">${cands.length ? behind : ""}${builds}</span>`;
+    const src = ld.source && ld.source.tag ? ` · dados PicoDex ${esc(ld.source.tag)}` : "";
+    return `<span class="text-ok">Pico Loader ${esc(ver)}</span>${variant}<span class="text-fg-mute">${cands.length ? behind : ""}${builds}${src}</span>`;
   }
 
   function launcherLine(l) {
@@ -681,24 +685,28 @@ const RouteDex = (() => {
 
   // ------------------------------------------------------------------ Fundos noturnos
 
-  async function drawNight(my) {
-    loading();
+  /** Fundos noturnos (*_night.bin), mostrados em DSPico → Launcher. */
+  async function renderNight(m, el) {
+    if (!el) return;
+    const card = (inner) => `<section class="panel p-5 space-y-3"><h3 class="section-label">Fundos noturnos</h3>${inner}</section>`;
+    el.innerHTML = card('<p class="text-[12px] text-fg-mute">A ler temas…</p>');
     const a = await api();
     let r;
     try {
-      r = await a.list_routedex_night_themes(mountPath);
+      r = await a.list_routedex_night_themes(m);
     } catch (e) {
       r = { success: false, error: e.message || String(e) };
     }
-    if (my !== gen) return;
-    const b = body();
     if (!(r && r.success)) {
-      b.innerHTML = errorHtml(r && r.error);
+      el.innerHTML = card(errorHtml(r && r.error));
       return;
     }
-    const enhanced = overview ? overview.enhanced : null;
+    const prevMount = mountPath;
+    mountPath = m;
+    const enhanced = overview && prevMount === m ? overview.enhanced : null;
     const themes = r.themes || [];
-    b.innerHTML = `
+    const b = el;
+    b.innerHTML = card(`
       <div class="note">O Pico Launcher Enhanced usa <code>topbg_night.bin</code> e <code>bottombg_night.bin</code> de um tema das 20:00 às 6:59, conferido ao arrancar. As cores são escurecidas e arrefecidas com a mesma fórmula do <code>make_night_bg.py</code> do Enhanced.${
         enhanced === false ? " <strong>O launcher oficial ignora estes ficheiros.</strong>" : ""
       }</div>
@@ -716,18 +724,18 @@ const RouteDex = (() => {
               })
               .join("")}</div>`
           : `<p class="text-[12px] text-fg-mute">Nenhum tema com <code>topbg.bin</code>/<code>bottombg.bin</code> em <code>/_pico/themes</code>.</p>`
-      }`;
+      }`);
     b.querySelectorAll("[data-gen]").forEach((btn) => {
       btn.onclick = async () => {
         const t = btn.getAttribute("data-gen");
         const res = await write("generate_routedex_night_backgrounds", [t], `Fundos noturnos gerados: ${t}.`);
-        if (res) draw();
+        if (res) renderNight(m, el);
       };
     });
     b.querySelectorAll("[data-rm]").forEach((btn) => {
       btn.onclick = async () => {
         const res = await write("remove_routedex_night_backgrounds", [btn.getAttribute("data-rm")], "Fundos noturnos removidos.");
-        if (res) draw();
+        if (res) renderNight(m, el);
       };
     });
   }
@@ -784,5 +792,5 @@ const RouteDex = (() => {
     await draw();
   }
 
-  return { render, credits: creditHtml };
+  return { render, renderNight, credits: creditHtml };
 })();

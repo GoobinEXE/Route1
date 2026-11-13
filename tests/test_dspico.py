@@ -403,8 +403,9 @@ def test_organize_dspico_platform_layout(tmp_path):
     assert ok, msg
     assert (tmp_path / "Games" / "nds").is_dir()
     assert any((tmp_path / "Games" / "nds").glob("*.nds"))
-    assert (tmp_path / "Games" / "dsi").is_dir()
-    assert any((tmp_path / "Games" / "dsi").glob("*.dsi"))
+    # PicoDex: .dsi pertence ao sistema "nds" → Games/nds/ (sem pasta dsi/).
+    assert any((tmp_path / "Games" / "nds").glob("*.dsi"))
+    assert not (tmp_path / "Games" / "dsi").exists()
     assert (tmp_path / "Games" / "gb").is_dir()
     assert any((tmp_path / "Games" / "gb").glob("*.gb"))
 

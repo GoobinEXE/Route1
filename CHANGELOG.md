@@ -14,8 +14,14 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 - **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas** na barra lateral
 
+- **Navegação simplificada**: barra lateral com Início, DSPico, Mais ferramentas e Definições. Utilidades deixa de existir (cada função foi para o sítio dela), o cartão escolhe-se só na barra de cima, a gaveta Atividade passa a mostrar os registos e abre sozinha durante operações, e há atalhos de teclado (setas nas abas, Alt+1…4 nas vistas)
+
+- **Regras da PicoDex primeiro**: capas escolhidas no catálogo libretro-thumbnails como na PicoDex (antes de SteamGridDB e GameTDB), cada capa/ícone gravado num só destino, pastas `Games/` por sistema iguais às da PicoDex (GB e GBC em `gb/`, Mega Drive em `gen/`, `.dsi` em `nds/`) e versão do Pico Loader identificada pelo manifesto da PicoDex
+- **Pico Loader 1.7.1** no pacote oficial; a atualização do loader passa a copiar também `patchlist.bin`
+
 ### Adicionado
 
+- **Fontes oficiais**: PicoDex, Pico Launcher, Pico Loader e as duas variantes Enhanced num registo único, com versões fixadas, verificação semanal e PR automático; os dados da PicoDex podem ser atualizados em Verificar atualizações
 - **RouteDex** (DSPico → RouteDex): favoritos, concluídos, partidas e tempo de jogo do Pico Launcher Enhanced, com edição à mão
 - **Saúde do cartão**: versão do Pico Loader e do launcher, ficheiros em falta ou de releases misturadas, saves sem jogo ou em duplicado, capas órfãs e lixo do macOS (com cópia no computador antes de remover)
 - **Capturas** do Enhanced com as duas telas juntas, para guardar em PNG ou apagar

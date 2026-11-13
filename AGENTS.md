@@ -20,7 +20,7 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 |---------|--------|
 | `app.py` | Entrada pywebview, `Api` (fachada de domínio), `OP_LOCK` / logs, preflight + ops de montagem |
 | `services/` | `FilePickerPort`, `wizard_flow`, `web_events` (UI ↔ Api) |
-| `static/` | Shell HTML/CSS/JS (sidebar, DSPico, Softmod, Utilidades, Cartão) |
+| `static/` | Shell HTML/CSS/JS (Início, DSPico, Mais ferramentas, Definições) |
 | `static/assets/` | Logo, ícones, plataformas, fontes |
 | `core/disks.py` | Listagem e formatação de volumes removíveis |
 | `core/sdio.py` | Pré-voo de escrita, sync de volume |
@@ -33,7 +33,10 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/dspico_emulators.py` | Catálogo + instalação de emuladores Pico-Launcher (pins `DSPICO_EMU_CACHE_KEYS`) |
 | `core/updates.py` | Verificar / instalar actualizações do ecossistema DSPico (pinned + latest LNH); variante opt-in `enhanced` (rasalopa) para launcher/loader |
 | `core/routedex.py` | RouteDex: `gamedata.json` sem perdas, saúde do cartão, versão do loader/launcher, capturas, banners/capas de pasta, fundos noturnos, `usrcheat.dat` (port do PicoDex, MIT) |
-| `core/data/pico_manifest.json` | SHA-256 por ficheiro das releases Pico Loader/Launcher (oficial + Enhanced); regenerar com `tools/gen_pico_manifest.py` |
+| `core/upstreams.py` + `core/data/upstreams.lock.json` | **Fontes oficiais** (PicoDex, Pico Launcher, Pico Loader, Launcher Enhanced, Loader Enhanced): repos, tags e SHA-256 em uso; `cache_pins`, `updates` e RouteDex leem daqui |
+| `core/picodex_rules.py` | Regras da PicoDex onde o app faz o mesmo: sistemas e pastas `Games/<sistema>/`, destino da arte (`artPaths`), correspondência de capas no catálogo libretro-thumbnails (`matching`) |
+| `core/data/picodex/loaderReleases.json` | Manifesto de versões do Pico Loader **mantido pela PicoDex** (cópia fixada no lock; o utilizador pode atualizá-lo pelo painel) |
+| `core/data/pico_manifest.json` | SHA-256 do `LAUNCHER.nds` (oficial + Enhanced) e do Loader Enhanced — só o que a PicoDex não cobre; `tools/gen_pico_manifest.py` |
 | `static/js/routedex.js` | UI do separador DSPico → RouteDex |
 | `core/pico_themes.py` | Temas Pico Launcher (`/_pico/themes/`) |
 | `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB + Libretro → TWiLight `boxart/` / `icons/` |
@@ -49,7 +52,8 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/privacy.py` | Redação de paths / PII em logs e respostas |
 | `tests/` | pytest |
 | `tools/update_pins.py` | Verificar / atualizar pins SHA-256 |
-| `tools/gen_pico_manifest.py` | Regenerar / `--check` o manifesto de hashes usado pelo RouteDex |
+| `tools/sync_upstreams.py` | `--check` / `--apply`: alinhar o lock com as releases mais recentes das cinco fontes oficiais (workflow semanal `upstreams.yml` abre PR) |
+| `tools/gen_pico_manifest.py` | Regenerar `core/data/pico_manifest.json` (corrido pelo `sync_upstreams.py --apply`) |
 | `nds/` | App do console (C, libnds): gestor de ficheiros do microSD + ponte USB (`make -C nds test`, `make -C nds nds`) |
 | `protocol/` | Spec R1USB partilhada desktop ↔ console (`R1USB.md` + `messages.json`) |
 | `docs/console/` | Plano, arquitetura e manuais do app do console |
@@ -110,9 +114,11 @@ Detalhe e exemplos: `.cursor/rules/` — não duplicar aqui; cumprir sempre.
 - Preferir mudanças mínimas e alinhadas ao estilo existente (nomes, helpers de `app.py` / `core/` / `services/`).
 - UI 100% **offline**: sem CDN, sem fetch remoto na UI (downloads oficiais só via `core/cache.py` com pins).
 - Temas da app: tokens em `themes.css` + entrada em `THEMES` (`theme.js`); CSS consome `--c-*`.
-- Navegação: sidebar Início / DSPico / Softmod DSi / Utilidades / Cartão SD / Outros flashcards / Definições; wizards em `services/wizard_flow.py`.
+- Navegação: sidebar Início / DSPico / Mais ferramentas / Definições, com abas em DSPico e Mais ferramentas (`docs/ui-parity.md`); cada painel vive no HTML da sua vista; um só seletor de cartão (barra de cima) e um só log (gaveta Atividade); wizards em `services/wizard_flow.py`.
 - DSPico (pacote/firmware): só downloads `DSPICO_CACHE_KEYS` / `github.com/LNH-team/`; jogos NDS/DSi em `Games/`; UF2 só com `dspico_firmware_uf2_ready()`.
 - DSPico Enhanced: só por escolha explícita (`variant="enhanced"`), pins `DSPICO_ENHANCED_CACHE_KEYS`, aviso `ENHANCED_DISCLAIMER` visível; o oficial continua o padrão e há sempre «Voltar ao oficial».
+- Fontes oficiais: os pacotes do launcher/loader (oficial e Enhanced) e os dados da PicoDex vêm **só** dos repos de `core/upstreams.py`; nunca escrever pins/URLs destes pacotes à mão — usar `tools/sync_upstreams.py --apply`. `tests/test_upstreams.py` falha se um repo, pin ou URL sair do registo.
+- PicoDex primeiro: onde o app e a PicoDex fazem a mesma coisa (pastas por sistema, destino da arte, escolha de capas, versão do loader, gamedata, saúde, banners, capturas), seguir `core/picodex_rules.py` / `core/routedex.py` e a PicoDex upstream.
 - RouteDex: crédito ao PicoDex (rasalopa, MIT) visível na UI; nunca sobrescrever um `gamedata.json` que não faz parse; remoções copiam antes para `~/.route_1_kit_cache/routedex_backup/`.
 - DSPico (emuladores): pins em `DSPICO_EMU_CACHE_KEYS` (guias Sanrax / autores oficiais); NDS em `/_pico/emulators/` ou `/Emulators/`; ROMs retro em `/ROMs/`; nunca descarregar BIOS proprietária.
 - Idioma do produto / README: português (pt); manter mensagens de UI e logs de utilizador em PT.

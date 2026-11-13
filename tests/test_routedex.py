@@ -126,16 +126,19 @@ def test_identify_loader_official_mixed_and_enhanced(fake_sd, monkeypatch):
     for n, b in files.items():
         _write(sd / "_pico" / n, b)
     h = {n: routedex._sha256_file(str(sd / "_pico" / n)) for n in files}
-    manifest = {
-        "loader": {
-            "releases": [{"tag": "v1.0.0"}, {"tag": "v1.1.0"}, {"tag": "v1.2.0"}],
-            "files": {n: {h[n]: ["v1.1.0"]} for n in files},
-            "builds": {n: {h[n]: ["DSPICO"]} for n in files},
-        },
-        "loader_enhanced": {"files": {}},
+    # Pico Loader oficial: manifesto da PicoDex; Enhanced: o nosso.
+    picodex = {
+        "releases": [{"tag": "v1.0.0"}, {"tag": "v1.1.0"}, {"tag": "v1.2.0"}],
+        "files": {n: {h[n]: ["v1.1.0"]} for n in files},
+        "builds": {n: {h[n]: ["DSPICO"]} for n in files},
+        "_picodex_tag": "v0.12.0",
+        "_origin": "app",
     }
-    _manifest(monkeypatch, manifest)
+    monkeypatch.setattr(routedex, "_picodex_loader_cache", picodex)
+    _manifest(monkeypatch, {"loader_enhanced": {"files": {}}})
+    manifest = {"loader": picodex}
     res = routedex.identify_loader(str(sd))
+    assert res["source"] == {"name": "PicoDex", "tag": "v0.12.0", "origin": "app"}
     assert res["status"] == "identified" and res["candidates"] == ["v1.1.0"]
     assert res["releases_behind"] == 1 and res["variant"] == "official" and res["builds"] == ["DSPICO"]
 
@@ -166,7 +169,8 @@ def test_shipped_manifest_knows_pinned_releases():
     m = routedex.load_manifest()
     assert "v1.3.0" in m["launcher"]["official"].values()
     assert "enhanced-v1.11.0" in m["launcher"]["enhanced"].values()
-    assert "v1.6.0" in [r["tag"] for r in m["loader"]["releases"]]
+    assert "loader" not in m  # o Pico Loader oficial vem do manifesto da PicoDex
+    assert "enhanced-v1.0.1" in [r["tag"] for r in m["loader_enhanced"]["releases"]]
 
 
 # --- saúde -----------------------------------------------------------------

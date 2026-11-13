@@ -263,41 +263,10 @@ body {
   gap: 8px;
 }
 
-.util-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
 
-.util-card {
-  appearance: none;
-  text-align: left;
-  border: 1px solid var(--c-line);
-  background: var(--c-panel);
-  border-radius: var(--shell-radius);
-  padding: 16px;
-  cursor: pointer;
-  transition: border-color var(--motion), transform var(--motion);
-}
 
-.util-card:hover {
-  border-color: color-mix(in srgb, var(--c-accent) 40%, var(--c-line));
-  transform: translateY(-1px);
-}
 
-.util-card-title {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
 
-.util-card-copy {
-  display: block;
-  font-size: 12px;
-  color: var(--c-fg-mute);
-  line-height: 1.45;
-}
 
 .r1k-op-progress {
   flex: 1 1 220px;
@@ -550,3 +519,8 @@ body {
 .enhanced-card .btn-primary, .routedex-form .btn-primary, #routedex-body .btn-primary { width: auto; }
 .routedex-shot figcaption .btn-ghost { white-space: nowrap; }
 .routedex-form .routedex-input { flex: none; }
+.theme-list { display: grid; gap: 2px; max-width: 360px; }
+.manual-steps > summary { list-style: none; display: flex; align-items: center; gap: 8px; }
+.manual-steps > summary::before { content: "▸"; color: rgb(var(--c-fg-mute)); transition: transform 0.15s ease; }
+.manual-steps[open] > summary::before { transform: rotate(90deg); }
+.adv-tab:focus-visible, .nav-item:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }

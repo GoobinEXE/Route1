@@ -139,10 +139,8 @@ const Theme = (() => {
       </button>`;
   }
 
-  function renderMenu() {
-    const menu = document.getElementById("theme-menu");
-    if (!menu) return;
-
+  /** Mesma lista para o menu do topo e para Definições → Aparência. */
+  function itemsHtml() {
     const systemColors = systemPrefersLight() ? THEMES.light.swatch : THEMES.dark.swatch;
     let html = `<div class="theme-group">Aparência</div>${itemHtml(
       SYSTEM,
@@ -159,13 +157,36 @@ const Theme = (() => {
       });
     });
 
-    menu.innerHTML = html;
-    menu.querySelectorAll("[data-theme-id]").forEach((btn) => {
+    return html;
+  }
+
+  function bindItems(root, onPick) {
+    root.querySelectorAll("[data-theme-id]").forEach((btn) => {
       btn.addEventListener("click", () => {
         set(btn.getAttribute("data-theme-id"));
-        closeMenu();
+        if (onPick) onPick();
       });
     });
+  }
+
+  let listHost = null;
+
+  /** Renderiza a lista de temas num contentor da página (Definições). */
+  function renderList(host) {
+    if (host) listHost = host;
+    if (!listHost) return;
+    listHost.setAttribute("role", "radiogroup");
+    listHost.setAttribute("aria-label", "Tema da app");
+    listHost.innerHTML = itemsHtml().replace(/role="menuitemradio"/g, 'role="radio"');
+    bindItems(listHost);
+  }
+
+  function renderMenu() {
+    const menu = document.getElementById("theme-menu");
+    if (listHost) renderList();
+    if (!menu) return;
+    menu.innerHTML = itemsHtml();
+    bindItems(menu, closeMenu);
 
     const trigger = document.getElementById("btn-theme");
     if (trigger) {
@@ -265,6 +286,7 @@ const Theme = (() => {
     set,
     current,
     list,
+    renderList,
     toggleMenu,
     closeMenu,
     get preference() {

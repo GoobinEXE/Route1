@@ -86,6 +86,10 @@ _USRCHEAT_MAX_BYTES = 64 * 1024 * 1024
 
 _MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pico_manifest.json")
 _manifest_cache: Optional[dict[str, Any]] = None
+_picodex_loader_cache: Optional[dict[str, Any]] = None
+# Cópia mais recente do manifesto da PicoDex descarregada pelo utilizador
+# (Verificar atualizações → PicoDex); a cópia incluída na app é o mínimo.
+PICODEX_USER_DIR = os.path.join(CACHE_DIR, "picodex")
 
 _ENHANCED_LAUNCHER_MARKER = b"rasalopa/pico-launcher-enhanced"
 _ENHANCED_LOADER_RE = re.compile(rb"Pico Loader Enhanced v([0-9][0-9A-Za-z.\-]{0,20})")
@@ -325,6 +329,72 @@ def load_manifest() -> dict[str, Any]:
     return _manifest_cache
 
 
+def validate_picodex_loader_manifest(data: Any) -> dict[str, Any]:
+    """Confere a forma do loaderReleases.json da PicoDex; levanta ValueError se inválido."""
+    if not isinstance(data, dict):
+        raise ValueError("raiz não é objeto")
+    releases = data.get("releases")
+    files = data.get("files")
+    if not isinstance(releases, list) or not releases or not isinstance(files, dict):
+        raise ValueError("sem releases/files")
+    if not all(isinstance(r, dict) and isinstance(r.get("tag"), str) for r in releases):
+        raise ValueError("release sem tag")
+    for name in ("picoLoader7.bin", "picoLoader9.bin", "aplist.bin", "savelist.bin"):
+        table = files.get(name)
+        if not isinstance(table, dict) or not table:
+            raise ValueError(f"sem hashes de {name}")
+        for digest, tags in table.items():
+            if not (isinstance(digest, str) and len(digest) == 64 and isinstance(tags, list)):
+                raise ValueError(f"entrada inválida em {name}")
+    builds = data.get("builds", {})
+    if not isinstance(builds, dict):
+        raise ValueError("builds inválido")
+    return data
+
+
+def _read_json(path: str) -> Optional[dict[str, Any]]:
+    try:
+        with open(path, encoding="utf-8") as f:
+            return validate_picodex_loader_manifest(json.load(f))
+    except (OSError, ValueError):
+        return None
+
+
+def load_picodex_loader_manifest() -> dict[str, Any]:
+    """Manifesto do Pico Loader mantido pela PicoDex (fonte oficial das versões).
+
+    Usa a cópia descarregada pelo utilizador quando é válida e cobre pelo menos
+    tantas releases como a incluída na app; senão a incluída (fixada no lock).
+    """
+    global _picodex_loader_cache
+    if _picodex_loader_cache is not None:
+        return _picodex_loader_cache
+    from core.upstreams import lock_entry, picodex_data_path
+
+    bundled = _read_json(picodex_data_path("loaderReleases.json")) or {"releases": [], "files": {}, "builds": {}}
+    try:
+        bundled_tag = lock_entry("picodex").get("tag", "")
+    except (OSError, ValueError, KeyError):
+        bundled_tag = ""
+    chosen, origin, tag = bundled, "app", bundled_tag
+    user = _read_json(os.path.join(PICODEX_USER_DIR, "loaderReleases.json"))
+    if user is not None and len(user["releases"]) >= len(bundled.get("releases") or []):
+        try:
+            with open(os.path.join(PICODEX_USER_DIR, "meta.json"), encoding="utf-8") as f:
+                meta = json.load(f)
+            tag = str(meta.get("tag") or tag)
+        except (OSError, ValueError):
+            pass
+        chosen, origin = user, "atualizado"
+    _picodex_loader_cache = dict(chosen, _origin=origin, _picodex_tag=tag)
+    return _picodex_loader_cache
+
+
+def reset_picodex_cache() -> None:
+    global _picodex_loader_cache
+    _picodex_loader_cache = None
+
+
 def identify_launcher(mount_path: str) -> dict[str, Any]:
     """Que launcher está em /_picoboot.nds: oficial (LNH) ou Enhanced, e versão."""
     path = os.path.join(mount_path, "_picoboot.nds")
@@ -362,7 +432,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
     variant: official | enhanced (picoLoader7/9 do fork) | None
     """
     manifest = load_manifest()
-    loader = manifest.get("loader") or {}
+    loader = load_picodex_loader_manifest()
     order = [r.get("tag") for r in loader.get("releases") or [] if isinstance(r, dict)]
     latest_known = order[-1] if order else ""
     files_tbl = loader.get("files") or {}
@@ -409,6 +479,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
     builds = sorted(_intersect(build_sets)) if build_sets else []
 
     result: dict[str, Any] = {
+        "source": {"name": "PicoDex", "tag": loader.get("_picodex_tag", ""), "origin": loader.get("_origin", "app")},
         "variant": "enhanced" if enhanced_files else ("official" if present else None),
         "enhanced_version": enhanced_version,
         "enhanced_files": sorted(enhanced_files),

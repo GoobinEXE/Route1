@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Gera core/data/pico_manifest.json: SHA-256 por ficheiro de cada release do
-Pico Loader / Pico Launcher (LNH-team) e das variantes Enhanced (rasalopa).
+"""Gera core/data/pico_manifest.json: SHA-256 do LAUNCHER.nds de cada release do
+Pico Launcher (LNH-team) e do Pico Launcher Enhanced, e dos picoLoader7/9.bin do
+Pico Loader Enhanced (rasalopa/pico-loader).
 
-O RouteDex usa este manifesto para dizer, offline, que versão do loader e do
-launcher está no cartão e se os ficheiros do loader vêm de releases misturadas.
-Ideia e formato inspirados em scripts/gen-loader-manifest.mjs do PicoDex
-(https://github.com/rasalopa/picodex, MIT).
+O Pico Loader oficial NÃO está aqui: o RouteDex usa o manifesto mantido pela
+própria PicoDex (core/data/picodex/loaderReleases.json, via
+tools/sync_upstreams.py). Este ficheiro cobre só o que a PicoDex não cobre.
 
 Uso:
     python tools/gen_pico_manifest.py            # regenera o JSON
@@ -30,11 +30,9 @@ import zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "core", "data", "pico_manifest.json")
 
-LOADER_FILES = ("picoLoader7.bin", "picoLoader9.bin", "aplist.bin", "savelist.bin", "patchlist.bin")
 LAUNCHER_FILE = "LAUNCHER.nds"
 
 SOURCES = {
-    "loader_official": {"repo": "LNH-team/pico-loader", "asset_re": r"^Pico_Loader_(?P<cart>[A-Za-z0-9]+)\.zip$"},
     "launcher_official": {"repo": "LNH-team/pico-launcher", "asset_re": r"^Pico[._]Launcher\.zip$"},
     "launcher_enhanced": {
         "repo": "rasalopa/pico-launcher-enhanced",
@@ -96,7 +94,6 @@ def _hash_members(zdata: bytes, wanted: tuple[str, ...]) -> dict[str, str]:
 def build() -> dict:
     manifest: dict = {
         "generated_by": "tools/gen_pico_manifest.py",
-        "loader": {"releases": [], "files": {}, "builds": {}},
         "loader_enhanced": {"releases": [], "files": {}},
         "launcher": {"official": {}, "enhanced": {}},
     }
@@ -105,23 +102,6 @@ def build() -> dict:
         tags = table.setdefault(file, {}).setdefault(digest, [])
         if tag not in tags:
             tags.append(tag)
-
-    src = SOURCES["loader_official"]
-    for rel in _releases(src["repo"]):
-        tag = rel["tag_name"]
-        manifest["loader"]["releases"].append({"tag": tag, "published": rel.get("published_at", "")[:10]})
-        for asset in rel.get("assets", []):
-            m = re.match(src["asset_re"], asset["name"])
-            if not m:
-                continue
-            cart = m.group("cart").upper()
-            hashes = _hash_members(_download_verified(asset), LOADER_FILES)
-            for file, digest in hashes.items():
-                add(manifest["loader"]["files"], file, digest, tag)
-                carts = manifest["loader"]["builds"].setdefault(file, {}).setdefault(digest, [])
-                if cart not in carts:
-                    carts.append(cart)
-            print(f"loader {tag} {cart}: {len(hashes)} ficheiros", file=sys.stderr)
 
     src = SOURCES["loader_enhanced"]
     for rel in _releases(src["repo"]):
@@ -148,10 +128,6 @@ def build() -> dict:
                     manifest["launcher"][variant][digest] = tag
                     print(f"launcher {variant} {tag}", file=sys.stderr)
 
-    for table in (manifest["loader"]["builds"],):
-        for by_hash in table.values():
-            for carts in by_hash.values():
-                carts.sort()
     return manifest
 
 

@@ -3,7 +3,7 @@
  * Depende de getApi / selectedDrive / runMountOp / escapeHtml / setBusy (app.js).
  */
 const Dspico = (() => {
-  let section = "status";
+  let section = "cartao";
   let gamesCwd = "";
   let selectedRels = new Set();
   let lastInspect = null;
@@ -22,16 +22,24 @@ const Dspico = (() => {
   let drivePollTimer = null;
   let lastPolledMount = null;
   const GAMES_VIRTUAL_THRESHOLD = 80;
-  const SECTIONS = [
-    "status",
-    "setup",
-    "games",
-    "routedex",
-    "emulators",
-    "emunand",
-    "settings",
-    "firmware",
-  ];
+  // Aba → secções renderizadas dentro dela (ids dspico-section-<secção>).
+  const TABS = {
+    cartao: ["status", "setup"],
+    games: ["games"],
+    routedex: ["routedex"],
+    launcher: ["settings", "picothemes", "night"],
+    extras: ["emulators", "usbapps"],
+    avancado: ["emunand", "firmware"],
+  };
+  const SECTIONS = Object.keys(TABS);
+  const LEGACY_SECTIONS = {
+    status: "cartao",
+    setup: "cartao",
+    settings: "launcher",
+    emulators: "extras",
+    emunand: "avancado",
+    firmware: "avancado",
+  };
 
   function mount() {
     return (typeof selectedDrive !== "undefined" && selectedDrive && selectedDrive.mount_path) || null;
@@ -62,19 +70,27 @@ const Dspico = (() => {
       alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
       return;
     }
-    if (!SECTIONS.includes(name)) name = "status";
+    selectSection(name);
+    refresh();
+  }
+
+  /** Muda a aba visível sem renderizar (usado antes de entrar na vista). */
+  function selectSection(name) {
+    if (LEGACY_SECTIONS[name]) name = LEGACY_SECTIONS[name];
+    if (!SECTIONS.includes(name)) name = "cartao";
+    if (section === "games" && name !== "games") gamesShellBuilt = false;
     section = name;
     for (const key of SECTIONS) {
-      const el = document.getElementById(`dspico-section-${key}`);
+      const pane = document.getElementById(`dspico-pane-${key}`);
       const tab = document.getElementById(`dspico-tab-${key}`);
-      if (el) el.classList.toggle("hidden", section !== key);
+      const on = section === key;
+      if (pane) pane.classList.toggle("hidden", !on);
       if (tab) {
-        const on = section === key;
         tab.classList.toggle("adv-tab--active", on);
         tab.setAttribute("aria-selected", on ? "true" : "false");
+        tab.tabIndex = on ? 0 : -1;
       }
     }
-    refresh();
   }
 
   function startDrivePoll() {
@@ -118,20 +134,38 @@ const Dspico = (() => {
 
   async function renderActive(gen) {
     const m = mount();
-    if (section === "status") await renderStatus(gen, m);
-    else if (section === "setup") await renderSetup(gen, m);
-    else if (section === "games") await renderGames(gen, m);
-    else if (section === "routedex") await renderRoutedex(gen, m);
-    else if (section === "emulators") await renderEmulators(gen, m);
-    else if (section === "emunand") await renderEmunand(gen, m);
-    else if (section === "settings") await renderSettings(gen, m);
-    else if (section === "firmware") await renderFirmware(gen, m);
+    const renderers = {
+      status: renderStatus,
+      setup: renderSetup,
+      games: renderGames,
+      routedex: renderRoutedex,
+      settings: renderSettings,
+      picothemes: renderPicoThemes,
+      night: renderNight,
+      emulators: renderEmulators,
+      usbapps: renderUsbApps,
+      emunand: renderEmunand,
+      firmware: renderFirmware,
+    };
+    const subs = TABS[section] || [];
+    if (!m) {
+      // Sem cartão: um único aviso por aba.
+      subs.forEach((sub, i) => {
+        const el = document.getElementById(`dspico-section-${sub}`);
+        if (el) el.innerHTML = i === 0 ? needDriveHtml() : "";
+      });
+      return;
+    }
+    for (const sub of subs) {
+      if (gen !== renderGen) return;
+      await renderers[sub](gen, m);
+    }
   }
 
   function needDriveHtml() {
     return `
       <section class="panel p-5">
-        <p class="opt-does">Seleccione o <strong>microSD do cartucho DSPico</strong> acima.</p>
+        <p class="opt-does">Seleccione o <strong>microSD do cartucho DSPico</strong> na barra de cima.</p>
         <p class="opt-when mt-1">Não é o SD lateral do DSi — é o cartão dentro do cartucho Slot-1.</p>
       </section>`;
   }
@@ -266,6 +300,33 @@ const Dspico = (() => {
     }
     if (gen !== renderGen) return;
     await RouteDex.render(gen, m, el);
+  }
+
+  async function renderPicoThemes(gen, m) {
+    const el = document.getElementById("dspico-section-picothemes");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (window.R1K && R1K.launcherExtras) await R1K.launcherExtras.renderPicoThemes(el);
+  }
+
+  async function renderNight(gen, m) {
+    const el = document.getElementById("dspico-section-night");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (typeof RouteDex !== "undefined" && RouteDex.renderNight) await RouteDex.renderNight(m, el);
+  }
+
+  async function renderUsbApps(gen, m) {
+    const el = document.getElementById("dspico-section-usbapps");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (window.R1K && R1K.launcherExtras) R1K.launcherExtras.renderUsbApps(el);
   }
 
   async function renderSetup(gen, m) {
@@ -1806,7 +1867,7 @@ const Dspico = (() => {
   }
 
   function onNativeDrop(paths) {
-    if (typeof appMode !== "undefined" && appMode !== "dspico") return;
+    if (!(window.R1K && R1K.shell && R1K.shell.current() === "dspico")) return;
     if (section !== "games") setSection("games");
     importPaths(paths);
   }
@@ -2272,6 +2333,7 @@ const Dspico = (() => {
     leave,
     refresh,
     setSection,
+    selectSection,
     onDrivesUpdated,
     onNativeDrop,
     addGames,

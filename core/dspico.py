@@ -139,7 +139,7 @@ def _dest_dir_for_import(
 
 # Layouts de organização DSPico (escolha do utilizador)
 LAYOUT_FRANCHISE = "franchise"  # Games/<franquia>/
-LAYOUT_PLATFORM = "platform"  # Games/nds/ ou Games/dsi/
+LAYOUT_PLATFORM = "platform"  # Games/<sistema>/ com as pastas da PicoDex (nds, gba, gb, gen…)
 LAYOUT_GAMES = "games"  # soltos em Games/
 LAYOUT_ROOT = "root"  # soltos na raiz ao lado do launcher
 LAYOUT_MODES = frozenset(
@@ -1831,12 +1831,8 @@ def _dspico_platform(ext: str, unitcode=None) -> str:
     low = (ext or "").lower()
     if low in RETRO_EXTS:
         return _RETRO_PLATFORM.get(low, "retro")
-    try:
-        uc = int(unitcode) if unitcode is not None else 0
-    except (TypeError, ValueError):
-        uc = 0
-    if low == ".dsi" or low == ".app" or uc == 2:
-        return "dsi"
+    # PicoDex (systems.ts): .nds/.dsi/.srl são todos do sistema "nds" → Games/nds/.
+    _ = unitcode
     return "nds"
 
 

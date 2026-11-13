@@ -45,14 +45,11 @@ const Wizard = (() => {
   }
 
   function onDrivesUpdated() {
-    const driveBox = document.getElementById("wizard-drive-panel");
-    if (driveBox && !driveBox.classList.contains("hidden")) {
-      // badge já atualizado por app.js
-    }
+    bindDrivePanel();
   }
 
   function onDriveSelected() {
-    // noop — gates reavaliados no próximo render/CTA
+    bindDrivePanel();
   }
 
   function goalTitle(goal) {
@@ -495,15 +492,6 @@ const Wizard = (() => {
         <div class="flex flex-wrap gap-2 pt-1">
           <button type="button" class="btn-ghost" onclick="Wizard.goBack()">Voltar</button>
         </div>
-        <section class="panel overflow-hidden mt-2">
-          <div class="flex items-center justify-between px-4 py-2 panel-header">
-            <h3 class="section-label !normal-case tracking-normal text-fg-soft">Atividade</h3>
-            <button type="button" onclick="clearLogs()" class="text-[11px] font-medium text-fg-mute hover:text-fg transition">Limpar</button>
-          </div>
-          <div id="wizard-log" class="h-28 overflow-y-auto px-4 py-2 space-y-1 log-view">
-            <div class="text-fg-mute">Atividade do assistente.</div>
-          </div>
-        </section>
       </div>
     `;
 
@@ -571,9 +559,9 @@ const Wizard = (() => {
         </section>
 
         <p class="text-[11px] text-fg-mute leading-relaxed">
-          Preferir o
-          <button type="button" class="text-accent-fg font-medium" onclick="setAppMode('advanced')">Modo avançado</button>
-          se já souber exactamente o que gravar.
+          Se já souber exactamente o que gravar, use os
+          <button type="button" class="text-accent-fg font-medium" onclick="Wizard.openManualSteps()">passos manuais</button>
+          abaixo.
         </p>
       </div>
     `;
@@ -653,47 +641,27 @@ const Wizard = (() => {
     };
   }
 
+  function driveSummaryText() {
+    if (typeof selectedDrive === "undefined" || !selectedDrive) {
+      return "Nenhum cartão escolhido. Ligue o SD e escolha-o na barra de cima.";
+    }
+    const d = selectedDrive;
+    return `${d.name || d.mount_path} · ${d.fs_type || "?"} · ${d.total_size_gb} GB (livre ${d.free_size_gb} GB)`;
+  }
+
   function drivePanelHtml() {
     return `
       <section class="panel p-4 drive-panel" id="wizard-drive-panel">
-        <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div class="flex-1 space-y-2">
-            <div class="flex items-center gap-2">
-              <span id="wizard-drive-status-dot" class="status-dot status-dot--idle" aria-hidden="true"></span>
-              <h3 class="section-label">Cartão SD</h3>
-            </div>
-            <select id="wizard-drive-select" onchange="onDriveSelected(true)" class="field-select w-full md:max-w-lg">
-              <option value="">Procurando unidades…</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <button type="button" class="btn-ghost" onclick="fetchDrives()">Atualizar</button>
-            <div id="wizard-drive-badge" class="hidden stats-row">
-              <div>
-                <span class="stat-label">Formato</span>
-                <span id="wizard-info-fs" class="stat-value">—</span>
-              </div>
-              <div class="stat-divider"></div>
-              <div>
-                <span class="stat-label">Capacidade</span>
-                <span id="wizard-info-size" class="stat-value">—</span>
-              </div>
-              <div class="stat-divider"></div>
-              <div>
-                <span class="stat-label">Livre</span>
-                <span id="wizard-info-free" class="stat-value text-accent-fg">—</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h3 class="section-label">Cartão SD</h3>
+        <p id="wizard-drive-summary" class="text-[13px] text-fg mt-1">${escapeHtml(driveSummaryText())}</p>
+        <p class="text-[11px] text-fg-mute mt-1">Para trocar de cartão, use o seletor na barra de cima.</p>
       </section>
     `;
   }
 
   function bindDrivePanel() {
-    syncDriveSelects();
-    updateDriveBadge();
-    setDriveStatus(!!selectedDrive);
+    const el = document.getElementById("wizard-drive-summary");
+    if (el) el.textContent = driveSummaryText();
   }
 
   function renderFormatWarn(el) {
@@ -1144,7 +1112,7 @@ const Wizard = (() => {
     };
     document.getElementById("wiz-roms-skip").onclick = () => goNext();
     document.getElementById("wiz-open-dspico").onclick = () => {
-      if (typeof setAppMode === "function") setAppMode("dspico");
+      if (window.R1K && R1K.shell) R1K.shell.go("dspico", "cartao");
     };
   }
 
@@ -1578,5 +1546,12 @@ const Wizard = (() => {
     onBusyChange,
     onDrivesUpdated,
     onDriveSelected,
+    openManualSteps() {
+      const d = document.querySelector("#tools-pane-softmod details.manual-steps");
+      if (d) {
+        d.open = true;
+        d.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    },
   };
 })();

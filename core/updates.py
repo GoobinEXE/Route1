@@ -44,9 +44,13 @@ _TIMEOUT = 15
 _CACHE_TTL_SECONDS = 600
 _MEM_CACHE: dict[str, tuple[float, bytes]] = {}
 
-# Repositório do fork Enhanced (rasalopa): único repo fora do LNH-team que o
-# fluxo DSPico aceita, e só quando o utilizador escolhe a variante "enhanced".
-ENHANCED_REPO = "rasalopa/pico-launcher-enhanced"
+from core.upstreams import OFFICIAL_REPOS, UPSTREAMS, lock_entry
+
+# Fontes oficiais (core/upstreams.py). Os forks Enhanced (rasalopa) só entram
+# quando o utilizador escolhe a variante "enhanced".
+ENHANCED_REPO = UPSTREAMS["pico_launcher_enhanced"]["repo"]
+ENHANCED_LOADER_REPO = UPSTREAMS["pico_loader_enhanced"]["repo"]
+PICODEX_REPO = UPSTREAMS["picodex"]["repo"]
 ENHANCED_DISCLAIMER = (
     "Fork não oficial do Pico Launcher/Loader, mantido por rasalopa (licença Zlib). "
     "Não é suportado pelo LNH team: problemas com esta variante devem ser reportados em "
@@ -55,7 +59,7 @@ ENHANCED_DISCLAIMER = (
 
 _COMPONENTS: dict[str, dict[str, Any]] = {
     "pico-launcher": {
-        "repo": "LNH-team/pico-launcher",
+        "repo": UPSTREAMS["pico_launcher"]["repo"],
         "cache_key": "pico_launcher",
         "asset_suffixes": ("Pico_Launcher.zip",),
         "variants": {
@@ -72,12 +76,12 @@ _COMPONENTS: dict[str, dict[str, Any]] = {
         },
     },
     "pico-loader": {
-        "repo": "LNH-team/pico-loader",
+        "repo": UPSTREAMS["pico_loader"]["repo"],
         "cache_key": "pico_loader_dspico",
         "asset_suffixes": ("Pico_Loader_DSPICO.zip",),
         "variants": {
             "enhanced": {
-                "repo": ENHANCED_REPO,
+                "repo": ENHANCED_LOADER_REPO,
                 "cache_key": "pico_loader_enhanced_dspico",
                 "asset_prefix": "Pico_Loader_Enhanced_v",
                 "label": "Pico Loader Enhanced",
@@ -87,6 +91,12 @@ _COMPONENTS: dict[str, dict[str, Any]] = {
                 ),
             }
         },
+    },
+    "picodex": {
+        "repo": PICODEX_REPO,
+        "cache_key": None,
+        "asset_suffixes": (),
+        "kind": "data",
     },
     "dspico-firmware": {
         "repo": "LNH-team/dspico-firmware",
@@ -135,10 +145,12 @@ def _is_allowed_url(url: str) -> bool:
     if parsed.scheme != "https" or parsed.hostname not in _ALLOWLIST_HOSTS:
         return False
     host = parsed.hostname or ""
+    # LNH-team inteiro (firmware, USB examples) + as fontes oficiais registadas.
+    allowed = ("LNH-team/",) + tuple(f"{r}/" for r in sorted(OFFICIAL_REPOS))
     if host == "api.github.com":
-        return parsed.path.startswith(("/repos/LNH-team/", f"/repos/{ENHANCED_REPO}/"))
+        return parsed.path.startswith(tuple(f"/repos/{p}" for p in allowed))
     if host == "github.com":
-        return parsed.path.startswith(("/LNH-team/", f"/{ENHANCED_REPO}/"))
+        return parsed.path.startswith(tuple(f"/{p}" for p in allowed))
     return False
 
 
@@ -377,6 +389,7 @@ def _install_loader_from_zip(
     loader9 = _find_file(extracted, ("picoLoader9.bin", "picoLoader9_DSPICO.bin"))
     aplist = _find_file(extracted, ("aplist.bin",))
     savelist = _find_file(extracted, ("savelist.bin",))
+    patchlist = _find_file(extracted, ("patchlist.bin",))
     if not loader7 or not loader9 or (not binaries_only and (not aplist or not savelist)):
         raise RuntimeError("Pacote do Pico Loader incompleto.")
 
@@ -393,6 +406,10 @@ def _install_loader_from_zip(
     plan = [(loader7, "picoLoader7.bin"), (loader9, "picoLoader9.bin")]
     if not binaries_only:
         plan += [(aplist, "aplist.bin"), (savelist, "savelist.bin")]
+        if patchlist:
+            # Sem isto o patchlist.bin ficava de outra release e o cartão
+            # passava a ter ficheiros do loader de versões misturadas.
+            plan.append((patchlist, "patchlist.bin"))
     undo = UndoStack()
     baks: list[Optional[str]] = []
     try:
@@ -594,6 +611,9 @@ def check_dspico_updates(mount_path: str, log_callback=None) -> dict[str, Any]:
     components: dict[str, Any] = {}
     try:
         for name, meta in _COMPONENTS.items():
+            if meta.get("kind") == "data":
+                components[name] = _picodex_status(log)
+                continue
             pinned_version = _pinned_version(name)
             installed = _installed_variant_info(mount_path, name)
             installed_version = installed.get("version") or _detect_installed_version(mount_path, name)
@@ -669,6 +689,8 @@ def install_dspico_component(
 
         if comp == "dspico-firmware":
             return _install_firmware(mount_path, ch, log)
+        if comp == "picodex":
+            return _install_picodex_data(log)
 
         if enhanced:
             log(f"⚠️ {vm['label']}: {ENHANCED_DISCLAIMER}")
@@ -700,3 +722,80 @@ def install_dspico_component(
         return res
     except Exception as e:
         return {"success": False, "error": redact_text(e)}
+
+
+# --------------------------------------------------------------------------- #
+# PicoDex: dados que o RouteDex segue (manifesto do Pico Loader)
+# --------------------------------------------------------------------------- #
+
+_PICODEX_LOADER_FILE = "src/data/loaderReleases.json"
+
+
+def _picodex_status(log: LogFn) -> dict[str, Any]:
+    from core.routedex import load_picodex_loader_manifest
+
+    manifest = load_picodex_loader_manifest()
+    in_use = manifest.get("_picodex_tag") or "unknown"
+    try:
+        pinned = lock_entry("picodex").get("tag") or "unknown"
+    except (OSError, ValueError, KeyError):
+        pinned = "unknown"
+    latest, err = "unknown", None
+    try:
+        tag = _github_latest_release(PICODEX_REPO).get("tag_name")
+        latest = str(tag).strip() if isinstance(tag, str) and tag.strip() else "unknown"
+    except Exception as e:
+        err = redact_text(e)
+        log(f"⚠️ picodex: falha ao consultar latest: {err}")
+    item = {
+        "id": "picodex",
+        "label": "PicoDex (dados do RouteDex)",
+        "installed_version": in_use,
+        "installed_variant": None,
+        "pinned_version": pinned,
+        "latest_version": latest,
+        "can_install_pinned": False,
+        "can_install_latest": latest not in {"unknown", ""} and latest != in_use and err is None,
+        "release_url": f"https://github.com/{PICODEX_REPO}/releases",
+        "note": "Manifesto de versões do Pico Loader usado pela Saúde do cartão; não grava no microSD.",
+        "variants": [],
+    }
+    if err:
+        item["latest_error"] = err
+    return item
+
+
+def _install_picodex_data(log: LogFn) -> dict[str, Any]:
+    """Descarrega o loaderReleases.json da release mais recente da PicoDex para a cache local."""
+    import base64
+
+    from core.routedex import PICODEX_USER_DIR, load_picodex_loader_manifest, reset_picodex_cache, validate_picodex_loader_manifest
+
+    release = _github_latest_release(PICODEX_REPO)
+    tag = str(release.get("tag_name") or "").strip()
+    if not tag or "/" in tag or ".." in tag:
+        raise RuntimeError("Release da PicoDex sem tag válida.")
+    url = f"https://api.github.com/repos/{PICODEX_REPO}/contents/{_PICODEX_LOADER_FILE}?ref={urllib.parse.quote(tag)}"
+    obj = json.loads(_cached_http_get(url).decode("utf-8"))
+    if not isinstance(obj, dict) or obj.get("encoding") != "base64":
+        raise RuntimeError("Resposta inesperada da API do GitHub (PicoDex).")
+    raw = base64.b64decode(obj.get("content") or "")
+    if len(raw) > 4 * 1024 * 1024:
+        raise RuntimeError("Manifesto da PicoDex grande demais.")
+    data = validate_picodex_loader_manifest(json.loads(raw.decode("utf-8")))
+    current = load_picodex_loader_manifest()
+    if len(data["releases"]) < len(current.get("releases") or []):
+        raise RuntimeError("O manifesto da PicoDex descarregado tem menos releases do que o atual; mantido o atual.")
+    os.makedirs(PICODEX_USER_DIR, exist_ok=True)
+    for name, payload in (
+        ("loaderReleases.json", raw),
+        ("meta.json", json.dumps({"tag": tag, "sha256": hashlib.sha256(raw).hexdigest(), "fetched_at": time.time()}).encode()),
+    ):
+        dst = os.path.join(PICODEX_USER_DIR, name)
+        tmp = dst + ".partial"
+        with open(tmp, "wb") as f:
+            f.write(payload)
+        os.replace(tmp, dst)
+    reset_picodex_cache()
+    log(f"PicoDex {tag}: manifesto do Pico Loader atualizado ({len(data['releases'])} releases).")
+    return {"success": True, "message": f"Dados da PicoDex atualizados para {tag}.", "variant": "official"}

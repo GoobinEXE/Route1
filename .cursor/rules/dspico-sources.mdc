@@ -31,7 +31,8 @@ Ao implementar, corrigir ou documentar o modo DSPico, **consultar estas fontes**
 | Fonte | URL | Usar para |
 |-------|-----|-----------|
 | pico-launcher-enhanced | https://github.com/rasalopa/pico-launcher-enhanced | Fork Zlib opt-in: `docs/Enhanced.md`, `docs/GameData.md` (formato de `gamedata.json`), capturas, `*_night.bin` |
-| picodex | https://github.com/rasalopa/picodex | Regras portadas em `core/routedex.py` (MIT, crédito obrigatório na UI e em `docs/licenses/`) |
+| pico-loader (Enhanced) | https://github.com/rasalopa/pico-loader | Loader Enhanced opt-in (releases `enhanced-v*`, só DSPico) |
+| picodex | https://github.com/rasalopa/picodex | Regras portadas em `core/routedex.py` e `core/picodex_rules.py`; `src/data/loaderReleases.json` usado tal como está (MIT, crédito obrigatório) |
 
 A variante Enhanced **nunca** é o padrão: só entra por escolha do utilizador (`variant="enhanced"`), com pins em `DSPICO_ENHANCED_CACHE_KEYS` e o aviso `ENHANCED_DISCLAIMER` de `core/updates.py`.
 
@@ -40,7 +41,7 @@ Emuladores Pico (secundário): guia Sanrax + pins `DSPICO_EMU_CACHE_KEYS` — ve
 ## Como trabalhar
 
 1. **Antes** de mudar layout do microSD, nomes de markers, fluxo «Preparar SD» ou firmware RPI-RP2: alinhar com o manual + GUIDE/Usage (WebFetch / docs do repo).
-2. Downloads de pacote/firmware: **só** `DSPICO_CACHE_KEYS` / `github.com/LNH-team/`, mais `DSPICO_ENHANCED_CACHE_KEYS` / `github.com/rasalopa/pico-launcher-enhanced` quando o utilizador escolhe a variante Enhanced. Nunca mirrors de terceiros nem BIOS proprietária.
+2. Downloads de pacote/firmware: **só** os repos de `core/upstreams.py` (lock em `core/data/upstreams.lock.json`) e `github.com/LNH-team/` para firmware/USB examples. Enhanced só quando o utilizador escolhe. Atualizar versões com `tools/sync_upstreams.py --apply`, nunca à mão. Nunca mirrors de terceiros nem BIOS proprietária.
 3. Textos de ajuda na UI e logs: coerentes com o manual (ex. `_picoboot.nds` na raiz, loaders em `/_pico/`, jogos em `Games/`, UF2 via BOOTSEL).
 4. Em conflito entre código local e fonte oficial recente: preferir a fonte LNH/manual e actualizar o app + pins com evidência — não «adivinhar».
 5. Manter `DSPICO_OFFICIAL_LINKS` e a allowlist em `core/about.py` sincronizados com estas URLs.

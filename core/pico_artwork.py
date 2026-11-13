@@ -17,11 +17,7 @@ from core.artwork import (
     _fetch_first_ok,
     boxart_urls_for_tid,
     is_nds_family_platform,
-    jsdelivr_libretro_urls,
-    libretro_name_candidates,
     libretro_platform_key,
-    libretro_sanitize_name,
-    libretro_urls,
 )
 from core.cache import USER_AGENT
 from core.disks import is_safe_mount_path
@@ -105,43 +101,24 @@ def _pico_asset_dir(mount_path: str, kind: str, bucket: str) -> str:
     return os.path.join(mount_path, "_pico", folder, bucket)
 
 
-def _dest_paths(
-    mount_path: str,
-    basename: str,
-    tid: Optional[str],
-    kind: str,
-    *,
-    code_bucket: str = "nds",
-) -> list[str]:
-    """Destinos: TID em nds|gba/ depois user/ por nome do ficheiro (Customization.md)."""
-    out: list[str] = []
-    if tid:
-        bucket = code_bucket if code_bucket in ("nds", "gba") else "nds"
-        out.append(
-            os.path.join(_pico_asset_dir(mount_path, kind, bucket), f"{tid}.bmp")
-        )
-    out.append(
-        os.path.join(_pico_asset_dir(mount_path, kind, "user"), f"{basename}.bmp")
-    )
-    return out
-
-
 def resolve_existing_art(
     mount_path: str, basename: str, tid: Optional[str], kind: str
 ) -> Optional[str]:
-    """Prioridade Pico: user > código (nds/ ou gba/)."""
+    """Arte que o launcher mostraria (findArt da PicoDex): user/<ficheiro>.bmp
+    primeiro, depois <nds|gba>/<CODE>.bmp conforme o sistema da ROM."""
+    from core.picodex_rules import is_usable_game_code, system_for_extension
+
     user = os.path.join(_pico_asset_dir(mount_path, kind, "user"), f"{basename}.bmp")
     if os.path.isfile(user) and os.path.getsize(user) > 64:
         return user
-    if tid:
-        for bucket in ("nds", "gba"):
-            by_tid = os.path.join(
-                _pico_asset_dir(mount_path, kind, bucket), f"{tid}.bmp"
-            )
+    system = system_for_extension(basename)
+    if tid and is_usable_game_code(tid):
+        buckets = [("nds" if system.id == "nds" else "gba")] if system and system.cover_keying == "gamecode" else ["nds", "gba"]
+        for bucket in buckets:
+            by_tid = os.path.join(_pico_asset_dir(mount_path, kind, bucket), f"{tid.upper()}.bmp")
             if os.path.isfile(by_tid) and os.path.getsize(by_tid) > 64:
                 return by_tid
     return None
-
 
 def _gba_game_code(path: str) -> Optional[str]:
     """Lê o game code interno GBA (offset 0xAC), se válido."""
@@ -172,6 +149,9 @@ def _url_allowed(url: str) -> bool:
     if parts.scheme != "https" or not parts.hostname:
         return False
     if parts.hostname.lower() in _ALLOWED_HOSTS:
+        return True
+    # Capas do catálogo libretro-thumbnails, como na PicoDex (raw.githubusercontent).
+    if parts.hostname.lower() == "raw.githubusercontent.com" and parts.path.startswith("/libretro-thumbnails/"):
         return True
     from core.steamgriddb import is_asset_url
 
@@ -258,49 +238,6 @@ def _http_exists(url: str) -> bool:
                 return True
         except (OSError, urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError):
             return False
-
-
-def _search_name_variants(
-    query: str, basename: str = "", *, fake_ext: str = ".nds"
-) -> list[str]:
-    """Candidatos de nome para Libretro a partir da query / ficheiro."""
-    out: list[str] = []
-    seen: set[str] = set()
-    ext = (fake_ext or ".nds").lower()
-    if not ext.startswith("."):
-        ext = "." + ext
-
-    def _add(raw: str) -> None:
-        s = libretro_sanitize_name((raw or "").strip())
-        if s and s not in seen:
-            seen.add(s)
-            out.append(s)
-
-    # Preferir basename real (com extensão) para strip No-Intro correcto.
-    bases: list[str] = []
-    if basename and str(basename).strip():
-        bases.append(str(basename).strip())
-    if query and str(query).strip():
-        q = str(query).strip()
-        bases.append(q if "." in os.path.basename(q) else q + ext)
-
-    for base in bases:
-        if not base:
-            continue
-        # libretro_name_candidates usa só o stem; extensão só serve de contexto.
-        name_src = base if "." in os.path.basename(base) else base + ext
-        for name in libretro_name_candidates(name_src):
-            _add(name)
-        stem = libretro_sanitize_name(os.path.splitext(os.path.basename(base))[0])
-        if stem:
-            for suf in _REGION_SUFFIXES:
-                _add(stem + suf)
-            words = stem.split()
-            for n in range(len(words), 0, -1):
-                _add(" ".join(words[:n]))
-                if n <= 2:
-                    break
-    return out[:40]
 
 
 def _resolve_game(
@@ -490,6 +427,74 @@ def get_dspico_game_previews(
     return {"success": True, "previews": previews}
 
 
+def _picodex_repo_for(meta_platform: str, basename: str) -> Optional[str]:
+    """Repo libretro-thumbnails do jogo: o da PicoDex (systems.ts) ou, para sistemas
+    que a PicoDex não cobre, o do mapa de plataformas do app."""
+    from core.artwork import LIBRETRO_SYSTEMS
+    from core.picodex_rules import libretro_repo_for_name, system_for_extension
+
+    system = system_for_extension(basename or "")
+    if system is not None:
+        return system.libretro_repo
+    key = libretro_platform_key(meta_platform)
+    if key and key in LIBRETRO_SYSTEMS:
+        return libretro_repo_for_name(LIBRETRO_SYSTEMS[key])
+    return None
+
+
+def _picodex_matches(
+    *, platform: str, basename: str, full: Optional[str], tid: Optional[str], query: str = "", limit: int = 8
+) -> list[dict[str, str]]:
+    """Capas do catálogo libretro-thumbnails escolhidas com as regras da PicoDex.
+
+    Sem pesquisa: o melhor par (``pickBoxart``) pelo nome do ficheiro, com o
+    título do banner NDS quando o nome não diz nada, e depois parecidos.
+    Com pesquisa: ``searchCatalog``. As URLs vêm do próprio catálogo, por isso
+    existem sem precisar de sondar.
+    """
+    from core.picodex_rules import (
+        CatalogError,
+        boxart_url,
+        fetch_catalog,
+        is_degenerate_title,
+        pick_boxart,
+        read_nds_banner_title,
+        region_prefs_for,
+        search_catalog,
+        system_for_extension,
+    )
+
+    repo = _picodex_repo_for(platform, basename)
+    if not repo:
+        return []
+    try:
+        catalog = fetch_catalog(repo)
+    except CatalogError:
+        return []
+    system = system_for_extension(basename or "")
+    sys_id = system.id if system else ""
+    names: list[str] = []
+    if query:
+        names = search_catalog(catalog, query, limit)
+    else:
+        title = os.path.splitext(basename or "")[0]
+        best = pick_boxart(title, catalog, region_prefs_for(sys_id, tid))
+        if best is None and sys_id == "nds" and full and is_degenerate_title(title):
+            banner = read_nds_banner_title(full)
+            if banner:
+                title = banner
+                best = pick_boxart(banner, catalog, region_prefs_for(sys_id, tid))
+        if best:
+            names.append(best)
+        for n in search_catalog(catalog, title, limit):
+            if n not in names:
+                names.append(n)
+    return [
+        {"url": boxart_url(repo, n), "label": n[:-4] if n.lower().endswith(".png") else n, "source": "picodex"}
+        for n in names[:limit]
+    ]
+
+
 def _collect_candidate_urls(
     *,
     kind: str,
@@ -498,8 +503,9 @@ def _collect_candidate_urls(
     tid: Optional[str],
     title: Optional[str],
     query: str,
+    full: Optional[str] = None,
 ) -> list[dict[str, str]]:
-    """Lista ordenada de {url, label, source} a sondar."""
+    """Lista ordenada de {url, label, source}: PicoDex → SteamGridDB → GameTDB."""
     items: list[dict[str, str]] = []
     seen: set[str] = set()
 
@@ -516,13 +522,14 @@ def _collect_candidate_urls(
 
     from core.steamgriddb import candidate_assets, has_api_key, search_term_from_rom
 
-    lr_kind = "boxart" if kind == "cover" else "icon"
-    lr_key = libretro_platform_key(platform)
     nds_family = is_nds_family_platform(platform)
-    fake_ext = os.path.splitext(basename or "")[1] or ".nds"
     q = (query or "").strip()
 
-    # 1.ª fonte: SteamGridDB (API → CDN).
+    # 1.ª fonte: catálogo libretro-thumbnails com as regras da PicoDex.
+    for m in _picodex_matches(platform=platform, basename=basename, full=full, tid=tid, query=q):
+        _push(m["url"], m["label"], "picodex")
+
+    # 2.ª fonte: SteamGridDB (API → CDN).
     if has_api_key():
         term = search_term_from_rom(basename, title=title, query=q)
         if term:
@@ -542,19 +549,6 @@ def _collect_candidate_urls(
     if q and _TID_RE.match(q) and kind == "cover" and nds_family:
         for url in boxart_urls_for_tid(q.upper()):
             _push(url, f"GameTDB · {q.upper()}", "gametdb")
-
-    names = _search_name_variants(q, basename, fake_ext=fake_ext)
-    if title:
-        for n in _search_name_variants(title, "", fake_ext=fake_ext):
-            if n not in names:
-                names.append(n)
-
-    if lr_key:
-        for name in names:
-            for url in libretro_urls(lr_key, name, kind=lr_kind):
-                _push(url, name, "libretro")
-            for url in jsdelivr_libretro_urls(lr_key, name, kind=lr_kind):
-                _push(url, name, "jsdelivr")
 
     return items
 
@@ -607,6 +601,7 @@ def search_dspico_artwork(
         tid=meta["game_code"],
         title=meta.get("title"),
         query=q,
+        full=meta.get("full"),
     )
     log(
         f"A listar opções de {'capa' if kind_n == 'cover' else 'ícone'} "
@@ -627,8 +622,8 @@ def search_dspico_artwork(
             continue
         probed += 1
         source = item.get("source") or ""
-        # SteamGridDB: URLs vindas da API — sem HEAD; restantes fontes: sondar.
-        if source != "steamgriddb" and not _http_exists(url):
+        # PicoDex (catálogo) e SteamGridDB (API) já garantem que a URL existe.
+        if source not in ("steamgriddb", "picodex") and not _http_exists(url):
             continue
         preview = item.get("preview") or url
         if isinstance(preview, str) and not _url_allowed(preview):
@@ -793,24 +788,15 @@ def _write_pico_bmp(
     note: str,
     defer_sync: bool = False,
 ) -> tuple[bool, str, dict[str, Any]]:
-    # Retro sem código → só user/{ficheiro}.bmp (Customization.md).
-    # GBA com código → gba/{TID}.bmp; NDS → nds/{TID}.bmp.
-    code_bucket = meta.get("code_bucket") or "nds"
-    if meta.get("area") == "roms" and not meta.get("game_code"):
-        dests = _dest_paths(mount_path, meta["basename"], None, kind)
-    else:
-        dests = _dest_paths(
-            mount_path,
-            meta["basename"],
-            meta.get("game_code"),
-            kind,
-            code_bucket=code_bucket,
-        )
-    if not dests:
-        return False, "Sem destino de arte.", stats
+    # Regra da PicoDex (artPaths.ts): um só destino. Um user/<ficheiro>.bmp já
+    # no cartão tem prioridade no launcher e é substituído no sítio; senão NDS/GBA
+    # com game code utilizável vão para nds|gba/<CODE>.bmp; o resto para user/.
+    from core.picodex_rules import resolve_art_target, system_for_extension
 
-    # Gravar em todos os destinos canónicos (TID + user) para compatibilidade
-    # com modos de lookup diferentes do launcher.
+    folder = "covers" if kind == "cover" else "icons"
+    system = system_for_extension(meta["basename"])
+    dests = [resolve_art_target(mount_path, folder, meta["basename"], system, meta.get("game_code"))]
+
     written: list[str] = []
     seen: set[str] = set()
     for dest in dests:
@@ -872,9 +858,10 @@ def _batch_candidate_urls(
     basename: str,
     tid: Optional[str],
     title: Optional[str],
+    full: Optional[str] = None,
 ) -> list[str]:
     """
-    Lista curta para lote: SteamGridDB → GameTDB → Libretro → jsDelivr.
+    Lista curta para lote: PicoDex (catálogo libretro) → SteamGridDB → GameTDB.
     Sem HEAD — o caller faz GET directo na 1.ª que converter.
     """
     from core.steamgriddb import candidate_assets, has_api_key, search_term_from_rom
@@ -888,10 +875,10 @@ def _batch_candidate_urls(
         seen.add(url)
         urls.append(url)
 
-    lr_kind = "boxart" if kind == "cover" else "icon"
-    plat = libretro_platform_key(platform)
     nds_family = is_nds_family_platform(platform)
-    fake_ext = os.path.splitext(basename or "")[1] or ".nds"
+
+    for m in _picodex_matches(platform=platform, basename=basename, full=full, tid=tid, limit=2):
+        _push(m["url"])
 
     if has_api_key():
         term = search_term_from_rom(basename, title=title)
@@ -904,26 +891,6 @@ def _batch_candidate_urls(
     if kind == "cover" and tid and nds_family:
         for url in boxart_urls_for_tid(tid)[:3]:
             _push(url)
-
-    names: list[str] = []
-    for raw in (basename, title or ""):
-        if not raw:
-            continue
-        src = raw if "." in os.path.basename(str(raw)) else f"{raw}{fake_ext}"
-        for n in libretro_name_candidates(src):
-            if n not in names:
-                names.append(n)
-        if len(names) >= 3:
-            break
-
-    if plat:
-        for name in names[:3]:
-            for url in libretro_urls(plat, name, kind=lr_kind):
-                _push(url)
-            for url in jsdelivr_libretro_urls(plat, name, kind=lr_kind):
-                _push(url)
-            if len(urls) >= _BATCH_MAX_CANDIDATES:
-                break
 
     return urls[:_BATCH_MAX_CANDIDATES]
 
@@ -1133,6 +1100,7 @@ def generate_dspico_artwork_batch(
             basename=meta["basename"],
             tid=meta.get("game_code"),
             title=meta.get("title"),
+            full=meta.get("full"),
         )
         if not probes:
             return None

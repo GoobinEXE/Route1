@@ -2,6 +2,7 @@
  * Verificar Atualizações — ecossistema DSPico.
  */
 (function () {
+  let lastComponents = [];
   function escapeHtml(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
@@ -18,8 +19,6 @@
     if (typeof selectedDrive !== "undefined" && selectedDrive && selectedDrive.mount_path) {
       return selectedDrive.mount_path;
     }
-    const sel = document.getElementById("dspico-drive-select");
-    if (sel && sel.value) return sel.value;
     return "";
   }
 
@@ -53,6 +52,7 @@
       return;
     }
     const comps = res.components || [];
+    lastComponents = comps;
     if (!comps.length) {
       el.innerHTML = '<p class="text-[12px] text-fg-mute">Nenhum componente reportado.</p>';
       return;
@@ -89,8 +89,9 @@
             : c.installed_variant === "official"
             ? ' <span class="text-fg-mute">(oficial)</span>'
             : "";
+        const note = c.note ? `<div class="text-[11px] text-fg-mute">${escapeHtml(c.note)}</div>` : "";
         return (
-          `<div class="updates-row"><span>${name}</span><span>${installed}${variantTag}</span><span>${pinned}</span><span>${latest}</span>` +
+          `<div class="updates-row"><span>${name}${note}</span><span>${installed}${variantTag}</span><span>${pinned}</span><span>${latest}</span>` +
           `<span class="flex flex-wrap gap-1 justify-end">${actions.join("")}</span></div>`
         );
       })
@@ -172,11 +173,13 @@
     if (v === "enhanced") {
       if (!confirm(ENHANCED_CONFIRM[component] || "Instalar a variante Enhanced (não oficial)?")) return;
     } else if (channel === "latest") {
-      const ok = confirm(
-        `Instalar a versão mais recente de ${component} a partir de github.com/LNH-team?\n\n` +
-          "O ficheiro será verificado pelo digest SHA-256 do release. Continuar?"
-      );
-      if (!ok) return;
+      const comp = (lastComponents || []).find((c) => c.id === component) || {};
+      const repo = String(comp.release_url || "").replace(/^https:\/\/github\.com\//, "").replace(/\/releases$/, "");
+      const what =
+        component === "picodex"
+          ? "Atualizar os dados da PicoDex (manifesto de versões do Pico Loader) para a release mais recente?\n\nNão grava nada no microSD."
+          : `Instalar a versão mais recente de ${comp.label || component} a partir de github.com/${repo || "LNH-team"}?\n\nO ficheiro será verificado pelo digest SHA-256 do release.`;
+      if (!confirm(what)) return;
     }
     try {
       const api = typeof waitForApi === "function" ? await waitForApi() : window.pywebview && pywebview.api;

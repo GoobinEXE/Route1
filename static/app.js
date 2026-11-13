@@ -10,9 +10,7 @@ let logPollInFlight = false;
 let fetchDrivesInFlight = false;
 let activeActionBtn = null;
 let activeActionLabel = null;
-let appMode = "wizard"; // wizard | advanced | about | dspico
 let aboutLoadInFlight = false;
-let advancedSection = "prepare"; // prepare | card | apps
 let homebrewCatalog = null;
 let homebrewCatalogLoadInFlight = false;
 let homebrewCategory = "all";
@@ -38,8 +36,10 @@ const ACTION_MAP = {
   "copy-nand": "copy_nand_backup",
 };
 
-const MODE_STORAGE_KEY = "route_1_kit_mode";
-const ADV_SECTION_KEY = "route_1_kit_adv_section";
+/** Vista actual da shell (home | dspico | tools | settings). */
+function currentView() {
+  return window.R1K && R1K.shell && R1K.shell.current ? R1K.shell.current() : "home";
+}
 
 /** Só considera pronta quando a bridge tem métodos (api começa como {}). */
 function getApi() {
@@ -84,25 +84,6 @@ function waitForApi(timeoutMs = 10000) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const saved = sessionStorage.getItem(MODE_STORAGE_KEY);
-  if (
-    saved === "advanced" ||
-    saved === "wizard" ||
-    saved === "about" ||
-    saved === "dspico"
-  ) {
-    appMode = saved;
-  }
-  const savedAdv = sessionStorage.getItem(ADV_SECTION_KEY);
-  if (savedAdv === "prepare" || savedAdv === "card" || savedAdv === "apps") {
-    advancedSection = savedAdv;
-  }
-  // Shell v2 gere a navegação; applyAppMode fica como compatibilidade.
-  if (!(window.R1K && R1K.shell)) {
-    applyAppMode(appMode, { silent: true });
-    applyAdvancedSection(advancedSection);
-  }
-
   if (window.R1K && R1K.events) {
     R1K.events.on("log", (p) => {
       if (p && p.message) appendLog(p.message, p.level || "info");
@@ -147,11 +128,7 @@ function stripLogDecorators(msg) {
 }
 
 function appendLog(msg, type = "info") {
-  const containers = [
-    document.getElementById("log-container"),
-    document.getElementById("wizard-log"),
-    document.getElementById("dspico-log-container"),
-  ].filter(Boolean);
+  const containers = [document.getElementById("log-container")].filter(Boolean);
 
   const clean = stripLogDecorators(msg);
   const time = new Date().toLocaleTimeString();
@@ -182,18 +159,8 @@ function escapeHtml(text) {
 }
 
 async function clearLogs() {
-  const advanced = document.getElementById("log-container");
-  const wizardLog = document.getElementById("wizard-log");
-  const dspicoLog = document.getElementById("dspico-log-container");
-  if (advanced) {
-    advanced.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
-  }
-  if (wizardLog) {
-    wizardLog.innerHTML = '<div class="text-fg-mute">Atividade do assistente.</div>';
-  }
-  if (dspicoLog) {
-    dspicoLog.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
-  }
+  const log = document.getElementById("log-container");
+  if (log) log.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
   lastLogIndex = 0;
   try {
     const api = getApi();
@@ -202,7 +169,7 @@ async function clearLogs() {
 }
 
 function setDriveStatus(hasDrive) {
-  document.querySelectorAll("#drive-status-dot, #wizard-drive-status-dot").forEach((dot) => {
+  document.querySelectorAll("#drive-status-dot").forEach((dot) => {
     dot.classList.toggle("status-dot--live", !!hasDrive);
     dot.classList.toggle("status-dot--idle", !hasDrive);
   });
@@ -534,11 +501,7 @@ function scheduleProgressPolling() {
 }
 
 function syncDriveSelects() {
-  const selects = [
-    document.getElementById("drive-select"),
-    document.getElementById("wizard-drive-select"),
-    document.getElementById("dspico-drive-select"),
-  ].filter(Boolean);
+  const selects = [document.getElementById("drive-select")].filter(Boolean);
 
   selects.forEach((select) => {
     const previous = select.value || (selectedDrive ? selectedDrive.mount_path : null);
@@ -581,29 +544,22 @@ async function fetchDrives(options) {
       selectedDrive = null;
       setDriveStatus(false);
       document.getElementById("drive-info-badge")?.classList.add("hidden");
-      document.getElementById("wizard-drive-badge")?.classList.add("hidden");
     } else {
       const keep = currentDrives.find((d) => d.mount_path === previous);
-      let pick = keep || null;
-      if (!pick && typeof appMode !== "undefined" && appMode === "dspico") {
-        pick =
-          currentDrives.find((d) => d && d.dspico_likely) ||
-          currentDrives[0];
-      }
-      selectedDrive = pick || currentDrives[0];
+      // Sem escolha anterior: preferir um microSD com marcadores do DSPico.
+      selectedDrive = keep || currentDrives.find((d) => d && d.dspico_likely) || currentDrives[0];
       setDriveStatus(true);
       updateDriveBadge();
     }
     syncDriveSelects();
+    if (window.R1K && R1K.shell) {
+      R1K.shell.refreshRoleBadge();
+      R1K.shell.updateHomeDrive();
+    }
     if (typeof Wizard !== "undefined" && Wizard.onDrivesUpdated) {
       Wizard.onDrivesUpdated();
     }
-    if (
-      typeof appMode !== "undefined" &&
-      appMode === "dspico" &&
-      typeof Dspico !== "undefined" &&
-      Dspico.onDrivesUpdated
-    ) {
+    if (currentView() === "dspico" && typeof Dspico !== "undefined" && Dspico.onDrivesUpdated) {
       Dspico.onDrivesUpdated();
     }
   } catch (err) {
@@ -618,14 +574,8 @@ async function fetchDrives(options) {
   }
 }
 
-function onDriveSelected(fromWizard) {
-  let selectId = "drive-select";
-  if (fromWizard === true || fromWizard === "wizard") {
-    selectId = "wizard-drive-select";
-  } else if (fromWizard === "dspico") {
-    selectId = "dspico-drive-select";
-  }
-  const select = document.getElementById(selectId);
+function onDriveSelected() {
+  const select = document.getElementById("drive-select");
   if (!select) return;
   const path = select.value;
   selectedDrive = currentDrives.find((d) => d.mount_path === path) || null;
@@ -636,20 +586,13 @@ function onDriveSelected(fromWizard) {
     R1K.shell.refreshRoleBadge();
     R1K.shell.updateHomeDrive();
   }
-  const view = window.R1K && R1K.shell ? R1K.shell.current() : null;
-  if (
-    (advancedSection === "card" && appMode === "advanced") ||
-    view === "card"
-  ) {
+  const view = currentView();
+  if (view === "tools") {
     if (typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
       RomExplorer.refresh();
     }
   }
-  if (
-    (appMode === "dspico" || view === "dspico") &&
-    typeof Dspico !== "undefined" &&
-    Dspico.refresh
-  ) {
+  if (view === "dspico" && typeof Dspico !== "undefined" && Dspico.refresh) {
     Dspico.refresh();
   }
   if (typeof Wizard !== "undefined" && Wizard.onDriveSelected) {
@@ -665,20 +608,7 @@ function updateDriveBadge() {
       size: "info-size",
       free: "info-free",
     },
-    {
-      badge: document.getElementById("wizard-drive-badge"),
-      fs: "wizard-info-fs",
-      size: "wizard-info-size",
-      free: "wizard-info-free",
-    },
   ];
-
-  badges.push({
-    badge: document.getElementById("dspico-drive-badge"),
-    fs: "dspico-info-fs",
-    size: "dspico-info-size",
-    free: "dspico-info-free",
-  });
 
   badges.forEach(({ badge, fs, size, free }) => {
     if (!badge) return;
@@ -714,7 +644,7 @@ function findActionButton(endpoint) {
   };
   const needle = map[endpoint];
   if (!needle) return null;
-  return Array.from(document.querySelectorAll("#view-advanced button")).find((b) =>
+  return Array.from(document.querySelectorAll("main button")).find((b) =>
     (b.getAttribute("onclick") || "").includes(needle)
   );
 }
@@ -968,110 +898,6 @@ async function confirmFormat() {
     method: "format_sd",
     sourceBtn: findActionButton("format-sd"),
   });
-}
-
-function applyAppMode(mode, { silent } = {}) {
-  // Shell v2: mapear modos legados → vistas.
-  if (window.R1K && R1K.shell && typeof R1K.shell.navigate === "function") {
-    const map = {
-      wizard: "softmod",
-      dspico: "dspico",
-      about: "settings",
-      advanced: "card",
-    };
-    const view = map[mode] || "home";
-    if (mode === "advanced") appMode = "advanced";
-    else if (mode === "about") appMode = "about";
-    else if (mode === "dspico") appMode = "dspico";
-    else appMode = "wizard";
-    try {
-      sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
-    } catch (e) {
-      /* ignore */
-    }
-    R1K.shell.navigate(view, { silent });
-    return;
-  }
-
-  if (busy && !silent) {
-    alert("Aguarde a operação em andamento terminar antes de mudar de modo.");
-    return;
-  }
-  if (mode === "advanced") appMode = "advanced";
-  else if (mode === "about") appMode = "about";
-  else if (mode === "dspico") appMode = "dspico";
-  else appMode = "wizard";
-  sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
-
-  const wizard = document.getElementById("view-wizard");
-  const advanced = document.getElementById("view-advanced");
-  const dspico = document.getElementById("view-dspico");
-  const about = document.getElementById("view-about");
-  if (wizard) wizard.classList.toggle("hidden", appMode !== "wizard");
-  if (advanced) advanced.classList.toggle("hidden", appMode !== "advanced");
-  if (dspico) dspico.classList.toggle("hidden", appMode !== "dspico");
-  if (about) about.classList.toggle("hidden", appMode !== "about");
-
-  if (appMode === "wizard" && typeof Wizard !== "undefined" && Wizard.render) {
-    Wizard.render();
-  }
-  if (appMode === "about") {
-    loadAboutPage();
-  }
-  if (appMode === "advanced") {
-    applyAdvancedSection(advancedSection);
-    if (advancedSection === "apps") {
-      loadHomebrewCatalog();
-    }
-  }
-  if (appMode === "dspico" && typeof Dspico !== "undefined" && Dspico.enter) {
-    Dspico.enter();
-  }
-}
-
-function setAppMode(mode) {
-  applyAppMode(mode);
-}
-
-function applyAdvancedSection(section) {
-  if (section === "card" || section === "apps") advancedSection = section;
-  else advancedSection = "prepare";
-  sessionStorage.setItem(ADV_SECTION_KEY, advancedSection);
-
-  const sections = {
-    prepare: document.getElementById("adv-section-prepare"),
-    card: document.getElementById("adv-section-card"),
-    apps: document.getElementById("adv-section-apps"),
-  };
-  const tabs = {
-    prepare: document.getElementById("adv-tab-prepare"),
-    card: document.getElementById("adv-tab-card"),
-    apps: document.getElementById("adv-tab-apps"),
-  };
-  for (const key of Object.keys(sections)) {
-    const el = sections[key];
-    if (el) el.classList.toggle("hidden", advancedSection !== key);
-    const tab = tabs[key];
-    if (tab) {
-      const on = advancedSection === key;
-      tab.classList.toggle("adv-tab--active", on);
-      tab.setAttribute("aria-selected", on ? "true" : "false");
-    }
-  }
-}
-
-function setAdvancedSection(section) {
-  if (busy) {
-    alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
-    return;
-  }
-  applyAdvancedSection(section);
-  if (advancedSection === "apps") {
-    loadHomebrewCatalog();
-  }
-  if (advancedSection === "card") {
-    RomExplorer.refresh();
-  }
 }
 
 async function loadHomebrewCatalog() {

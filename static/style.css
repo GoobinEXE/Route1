@@ -801,15 +801,6 @@ button:disabled {
 
 /* ---------- utilitários ---------- */
 
-.adv-subnav {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 10px;
-  border: 1px solid rgb(var(--c-line));
-  background: rgb(var(--c-surface-2));
-}
 
 .adv-tab {
   appearance: none;

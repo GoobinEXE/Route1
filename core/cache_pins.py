@@ -34,11 +34,6 @@ PINNED_SHA256 = {
     "twlmagician_macos": "e58afa025734dc74d8d98c49a51360841fe1aa671cbbd0bf036076afbee5e828",
     "twlmagician_linux": "7f037a5f34f7699b092930308f506f422ff524a812b1fe2d3acf1a86e7b80ff2",
     "twlmagician_win": "969ebb6a36cc7f1d875dbfd0a03f48f218d07d00d0326bc1ae5115267b695b87",
-    "pico_launcher": "b4ed7f2cf2713e0c74985764536a0bfb7381566c67b0f85dc8b83375bcfc495d",
-    "pico_loader_dspico": "b589797da9aa24882bd8a80119d90373a915df26ded9cc4c5a3708321ea29aa3",
-    # Variantes Enhanced (rasalopa, fork Zlib do LNH) — opt-in, nunca o padrão.
-    "pico_launcher_enhanced": "6169f3ef57c46505efd81442a9f05c25c8889947f00c6e967080f16d75b2699f",
-    "pico_loader_enhanced_dspico": "cba2fe62fdb6cc5fbf0ef72bf98ba458b3dfd1d26b3a414ef841da35364e34d5",
     "hiya_launcher_usa": "8efbed489e9e5fa1c7b98035d56c708402468ad96d98fc5556f420809e418ee2",
     "hiya_launcher_eur": "a36d915f096952db7b1b9c3cd6b59cc67baf78946fa34589ed837417ab4e8b6a",
     "hiya_launcher_jpn": "4c388bed2df210aee798dcadc53f8a98fb57dd285cada53d6ff33a4945cde0d0",
@@ -165,26 +160,6 @@ PIN_META = {
         "tag": "v1.6.3",
         "asset": "TWLMagician_Win_v1.6.3_x64.msi",
     },
-    "pico_launcher": {
-        "repo": "LNH-team/pico-launcher",
-        "tag": "v1.3.0",
-        "asset": "Pico_Launcher.zip",
-    },
-    "pico_loader_dspico": {
-        "repo": "LNH-team/pico-loader",
-        "tag": "v1.6.0",
-        "asset": "Pico_Loader_DSPICO.zip",
-    },
-    "pico_launcher_enhanced": {
-        "repo": "rasalopa/pico-launcher-enhanced",
-        "tag": "enhanced-v1.11.0",
-        "asset": "Pico_Launcher_Enhanced.zip",
-    },
-    "pico_loader_enhanced_dspico": {
-        "repo": "rasalopa/pico-launcher-enhanced",
-        "tag": "enhanced-v1.11.0",
-        "asset": "Pico_Loader_Enhanced_v1.0.1.zip",
-    },
 }
 
 URLS = {
@@ -256,22 +231,6 @@ URLS = {
     "twlmagician_win": (
         "https://github.com/R-YaTian/TWLMagician/releases/download/v1.6.3/"
         "TWLMagician_Win_v1.6.3_x64.msi"
-    ),
-    "pico_launcher": (
-        "https://github.com/LNH-team/pico-launcher/releases/download/v1.3.0/"
-        "Pico_Launcher.zip"
-    ),
-    "pico_loader_dspico": (
-        "https://github.com/LNH-team/pico-loader/releases/download/v1.6.0/"
-        "Pico_Loader_DSPICO.zip"
-    ),
-    "pico_launcher_enhanced": (
-        "https://github.com/rasalopa/pico-launcher-enhanced/releases/download/"
-        "enhanced-v1.11.0/Pico_Launcher_Enhanced.zip"
-    ),
-    "pico_loader_enhanced_dspico": (
-        "https://github.com/rasalopa/pico-launcher-enhanced/releases/download/"
-        "enhanced-v1.11.0/Pico_Loader_Enhanced_v1.0.1.zip"
     ),
     "hiya_launcher_usa": (
         "https://raw.githubusercontent.com/R-YaTian/TWLMagician/main/launchers/USA"
@@ -424,10 +383,6 @@ FILENAMES = {
     "twlmagician_macos": "TWLMagician_macOS_universal2_v1.6.3.zip",
     "twlmagician_linux": "TWLMagician_Linux_Py3_v1.6.3.zip",
     "twlmagician_win": "TWLMagician_Win_v1.6.3_x64.msi",
-    "pico_launcher": "Pico_Launcher.zip",
-    "pico_loader_dspico": "Pico_Loader_DSPICO.zip",
-    "pico_launcher_enhanced": "Pico_Launcher_Enhanced.zip",
-    "pico_loader_enhanced_dspico": "Pico_Loader_Enhanced_v1.0.1.zip",
     "hiya_launcher_usa": "hiya_launcher_USA",
     "hiya_launcher_eur": "hiya_launcher_EUR",
     "hiya_launcher_jpn": "hiya_launcher_JPN",
@@ -534,3 +489,19 @@ MIN_SIZES = {
     "emu_neods": 1024 * 50,
     "emu_neods_ini": 8,
 }
+
+
+# --- Pacotes DSPico: fonte única em core/data/upstreams.lock.json ---------------
+# Launcher/Loader oficiais (LNH-team) e Enhanced (rasalopa). Não editar aqui:
+# atualizar com tools/sync_upstreams.py --apply.
+def _merge_upstream_pins() -> None:
+    from core.upstreams import pinned_assets
+
+    for key, pin in pinned_assets().items():
+        PINNED_SHA256[key] = pin["sha256"]
+        PIN_META[key] = {"repo": pin["repo"], "tag": pin["tag"], "asset": pin["asset"]}
+        URLS[key] = pin["url"]
+        FILENAMES[key] = pin["asset"]
+
+
+_merge_upstream_pins()
