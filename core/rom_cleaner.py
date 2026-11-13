@@ -61,7 +61,7 @@ KNOWN_GAME_CODES = {
     "CRFE": "Chrono Trigger",
 }
 
-# Layouts de organização (escolha do utilizador)
+# Layouts de organização (escolha do usuário)
 LAYOUT_CONSOLE = "console"  # /roms/<plat>/jogo — padrão TWiLight
 LAYOUT_FRANCHISE = "franchise"  # /roms/<franquia>/jogo
 LAYOUT_BOTH = "both"  # /roms/<plat>/<franquia>/jogo
@@ -407,8 +407,8 @@ def prune_empty_dirs(mount_path: str, layout=LAYOUT_CONSOLE, log_callback=None) 
     """
     Remove pastas vazias sob o cartão (após organizar).
     Conserva /roms/, pastas de utilidade e — em layout console/both —
-    pastas canónicas de plataforma directamente sob /roms/.
-    Em layout franchise, pastas de consola vazias (nds, gba, …) são removidas.
+    pastas canónicas de plataforma diretamente sob /roms/.
+    Em layout franchise, pastas de console vazias (nds, gba, …) são removidas.
     Nunca toca em pastas de sistema (SKIP_DIR_NAMES / ocultas).
     """
     log = (lambda msg: emit_log(log_callback, msg)) if log_callback else (lambda _msg: None)
@@ -444,7 +444,7 @@ def prune_empty_dirs(mount_path: str, layout=LAYOUT_CONSOLE, log_callback=None) 
             continue
         if real == mount_real or real == roms_root:
             continue
-        # Só proteger pastas canónicas como filhos directos de /roms/
+        # Só proteger pastas canónicas como filhos diretos de /roms/
         if parent == roms_root and base in keep_roms_children:
             continue
         try:
@@ -554,7 +554,7 @@ def classify_nds_kind(title, game_code, maker_code, filename, *, at_sd_root=Fals
     if at_sd_root and low in SYSTEM_ROOT_NAMES:
         return "system"
     if low in SYSTEM_ROOT_NAMES or stem in KNOWN_APP_STEMS:
-        # GodMode9i etc. na raiz = system; noutros sítios = app.
+        # GodMode9i etc. na raiz = system; em outros lugares = app.
         if at_sd_root and low.startswith("godmode9i"):
             return "system"
         if stem in KNOWN_APP_STEMS or low.startswith("godmode9i"):
@@ -634,7 +634,7 @@ def _match_franchise_patterns(text):
 
 def detect_franchise(clean_name, game_code=None, raw_title=None, original_name=None):
     """
-    Infere franquia a partir do game code, título limpo ou nome do ficheiro.
+    Infere franquia a partir do game code, título limpo ou nome do arquivo.
     Retorna None se não houver correspondência (caller decide 'Outros' ou flat).
     """
     code = (game_code or "").replace("\x00", "").strip()
@@ -762,8 +762,8 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
     - console:   jogos em /roms/<plat>/; apps em /roms/apps/
     - franchise: jogos em /roms/<franquia>/; apps em /roms/apps/
     - both:      jogos em /roms/<plat>/<franquia>/; apps em /roms/apps/
-    Cria as pastas de destino em falta, sincroniza saves/sidecars e
-    remove pastas vazias (em franchise, limpa pastas de consola vazias).
+    Cria as pastas de destino ausentes, sincroniza saves/sidecars e
+    remove pastas vazias (em franchise, limpa pastas de console vazias).
     Saves / estados GameYob (.sav, .yss, .ysN) e sidecars (.cht, …) ao lado da ROM
     ou em /roms/saves/.
     """
@@ -774,9 +774,9 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
         return False, f"Layout de organização inválido: {layout!r}."
 
     layout_labels = {
-        LAYOUT_CONSOLE: "por consola (flat)",
+        LAYOUT_CONSOLE: "por console (flat)",
         LAYOUT_FRANCHISE: "por franquia",
-        LAYOUT_BOTH: "consola → franquia",
+        LAYOUT_BOTH: "console → franquia",
     }
     log(f"=== Organização ({layout_labels.get(mode, mode)}) em: {mount_path} ===")
 
@@ -862,7 +862,7 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
 
     summary = ", ".join(f"{n} {p}" for p, n in sorted(by_plat.items())) or "nenhum"
     log(
-        f"Encontrados: {len(rom_candidates)} ficheiros ({summary}) e "
+        f"Encontrados: {len(rom_candidates)} arquivos ({summary}) e "
         f"{len(companion_candidates)} saves/sidecars."
     )
 
@@ -876,11 +876,11 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
             pass
     tracker = ProgressTracker(
         "organize_roms",
-        label="A organizar…",
+        label="Organizando…",
         total_items=len(rom_candidates),
         total_bytes=total_bytes,
     )
-    tracker.set_phase("move", label="A organizar ROMs…")
+    tracker.set_phase("move", label="Organizando ROMs…")
 
     companions_by_stem = {}
     for comp_name, comp_path in companion_candidates:
@@ -1023,7 +1023,7 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
     log("✅ Organização finalizada!")
     if counts_moved:
         for bucket, n in sorted(counts_moved.items()):
-            log(f"   - /roms/{bucket}/ → {n} ficheiro(s)")
+            log(f"   - /roms/{bucket}/ → {n} arquivo(s)")
     log(f"   - {organized_count} organizados no total.")
     log(f"   - {matched_companions_count} saves/sidecars sincronizados.")
     if orphan_count > 0:
@@ -1037,9 +1037,9 @@ def organize_roms_directory(mount_path, log_callback=None, layout=LAYOUT_CONSOLE
     if mode == LAYOUT_FRANCHISE:
         where = "Jogos em /roms/<franquia>/; apps em /roms/apps/."
     elif mode == LAYOUT_BOTH:
-        where = "Jogos em /roms/<consola>/<franquia>/; apps em /roms/apps/."
+        where = "Jogos em /roms/<console>/<franquia>/; apps em /roms/apps/."
     else:
-        where = "Jogos em /roms/<consola>/ (incl. gb/gbc/nes/…); apps em /roms/apps/."
+        where = "Jogos em /roms/<console>/ (incl. gb/gbc/nes/…); apps em /roms/apps/."
     msg = (
         f"{organized_count} itens organizados ({detail}); "
         f"{matched_companions_count} saves/sidecars sincronizados; "

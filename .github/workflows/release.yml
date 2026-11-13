@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag a publicar (ex. v1.0.0); vazio = só build de artefactos"
+        description: "Tag a publicar (ex. v1.0.0); vazio = só build de artefatos"
         required: false
         default: ""
 
@@ -84,7 +84,7 @@ jobs:
             echo "Assinatura Windows (Dark Room / Artifact Signing) activa."
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "Assinatura Windows omitida — secrets/vars Azure em falta (ver docs/WINDOWS_SIGNING.md)."
+            echo "Assinatura Windows omitida — secrets/vars Azure ausentes (ver docs/WINDOWS_SIGNING.md)."
           fi
 
       - name: Azure login (OIDC)
@@ -146,7 +146,7 @@ jobs:
     name: GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    # Publica mesmo se um SO falhar, desde que existam artefactos.
+    # Publica mesmo se um SO falhar, desde que existam artefatos.
     if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result != 'cancelled'
     steps:
       - name: Checkout
@@ -162,7 +162,7 @@ jobs:
       - name: Require at least one artefact
         run: |
           count=$(find release_download -type f 2>/dev/null | wc -l | tr -d ' ')
-          echo "Ficheiros: ${count}"
+          echo "Arquivos: ${count}"
           find release_download -type f -print || true
           test "$count" -gt 0
 

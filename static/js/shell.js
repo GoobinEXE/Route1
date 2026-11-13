@@ -1,5 +1,5 @@
 /**
- * Router da shell — quatro vistas (Início, DSPico, Mais ferramentas, Definições),
+ * Router da shell — quatro vistas (Início, DSPico, Mais ferramentas, Configurações),
  * abas por vista e navegação por teclado. Mount preguiçoso por vista/aba.
  */
 (function () {
@@ -58,7 +58,7 @@
 
   function setToolsSection(name, { silent } = {}) {
     if (hardBusy() && !silent) {
-      alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
+      alert("Aguarde a operação em andamento terminar antes de mudar de seção.");
       return;
     }
     if (!TOOLS_SECTIONS.includes(name)) name = "softmod";
@@ -105,7 +105,7 @@
     const usage = $("home-drive-usage");
     const d = typeof selectedDrive !== "undefined" ? selectedDrive : null;
     if (!d) {
-      el.textContent = "Nenhuma unidade selecionada. Ligue o microSD e escolha-o na barra de cima.";
+      el.textContent = "Nenhuma unidade selecionada. Conecte o microSD e escolha-o na barra de cima.";
       if (usage) usage.classList.add("hidden");
       return;
     }
@@ -154,7 +154,7 @@
 
   function navigate(view, { silent } = {}) {
     if (hardBusy() && !silent) {
-      alert("Aguarde a operação em andamento terminar antes de mudar de ecrã.");
+      alert("Aguarde a operação em andamento terminar antes de mudar de tela.");
       return;
     }
     if (LEGACY_VIEWS[view]) {
@@ -250,19 +250,19 @@
           const res = await api.set_prefs({ steamgriddb_api_key: raw });
           if (res && res.success) {
             input.value = "";
-            input.placeholder = "Chave guardada — cole outra para substituir";
+            input.placeholder = "Chave salva — cole outra para substituir";
             setSgdbStatus(
-              "Chave SteamGridDB guardada. Capas/ícones usam-na como fonte principal.",
+              "Chave SteamGridDB salva. Capas/ícones a usam como fonte principal.",
               true
             );
           } else {
             setSgdbStatus(
-              (res && res.error) || "Não foi possível guardar a chave.",
+              (res && res.error) || "Não foi possível salvar a chave.",
               false
             );
           }
         } catch (e) {
-          setSgdbStatus("Falha ao guardar a chave.", false);
+          setSgdbStatus("Falha ao salvar a chave.", false);
         }
       });
       clearBtn.addEventListener("click", async () => {
@@ -305,7 +305,7 @@
         res.prefs &&
         res.prefs.steamgriddb_configured === true;
       if (configured) {
-        input.placeholder = "Chave guardada — cole outra para substituir";
+        input.placeholder = "Chave salva — cole outra para substituir";
         setSgdbStatus("SteamGridDB ativo (fonte principal de capas/ícones).", true);
       } else {
         input.placeholder = "Cole a chave aqui";

@@ -34,7 +34,7 @@
     if (el) themesHost = el;
     if (!themesHost) return;
     const host = themesHost;
-    host.innerHTML = `<section class="panel p-5"><p class="text-[12px] text-fg-mute">A carregar temas do launcher…</p></section>`;
+    host.innerHTML = `<section class="panel p-5"><p class="text-[12px] text-fg-mute">Carregando temas do launcher…</p></section>`;
     let res;
     try {
       const api = await waitForApi();
@@ -108,7 +108,7 @@
       <section class="panel p-5 space-y-2">
         <h3 class="section-label">Apps USB oficiais (LNH)</h3>
         <p class="text-[12px] text-fg-mute">mass-storage, usb-speaker, usb-video e usb-microphone de <code>dspico-usb-examples</code>.
-        Depois de um reset com USB ligado pode ser preciso desligar e voltar a ligar o console (bug conhecido do firmware).</p>
+        Depois de um reset com USB conectado pode ser preciso desligar e voltar a ligar o console (bug conhecido do firmware).</p>
         <button type="button" class="btn-primary" id="dspico-usb-install">Instalar apps USB no cartão</button>
         <div id="dspico-usb-msg" class="text-[12px] text-fg-mute" role="status"></div>
       </section>`;

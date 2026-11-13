@@ -19,7 +19,7 @@ EXPECTED_REPOS = {
 }
 
 
-# --- registo e lock -------------------------------------------------------
+# --- registro e lock -------------------------------------------------------
 
 
 def test_registry_is_exactly_the_five_official_repos():

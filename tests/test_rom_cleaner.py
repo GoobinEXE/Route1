@@ -227,7 +227,7 @@ def test_companion_index_keys_s8ds():
 
 
 def test_franchise_layout_prunes_empty_platform_folders(fake_sd):
-    """Por franquia: cria /roms/Pokemon/ e remove pastas de consola vazias."""
+    """Por franquia: cria /roms/Pokemon/ e remove pastas de console vazias."""
     ensure = fake_sd / "roms"
     for name in ("nds", "gba", "a26", "nes"):
         (ensure / name).mkdir(parents=True, exist_ok=True)
@@ -247,7 +247,7 @@ def test_franchise_layout_prunes_empty_platform_folders(fake_sd):
 
 
 def test_console_layout_keeps_canonical_empty_folders(fake_sd):
-    """Por consola: pastas TWiLight vazias (sem jogos) mantêm-se."""
+    """Por console: pastas TWiLight vazias (sem jogos) mantêm-se."""
     make_nds(
         fake_sd / "Kart.nds",
         title=b"MARIOKARTDS",
@@ -262,7 +262,7 @@ def test_console_layout_keeps_canonical_empty_folders(fake_sd):
 
 
 def test_both_layout_creates_nested_franchise_and_prunes_old(fake_sd):
-    """Consola+franquia: /roms/nds/Pokemon/ e limpa pasta franquia solta vazia."""
+    """Console+franquia: /roms/nds/Pokemon/ e limpa pasta franquia solta vazia."""
     (fake_sd / "roms" / "Pokemon").mkdir(parents=True)
     make_nds(
         fake_sd / "roms" / "Pokemon" / "Pearl.nds",

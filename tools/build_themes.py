@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gera static/themes.css e static/theme-data.js a partir das paletas abaixo.
 
-Sete temas (inspirados em menus de consolas, nomes genéricos) × três modos:
+Sete temas (inspirados em menus de consoles, nomes genéricos) × três modos:
   original  paleta própria do tema
   light     Catppuccin Latte com o acento do tema
   dark      Catppuccin Mocha com o acento do tema
@@ -12,7 +12,7 @@ botão de acento ≥ 4.5:1; estados (ok/aviso/erro) ≥ 4.5:1 sobre o painel. Co
 de texto derivadas (accent-fg, on-accent, estados) são escurecidas/clareadas
 até passarem; uma paleta base que mesmo assim falhe aborta a geração.
 
-    python tools/build_themes.py          # escreve os ficheiros
+    python tools/build_themes.py          # escreve os arquivos
     python tools/build_themes.py --check  # falha se estiverem desatualizados
 """
 

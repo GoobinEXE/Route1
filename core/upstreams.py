@@ -1,4 +1,4 @@
-"""Fontes oficiais do Route Pico — registo único.
+"""Fontes oficiais do Route Pico — registro único.
 
 Cinco repositórios, e só estes, alimentam o ecossistema DSPico do app:
 
@@ -10,7 +10,7 @@ Cinco repositórios, e só estes, alimentam o ecossistema DSPico do app:
 
 As versões e digests em uso estão em ``core/data/upstreams.lock.json``.
 ``tools/sync_upstreams.py --apply`` atualiza o lock a partir das releases mais
-recentes (o workflow ``upstreams.yml`` corre-o toda a semana e abre um PR);
+recentes (o workflow ``upstreams.yml`` o executa toda semana e abre um PR);
 ``--check`` falha se alguma fonte tiver release mais nova que o lock.
 ``core.cache_pins`` lê daqui os pins destes pacotes, ``core.updates`` a
 allowlist de downloads e ``core.routedex`` o manifesto do loader da PicoDex.
@@ -27,7 +27,7 @@ LOCK_PATH = os.path.join(_HERE, "data", "upstreams.lock.json")
 PICODEX_DATA_DIR = os.path.join(_HERE, "data", "picodex")
 
 # id → definição. ``cache_key`` liga ao cache pinado (core.cache_pins);
-# ``asset_re`` escolhe o asset da release; ``files`` (só PicoDex) são ficheiros
+# ``asset_re`` escolhe o asset da release; ``files`` (só PicoDex) são arquivos
 # do repositório copiados para core/data/picodex/ na tag fixada.
 UPSTREAMS: dict[str, dict[str, Any]] = {
     "picodex": {

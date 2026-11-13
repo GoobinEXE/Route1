@@ -47,7 +47,7 @@ _MEM_CACHE: dict[str, tuple[float, bytes]] = {}
 from core.upstreams import OFFICIAL_REPOS, UPSTREAMS, lock_entry
 
 # Fontes oficiais (core/upstreams.py). Os forks Enhanced (rasalopa) só entram
-# quando o utilizador escolhe a variante "enhanced".
+# quando o usuário escolhe a variante "enhanced".
 ENHANCED_REPO = UPSTREAMS["pico_launcher_enhanced"]["repo"]
 ENHANCED_LOADER_REPO = UPSTREAMS["pico_loader_enhanced"]["repo"]
 PICODEX_REPO = UPSTREAMS["picodex"]["repo"]
@@ -70,7 +70,7 @@ _COMPONENTS: dict[str, dict[str, Any]] = {
                 "label": "Pico Launcher Enhanced",
                 "summary": (
                     "Favoritos, jogos concluídos, estatísticas e tempo de jogo, recentes, "
-                    "jogo aleatório, capturas de ecrã (START), slots de save, fundos noturnos."
+                    "jogo aleatório, capturas de tela (START), slots de save, fundos noturnos."
                 ),
             }
         },
@@ -145,7 +145,7 @@ def _is_allowed_url(url: str) -> bool:
     if parsed.scheme != "https" or parsed.hostname not in _ALLOWLIST_HOSTS:
         return False
     host = parsed.hostname or ""
-    # LNH-team inteiro (firmware, USB examples) + as fontes oficiais registadas.
+    # LNH-team inteiro (firmware, USB examples) + as fontes oficiais registradas.
     allowed = ("LNH-team/",) + tuple(f"{r}/" for r in sorted(OFFICIAL_REPOS))
     if host == "api.github.com":
         return parsed.path.startswith(tuple(f"/repos/{p}" for p in allowed))
@@ -294,7 +294,7 @@ def _download_asset_verified(asset: dict[str, Any], log: LogFn) -> str:
     tmp_path = out_path + ".partial"
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     log(f"Baixando asset latest: {name}")
-    # Teto defensivo: evita stream infinito / ficheiro anormal a encher o disco.
+    # Teto defensivo: evita stream infinito / arquivo anormal a encher o disco.
     max_bytes = 80 * 1024 * 1024
     try:
         with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp, open(tmp_path, "wb") as f:  # nosec B310
@@ -408,7 +408,7 @@ def _install_loader_from_zip(
         plan += [(aplist, "aplist.bin"), (savelist, "savelist.bin")]
         if patchlist:
             # Sem isto o patchlist.bin ficava de outra release e o cartão
-            # passava a ter ficheiros do loader de versões misturadas.
+            # passava a ter arquivos do loader de versões misturadas.
             plan.append((patchlist, "patchlist.bin"))
     undo = UndoStack()
     baks: list[Optional[str]] = []
@@ -511,7 +511,7 @@ def _install_firmware(mount_path: str, channel: str, log: LogFn) -> dict[str, An
     return {
         "success": True,
         "message": (
-            "Firmware latest descarregado; para gravar, monte o cartucho em modo "
+            "Firmware latest baixado; para gravar, monte o cartucho em modo "
             "BOOTSEL (RPI-RP2) e execute o flash."
         ),
         "flashed": False,
@@ -766,7 +766,7 @@ def _picodex_status(log: LogFn) -> dict[str, Any]:
 
 
 def _install_picodex_data(log: LogFn) -> dict[str, Any]:
-    """Descarrega o loaderReleases.json da release mais recente da PicoDex para a cache local."""
+    """Baixa o loaderReleases.json da release mais recente da PicoDex para o cache local."""
     import base64
 
     from core.routedex import PICODEX_USER_DIR, load_picodex_loader_manifest, reset_picodex_cache, validate_picodex_loader_manifest
@@ -785,7 +785,7 @@ def _install_picodex_data(log: LogFn) -> dict[str, Any]:
     data = validate_picodex_loader_manifest(json.loads(raw.decode("utf-8")))
     current = load_picodex_loader_manifest()
     if len(data["releases"]) < len(current.get("releases") or []):
-        raise RuntimeError("O manifesto da PicoDex descarregado tem menos releases do que o atual; mantido o atual.")
+        raise RuntimeError("O manifesto da PicoDex baixado tem menos releases do que o atual; mantido o atual.")
     os.makedirs(PICODEX_USER_DIR, exist_ok=True)
     for name, payload in (
         ("loaderReleases.json", raw),

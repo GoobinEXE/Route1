@@ -145,7 +145,7 @@ def test_macos_force_cluster_retries_admin_on_permission(monkeypatch):
 
 
 def test_macos_force_cluster_terminal_fallback_on_eperm(monkeypatch):
-    """Mantido: euid!=0 usa Terminal directamente (sem osascript)."""
+    """Mantido: euid!=0 usa Terminal diretamente (sem osascript)."""
     term_calls = []
 
     monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))

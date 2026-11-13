@@ -24,7 +24,7 @@ GetLogicalDriveStringsW(len(buf), buf)
 
 ## Index / None / undefined
 
-- `split()[0]`, `list[0]`, `.get("x")[…]`: guardar se a sequência pode estar vazia (`parts[0] if parts else …`).
+- `split()[0]`, `list[0]`, `.get("x")[…]`: salvar se a sequência pode estar vazia (`parts[0] if parts else …`).
 - Binário (`struct.unpack_from`, índices de header): checar `len(buf)` **antes** do offset.
 - JS: nunca `result.success` / `k.files.length` sem guarda — `result && result.success`, `(k.files || []).length`.
 - Helpers de path (`expand_user_path`): devolver `""` tipado, nunca `None` para input inválido.

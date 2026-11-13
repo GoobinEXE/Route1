@@ -5,7 +5,7 @@ Pico Loader Enhanced (rasalopa/pico-loader).
 
 O Pico Loader oficial NÃO está aqui: o RouteDex usa o manifesto mantido pela
 própria PicoDex (core/data/picodex/loaderReleases.json, via
-tools/sync_upstreams.py). Este ficheiro cobre só o que a PicoDex não cobre.
+tools/sync_upstreams.py). Este arquivo cobre só o que a PicoDex não cobre.
 
 Uso:
     python tools/gen_pico_manifest.py            # regenera o JSON
@@ -113,7 +113,7 @@ def build() -> dict:
             for file, digest in hashes.items():
                 add(manifest["loader_enhanced"]["files"], file, digest, tag)
             manifest["loader_enhanced"]["releases"].append({"tag": tag, "published": rel.get("published_at", "")[:10]})
-            print(f"loader enhanced {tag}: {len(hashes)} ficheiros", file=sys.stderr)
+            print(f"loader enhanced {tag}: {len(hashes)} arquivos", file=sys.stderr)
 
     for variant in ("official", "enhanced"):
         src = SOURCES[f"launcher_{variant}"]

@@ -5,7 +5,7 @@ Port em Python (stdlib) das regras do PicoDex de rasalopa
 docs/licenses/PicoDex-LICENSE.txt), com diferenças deliberadas:
 
 * ``gamedata.json`` é lido e escrito sem perder campos desconhecidos, e um
-  ficheiro que não faz parse nunca é sobrescrito (mesma regra do launcher).
+  arquivo que não faz parse nunca é sobrescrito (mesma regra do launcher).
 * Toda a escrita no SD é atómica (``.partial`` + fsync + ``os.replace``) e
   toda a remoção guarda primeiro uma cópia no host.
 * A versão do Pico Loader / Launcher é identificada offline contra
@@ -87,8 +87,8 @@ _USRCHEAT_MAX_BYTES = 64 * 1024 * 1024
 _MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pico_manifest.json")
 _manifest_cache: Optional[dict[str, Any]] = None
 _picodex_loader_cache: Optional[dict[str, Any]] = None
-# Cópia mais recente do manifesto da PicoDex descarregada pelo utilizador
-# (Verificar atualizações → PicoDex); a cópia incluída na app é o mínimo.
+# Cópia mais recente do manifesto da PicoDex baixada pelo usuário
+# (Verificar atualizações → PicoDex); a cópia incluída no app é o mínimo.
 PICODEX_USER_DIR = os.path.join(CACHE_DIR, "picodex")
 
 _ENHANCED_LAUNCHER_MARKER = b"rasalopa/pico-launcher-enhanced"
@@ -101,7 +101,7 @@ class RouteDexError(RuntimeError):
 
 
 # --------------------------------------------------------------------------- #
-# Infra: paths, hashing, escrita atómica, cópia de segurança
+# Infra: paths, hashing, escrita atómica, backup
 # --------------------------------------------------------------------------- #
 
 
@@ -159,7 +159,7 @@ def _atomic_write(path: str, data: bytes) -> None:
                 pass
         with open(tmp, "rb") as f:
             if hashlib.sha256(f.read()).digest() != hashlib.sha256(data).digest():
-                raise RouteDexError("Verificação pós-escrita falhou; ficheiro original mantido.")
+                raise RouteDexError("Verificação pós-escrita falhou; arquivo original mantido.")
         os.replace(tmp, path)
     finally:
         if os.path.exists(tmp):
@@ -177,7 +177,7 @@ def _host_backup_dir(label: str) -> str:
 
 
 def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: LogFn) -> dict[str, Any]:
-    """Copia cada ficheiro para o host (mantendo o caminho relativo) e só então remove."""
+    """Copia cada arquivo para o host (mantendo o caminho relativo) e só então remove."""
     backup_root: Optional[str] = None
     removed: list[str] = []
     failed: list[str] = []
@@ -196,7 +196,7 @@ def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: 
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(path, dst)
                 if _sha256_file(dst) != _sha256_file(path):
-                    raise RouteDexError("cópia de segurança não confere")
+                    raise RouteDexError("backup não confere")
                 os.remove(path)
             else:
                 continue
@@ -212,7 +212,7 @@ def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: 
 
 
 # --------------------------------------------------------------------------- #
-# Biblioteca: ROMs, saves e lixo numa só passagem
+# Biblioteca: ROMs, saves e lixo em uma só passagem
 # --------------------------------------------------------------------------- #
 
 
@@ -363,8 +363,8 @@ def _read_json(path: str) -> Optional[dict[str, Any]]:
 def load_picodex_loader_manifest() -> dict[str, Any]:
     """Manifesto do Pico Loader mantido pela PicoDex (fonte oficial das versões).
 
-    Usa a cópia descarregada pelo utilizador quando é válida e cobre pelo menos
-    tantas releases como a incluída na app; senão a incluída (fixada no lock).
+    Usa a cópia baixada pelo usuário quando é válida e cobre pelo menos
+    tantas releases como a incluída no app; senão a incluída (fixada no lock).
     """
     global _picodex_loader_cache
     if _picodex_loader_cache is not None:
@@ -744,7 +744,7 @@ def set_stats(mount_path: str, rel: str, launch_count: Any, play_minutes: Any, l
 
 
 def prune_stale_entries(mount_path: str, file_names: list[str], log: LogFn = None) -> dict[str, Any]:
-    """Remove entradas de jogos que já não estão no cartão (cópia do JSON fica no host)."""
+    """Remove entradas de jogos que não estão mais no cartão (cópia do JSON fica no host)."""
     wanted = {n.lower() for n in file_names if isinstance(n, str)}
     if not wanted:
         return {"success": True, "removed": 0}
@@ -857,11 +857,11 @@ def check_health(mount_path: str) -> dict[str, Any]:
     loader = identify_loader(mount_path)
     problems = []
     if not launcher["present"]:
-        problems.append("Falta /_picoboot.nds: o DSPico não arranca o Pico Launcher.")
+        problems.append("Falta /_picoboot.nds: o DSPico não inicia o Pico Launcher.")
     if missing_required:
-        problems.append("Faltam ficheiros obrigatórios do Pico Loader em /_pico: " + ", ".join(missing_required) + ".")
+        problems.append("Faltam arquivos obrigatórios do Pico Loader em /_pico: " + ", ".join(missing_required) + ".")
     if loader["status"] == "mixed":
-        problems.append("Os ficheiros do Pico Loader vêm de releases diferentes; reinstale o loader.")
+        problems.append("Os arquivos do Pico Loader vêm de releases diferentes; reinstale o loader.")
     if loader.get("builds") and "DSPICO" not in loader["builds"]:
         problems.append("O Pico Loader no cartão foi feito para outro flashcard (" + ", ".join(loader["builds"]) + ").")
     sp = _settings_problem(mount_path)
@@ -895,7 +895,7 @@ def check_health(mount_path: str) -> dict[str, Any]:
 def remove_card_items(mount_path: str, rels: list[str], log: LogFn = None) -> dict[str, Any]:
     """Remove itens que o relatório de saúde apontou (lixo, saves órfãos, arte órfã).
 
-    Só aceita caminhos que o próprio relatório devolveria; cada ficheiro vai
+    Só aceita caminhos que o próprio relatório devolveria; cada arquivo vai
     primeiro para ~/.route_1_kit_cache/routedex_backup/.
     """
     if not isinstance(rels, list) or not rels:
@@ -913,7 +913,7 @@ def remove_card_items(mount_path: str, rels: list[str], log: LogFn = None) -> di
 
 
 # --------------------------------------------------------------------------- #
-# Capturas de ecrã (Enhanced: hold START)
+# Capturas de tela (Enhanced: hold START)
 # --------------------------------------------------------------------------- #
 
 
@@ -948,7 +948,7 @@ def _find_shot(mount_path: str, shot_id: str) -> dict[str, Any]:
 
 
 def screenshot_png(mount_path: str, shot_id: str) -> bytes:
-    """As duas telas empilhadas (topo em cima) num único PNG."""
+    """As duas telas empilhadas (topo em cima) em um único PNG."""
     from core.pico_bmp import decode_bmp_rgba, rgba_to_png
 
     shot = _find_shot(mount_path, shot_id)

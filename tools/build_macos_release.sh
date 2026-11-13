@@ -49,5 +49,5 @@ hdiutil create \
 rm -rf "$STAGE"
 
 echo
-echo "Artefactos em ${OUT}:"
+echo "Artefatos em ${OUT}:"
 ls -lh "$OUT"

@@ -1,6 +1,6 @@
 """Tabelas pinadas de cache (SHA-256, URLs, nomes, tamanhos).
 
-Carregadas sob demanda via ``core.cache`` (PEP 562) — não importar no arranque
+Carregadas sob demanda via ``core.cache`` (PEP 562) — não importar na inicialização
 se só precisar de ``CACHE_DIR`` / ``USER_AGENT``.
 """
 

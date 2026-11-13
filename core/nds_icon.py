@@ -14,7 +14,7 @@ _ICON_CACHE_MAX = 256
 
 
 def _png_rgba(width: int, height: int, rgba: bytes) -> bytes:
-    """Codifica imagem RGBA crua num PNG mínimo."""
+    """Codifica imagem RGBA crua em um PNG mínimo."""
 
     def chunk(tag: bytes, data: bytes) -> bytes:
         crc = zlib.crc32(tag + data) & 0xFFFFFFFF

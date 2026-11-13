@@ -19,8 +19,8 @@ Checklist manual **antes** de uma release futura. Use um **cartão MicroSD dedic
 
 - [ ] Escolher um objetivo (ex.: SD-direct) e avançar sem saltar avisos de NAND
 - [ ] Etapa 1 (Memory Pit + dumpTool): conclui com sucesso no SD de teste
-- [ ] Etapa 2 (TWiLight + Unlaunch installer no SD): conclui; ficheiros esperados presentes
-- [ ] Aviso de brick / Unlaunch aparece antes da fase crítica na consola
+- [ ] Etapa 2 (TWiLight + Unlaunch installer no SD): conclui; arquivos esperados presentes
+- [ ] Aviso de brick / Unlaunch aparece antes da fase crítica no console
 
 ## Modo avançado / utilitários
 
@@ -28,7 +28,7 @@ Checklist manual **antes** de uma release futura. Use um **cartão MicroSD dedic
 - [ ] **GEi** ou **R4** (conforme kernel disponível): instalação sem crash
 - [ ] **Organizar ROMs**: confirmação; pastas `/roms/...` coerentes
 - [ ] **Backup do SD** e **limpar metadados** (se aplicável) concluem com mensagem clara
-- [ ] Segunda operação enquanto a primeira corre: rejeitada (“já em andamento”)
+- [ ] Segunda operação enquanto a primeira roda: rejeitada (“já em andamento”)
 
 ## UI
 
@@ -40,7 +40,7 @@ Checklist manual **antes** de uma release futura. Use um **cartão MicroSD dedic
 - [ ] Fechar a janela encerra o processo sem orphan óbvio
 - [ ] Anotar falhas com SO, versão do app e passo exato
 
-Não execute Unlaunch na NAND de uma consola de produção só para este checklist; o foco é o PC + cartão de teste.
+Não execute Unlaunch na NAND de um console de produção só para este checklist; o foco é o PC + cartão de teste.
 
 ## Builds empacotados (opcional)
 

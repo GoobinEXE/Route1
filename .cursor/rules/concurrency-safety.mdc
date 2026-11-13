@@ -5,12 +5,12 @@ alwaysApply: true
 
 # Concorrência e operações no cartão
 
-Este app usa pywebview: cada chamada `js_api` corre numa **thread não-daemon**. Manter estes invariantes:
+Este app usa pywebview: cada chamada `js_api` roda em uma **thread não-daemon**. Manter estes invariantes:
 
 ## Python (`app.py`, `core/`)
 
 - Operações de escrita no SD passam por `_run_mount_op` / `OP_LOCK` (`blocking=False`).
-- **`preflight` corre dentro do lock**, depois de `acquire` — nunca I/O de escrita no cartão em paralelo com outra op.
+- **`preflight` roda dentro do lock**, depois de `acquire` — nunca I/O de escrita no cartão em paralelo com outra op.
 - Libertação do lock **sempre** em `finally`.
 - **`window.events.closing`**: se `OP_LOCK.locked()`, devolver `False` e logar — não fechar a meio de uma op.
 - Todo `subprocess.run` / `check_output` / `Popen` com I/O de disco ou listagem **deve ter `timeout=`** (info ~30s, format ~300s, sync/dot_clean ~60–120s). Tratar `TimeoutExpired` com retorno estruturado; o lock tem de libertar-se.

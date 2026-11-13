@@ -104,7 +104,7 @@ def _pico_asset_dir(mount_path: str, kind: str, bucket: str) -> str:
 def resolve_existing_art(
     mount_path: str, basename: str, tid: Optional[str], kind: str
 ) -> Optional[str]:
-    """Arte que o launcher mostraria (findArt da PicoDex): user/<ficheiro>.bmp
+    """Arte que o launcher mostraria (findArt da PicoDex): user/<arquivo>.bmp
     primeiro, depois <nds|gba>/<CODE>.bmp conforme o sistema da ROM."""
     from core.picodex_rules import is_usable_game_code, system_for_extension
 
@@ -447,7 +447,7 @@ def _picodex_matches(
 ) -> list[dict[str, str]]:
     """Capas do catálogo libretro-thumbnails escolhidas com as regras da PicoDex.
 
-    Sem pesquisa: o melhor par (``pickBoxart``) pelo nome do ficheiro, com o
+    Sem pesquisa: o melhor par (``pickBoxart``) pelo nome do arquivo, com o
     título do banner NDS quando o nome não diz nada, e depois parecidos.
     Com pesquisa: ``searchCatalog``. As URLs vêm do próprio catálogo, por isso
     existem sem precisar de sondar.
@@ -561,11 +561,11 @@ def search_dspico_artwork(
     log_callback=None,
 ) -> dict[str, Any]:
     """
-    Lista opções de capas/ícones **sem descarregar** bytes para o PC.
+    Lista opções de capas/ícones **sem baixar** bytes para o PC.
 
     Cada candidato traz `url` / `preview` (URL remota allowlisted). A UI mostra
-    a miniatura via <img src>; só `apply_dspico_artwork_url` descarrega a
-    escolha do utilizador e grava BMP no cartão SD.
+    a miniatura via <img src>; só `apply_dspico_artwork_url` baixa a
+    escolha do usuário e grava BMP no cartão SD.
     kind: cover | icon
     """
     log = lambda msg: emit_log(log_callback, msg)
@@ -604,7 +604,7 @@ def search_dspico_artwork(
         full=meta.get("full"),
     )
     log(
-        f"A listar opções de {'capa' if kind_n == 'cover' else 'ícone'} "
+        f"Listando opções de {'capa' if kind_n == 'cover' else 'ícone'} "
         f"para {meta['display_name']}…"
     )
 
@@ -646,19 +646,19 @@ def search_dspico_artwork(
     elif not sgdb_on and not is_nds_family_platform(meta.get("platform")):
         # Retro sem SGDB: Libretro quase nunca acerta nomes BR — pedir chave.
         msg = (
-            "Sem chave SteamGridDB — em Definições (barra lateral) → "
-            "secção SteamGridDB, cole a chave e Guarde. "
-            "Ou escolha um ficheiro PNG/BMP."
+            "Sem chave SteamGridDB — em Configurações (barra lateral) → "
+            "seção SteamGridDB, cole a chave e Salve. "
+            "Ou escolha um arquivo PNG/BMP."
         )
     elif not lr_key and not is_nds_family_platform(meta.get("platform")) and not sgdb_on:
         msg = (
             "Sem fonte online para esta plataforma — "
-            "configure SteamGridDB em Definições ou escolha um ficheiro PNG/BMP."
+            "configure SteamGridDB em Configurações ou escolha um arquivo PNG/BMP."
         )
     else:
         msg = (
             "Nenhuma imagem encontrada — tente outro nome/TID "
-            "ou escolha um ficheiro PNG/BMP."
+            "ou escolha um arquivo PNG/BMP."
         )
     if candidates:
         log(f"✅ {msg}")
@@ -698,9 +698,9 @@ def apply_dspico_artwork_url(
     log_callback=None,
 ) -> tuple[bool, str, dict[str, Any]]:
     """
-    Descarrega só a URL escolhida (memória) e grava BMP directamente no cartão SD.
+    Baixa só a URL escolhida (memória) e grava BMP diretamente no cartão SD.
 
-    Não usa a cache do Route Pico nem ficheiros temporários no disco do PC —
+    Não usa o cache do Route Pico nem arquivos temporários no disco do PC —
     o destino final é `/_pico/covers|icons/...` no mount do cartão.
     """
     log = lambda msg: emit_log(log_callback, msg)
@@ -715,10 +715,10 @@ def apply_dspico_artwork_url(
     if err or not meta:
         return False, err or "Jogo inválido.", stats
 
-    log("A descarregar e converter a imagem para o formato Pico…")
+    log("Baixando e convertendo a imagem para o formato Pico…")
     raw = _http_get(url)
     if not raw:
-        return False, "Falha ao descarregar a imagem.", stats
+        return False, "Falha ao baixar a imagem.", stats
     try:
         bmp = image_bytes_to_pico_bmp(raw, kind_n)
     except ValueError as e:
@@ -738,7 +738,7 @@ def set_dspico_artwork_file(
     source_path: str,
     log_callback=None,
 ) -> tuple[bool, str, dict[str, Any]]:
-    """Converte ficheiro local (PNG/BMP) para BMP Pico e grava."""
+    """Converte arquivo local (PNG/BMP) para BMP Pico e grava."""
     log = lambda msg: emit_log(log_callback, msg)
     stats: dict[str, Any] = {}
     kind_n = (kind or "cover").strip().lower()
@@ -751,11 +751,11 @@ def set_dspico_artwork_file(
 
     src = (source_path or "").strip()
     if not src or "\x00" in src or not os.path.isfile(src):
-        return False, "Ficheiro de imagem inexistente.", stats
+        return False, "Arquivo de imagem inexistente.", stats
     try:
         size = os.path.getsize(src)
     except OSError:
-        return False, "Ficheiro de imagem inacessível.", stats
+        return False, "Arquivo de imagem inacessível.", stats
     if size < 64 or size > 12 * 1024 * 1024:
         return False, "Tamanho de imagem inválido.", stats
 
@@ -788,8 +788,8 @@ def _write_pico_bmp(
     note: str,
     defer_sync: bool = False,
 ) -> tuple[bool, str, dict[str, Any]]:
-    # Regra da PicoDex (artPaths.ts): um só destino. Um user/<ficheiro>.bmp já
-    # no cartão tem prioridade no launcher e é substituído no sítio; senão NDS/GBA
+    # Regra da PicoDex (artPaths.ts): um só destino. Um user/<arquivo>.bmp já
+    # no cartão tem prioridade no launcher e é substituído no lugar; senão NDS/GBA
     # com game code utilizável vão para nds|gba/<CODE>.bmp; o resto para user/.
     from core.picodex_rules import resolve_art_target, system_for_extension
 
@@ -811,7 +811,7 @@ def _write_pico_bmp(
                 f.flush()
                 os.fsync(f.fileno())
             if len(bmp) < 64:
-                raise OSError("BMP gerado demasiado pequeno.")
+                raise OSError("BMP gerado pequeno demais.")
             os.replace(partial, dest)
             written.append(dest)
         except OSError as e:
@@ -862,7 +862,7 @@ def _batch_candidate_urls(
 ) -> list[str]:
     """
     Lista curta para lote: PicoDex (catálogo libretro) → SteamGridDB → GameTDB.
-    Sem HEAD — o caller faz GET directo na 1.ª que converter.
+    Sem HEAD — o caller faz GET direto na 1.ª que converter.
     """
     from core.steamgriddb import candidate_assets, has_api_key, search_term_from_rom
 
@@ -925,7 +925,7 @@ def _apply_bytes_to_meta(
 def get_dspico_game_artwork(
     mount_path: str, rel_path: str
 ) -> dict[str, Any]:
-    """Estado actual de capa/ícone + metadados do jogo."""
+    """Estado atual de capa/ícone + metadados do jogo."""
     err, meta = _resolve_game(mount_path, rel_path)
     if err or not meta:
         return {"success": False, "error": err or "Jogo inválido."}
@@ -1229,7 +1229,7 @@ def generate_dspico_artwork_batch(
             tracker.current = idx
             tracker.tick(force=True)
     except OperationCancelled as e:
-        msg = str(e) or "Operação cancelada pelo utilizador."
+        msg = str(e) or "Operação cancelada pelo usuário."
         log(f"⚠️ {msg} ({written} gravada(s) antes).")
         tracker.written = written
         tracker.skipped = skipped

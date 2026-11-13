@@ -10,7 +10,7 @@ Escrita no cartão **não é transacional** no SO — o código tem de deixar o 
 
 ## Cópia verificada
 
-- `copy_verified`: calcular SHA do `.partial` **antes** de `os.replace`. Nunca `replace` → verificar → `os.remove(dst)` (destrói ficheiro bom).
+- `copy_verified`: calcular SHA do `.partial` **antes** de `os.replace`. Nunca `replace` → verificar → `os.remove(dst)` (destrói arquivo bom).
 - Em falha, limpar só o `.partial`; destino antigo permanece.
 
 ```python
@@ -28,8 +28,8 @@ os.replace(partial, dst)
 
 ## Rollback
 
-- Multi-ficheiro (etapas softmod, kernels GEi/R4, TWiLight): `UndoStack` (ou equivalente) com ações LIFO; closures com **default args** (`lambda p=path`).
-- Ficheiro que sobrescreve: backup `.bak_*` + `push_restore_file`; ficheiro novo: `push_remove`.
+- Multiarquivo (etapas softmod, kernels GEi/R4, TWiLight): `UndoStack` (ou equivalente) com ações LIFO; closures com **default args** (`lambda p=path`).
+- Arquivo que sobrescreve: backup `.bak_*` + `push_restore_file`; arquivo novo: `push_remove`.
 - Após `rollback`, chamar `sync_volume(mount_path)`.
 - Promoção de árvores no cache (ex. extract 7z): staging + `rename`; se falhar, restaurar o anterior (`rename` ou `copytree` fallback). **Proibido** `rmtree(dest)` + `copytree` sem staging.
 
@@ -42,4 +42,4 @@ os.replace(partial, dst)
 - Ops por-item (`organize_roms`, limpeza): podem ficar parciais, mas **não** mentir `success: True` se zero itens moveram e houve erros.
 - Ops de softmod/kernel: falha → rollback → `{success: False}` / re-raise capturado pela `Api`.
 
-Ao rever diffs: assinalar verify-after-replace, escrita multi-ficheiro sem undo, promote sem staging, inspect sem lock.
+Ao rever diffs: assinalar verify-after-replace, escrita multiarquivo sem undo, promote sem staging, inspect sem lock.

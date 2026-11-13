@@ -35,7 +35,7 @@ ASSETS = os.path.join(ROOT, "static", "assets")
 LARGE_SVG = os.path.join(ASSETS, "logo.svg")
 SMALL_SVG = os.path.join(ASSETS, "logo-small.svg")
 
-# tamanho -> (svg de origem, nome do ficheiro)
+# tamanho -> (svg de origem, nome do arquivo)
 OUTPUTS = {
     1024: (LARGE_SVG, "app-icon.png"),
     512: (LARGE_SVG, "app-icon-512.png"),
@@ -96,7 +96,7 @@ def render_svg(chrome: str, svg_path: str, size: int, out_png: str, workdir: str
         f"file://{html}",
     ]
     # Algumas builds do Chrome não terminam sozinhas após o screenshot;
-    # esperamos pelo ficheiro e encerramos o processo.
+    # esperamos pelo arquivo e encerramos o processo.
     proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.time() + 40
     try:

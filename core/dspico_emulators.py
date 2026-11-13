@@ -3,7 +3,7 @@
 Segue o guia Sanrax «Emulators on Pico-Launcher»:
 https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/
 
-Downloads via core.cache (SHA-256 pinados). BIOS proprietária nunca é descarregada.
+Downloads via core.cache (SHA-256 pinados). BIOS proprietária nunca é baixada.
 """
 
 from __future__ import annotations
@@ -92,7 +92,7 @@ EMULATOR_CATALOG: list[dict[str, Any]] = [
         copy_trees=[("_gba", "_gba")],
         bios_notes=(
             "GBARunner3 exige bios.bin (dump da BIOS GBA) em /_gba/. "
-            "O app não descarrega BIOS proprietária."
+            "O app não baixa BIOS proprietária."
         ),
         conflict_group="gba",
         association_priority=20,
@@ -487,7 +487,7 @@ def dspico_rom_picker_filter_labels() -> tuple[str, ...]:
         "ROMs NDS DSi (*.nds *.dsi *.ids *.srl *.app)",
         f"ROMs emuladores ({retro_star})",
         "Arquivos (*.zip *.7z *.7zip *.rar)",
-        "Todos os ficheiros (*.*)",
+        "Todos os arquivos (*.*)",
     )
 
 
@@ -723,7 +723,7 @@ def install_dspico_emulators(
     if not os.path.isdir(pico):
         return (
             False,
-            "Pacote DSPico em falta (_pico/). Instale primeiro em «Preparar SD».",
+            "Pacote DSPico ausente (_pico/). Instale primeiro em «Preparar SD».",
             {},
         )
 
@@ -752,17 +752,17 @@ def install_dspico_emulators(
         if entry is None:
             return False, f"Emulador desconhecido: {eid!r}", {}
         if not _pin_ready(entry["cache_key"]):
-            return False, f"Pin em falta para {entry['label']}.", {}
+            return False, f"Pin ausente para {entry['label']}.", {}
         for ck, dest in entry.get("extra_cache_files") or []:
             if not _pin_ready(ck):
-                return False, f"Pin em falta para ficheiro extra ({ck}).", {}
+                return False, f"Pin ausente para arquivo extra ({ck}).", {}
             if not _safe_rel(dest):
                 return False, f"Destino extra inválido: {dest!r}", {}
         if not _safe_rel(entry["nds_dest"]):
             return False, f"Destino NDS inválido: {entry['nds_dest']!r}", {}
         selected.append(entry)
 
-    # SNEmulDS 0.6a e 0.6d partilham o mesmo ficheiro — o último selecionado ganha
+    # SNEmulDS 0.6a e 0.6d compartilham o mesmo arquivo — o último selecionado ganha
     snemul = [e for e in selected if e["id"].startswith("snemulds_")]
     if len(snemul) > 1:
         keep = snemul[-1]["id"]
@@ -772,7 +772,7 @@ def install_dspico_emulators(
             if not e["id"].startswith("snemulds_") or e["id"] == keep
         ]
         log(
-            f"SNEmulDS: várias versões pedidas — a instalar só {keep}."
+            f"SNEmulDS: várias versões pedidas — instalando só {keep}."
         )
 
     gba_winners = _resolve_gba_association_winners(selected)
@@ -833,7 +833,7 @@ def install_dspico_emulators(
                             break
                     src_tree = found or src_tree
                 if not os.path.isdir(src_tree):
-                    log(f"⚠️ Pasta {src_rel}/ em falta no arquivo — a ignorar.")
+                    log(f"⚠️ Pasta {src_rel}/ ausente no arquivo — ignorando.")
                     continue
                 dst_tree = os.path.join(mount_path, dst_rel.replace("/", os.sep))
                 os.makedirs(dst_tree, exist_ok=True)
@@ -886,7 +886,7 @@ def install_dspico_emulators(
                     dest_cfg = os.path.join(mount_path, "snemul.cfg")
                     _copy_with_undo(cfg_src, dest_cfg, undo, log_callback=log_callback)
 
-            # Ficheiros extra pinados (settings.cfg, _NeoDS.ini)
+            # Arquivos extra pinados (settings.cfg, _NeoDS.ini)
             for ck, dest_rel in entry.get("extra_cache_files") or []:
                 src = ensure_cached(ck, log_callback=log_callback)
                 dest = os.path.join(mount_path, dest_rel.replace("/", os.sep))

@@ -1,4 +1,4 @@
-"""Temas da app: ficheiros gerados em dia e contraste AA em todas as combinações."""
+"""Temas do app: arquivos gerados em dia e contraste AA em todas as combinações."""
 
 from __future__ import annotations
 

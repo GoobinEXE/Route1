@@ -24,7 +24,7 @@ def test_emit_coalesces_same_event_type(monkeypatch):
     win = _FakeWindow()
     monkeypatch.setattr(web_events, "webview", SimpleNamespace(windows=[win]))
     web_events.stop()
-    # Isolar fila: só logs neste teste (o serviço é singleton partilhado).
+    # Isolar fila: só logs neste teste (o serviço é singleton compartilhado).
     for i in range(25):
         web_events.emit("log", {"message": f"log-{i}"})
     web_events.start()

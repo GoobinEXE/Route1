@@ -1,7 +1,7 @@
 """Receitas de instalação/configuração por app (guias GameBrew / README).
 
 Cada receita aplica o que o cartão precisa além de copiar o ``.nds``/``.dsi``:
-pastas, ficheiros de config (só se ainda não existirem) e cópias extra.
+pastas, arquivos de config (só se ainda não existirem) e cópias extra.
 """
 
 from __future__ import annotations
@@ -33,7 +33,7 @@ def _ensure_dir(path: str, log) -> None:
 
 
 def _write_text_if_missing(path: str, content: str, log, *, label: str) -> bool:
-    """Escreve ficheiro de config só se não existir (não sobrescreve o utilizador)."""
+    """Escreve arquivo de config só se não existir (não sobrescreve o usuário)."""
     if os.path.isfile(path):
         log(f"Mantido (já existia): {label}")
         return False
@@ -74,18 +74,18 @@ SETUP_NOTES: Dict[str, List[str]] = {
         "Não altere banner da flashcart em DSi/3DS sem CFW — pode bloquear o cartucho.",
     ],
     "dsfetch": [
-        "Não coloque em /_nds/ (a wiki pede outro sítio; /roms/apps/ está OK).",
+        "Não coloque em /_nds/ (a wiki pede outro lugar; /roms/apps/ está OK).",
     ],
     "rocket_video": [
         "Converta vídeos para .rvid com Vid2RVID (PC) e coloque em /videos/.",
-        "No console, abra o player e navegue até ao ficheiro .rvid.",
+        "No console, abra o player e navegue até o arquivo .rvid.",
     ],
     "fastvideo_ds": [
         "Converta vídeos para .fv com FastVideoDS Encoder e coloque em /videos/fv/.",
-        "Argv / TWiLight: pode abrir um .fv directamente a partir do menu.",
+        "Argv / TWiLight: pode abrir um .fv diretamente a partir do menu.",
     ],
     "ftpd": [
-        "Configure Wi‑Fi no DSi (definições do sistema) antes de abrir o ftpd.",
+        "Configure Wi‑Fi no DSi (configurações do sistema) antes de abrir o ftpd.",
         "No PC, ligue por FTP ao IP mostrado (porta por omissão 5000).",
         "START sai · SELECT liga/desliga backlight.",
     ],
@@ -95,9 +95,9 @@ SETUP_NOTES: Dict[str, List[str]] = {
         "Requer Wi‑Fi no DSi.",
     ],
     "dsidl": [
-        "Ligue o Wi‑Fi nas definições do DSi (WPA2; WEP/aberto costuma falhar).",
+        "Ligue o Wi‑Fi nas configurações do DSi (WPA2; WEP/aberto costuma falhar).",
         "Se ficar preso ao ligar, reabra segurando SELECT para ver o log.",
-        "O QR deve conter um URL HTTPS directo (ou script JSON).",
+        "O QR deve conter um URL HTTPS direto (ou script JSON).",
     ],
     "ds_micpassthrough": [
         "Precisa de cabo áudio macho–macho 3,5 mm entre o DS e o PC.",
@@ -138,7 +138,7 @@ def apply_install_recipe(
     log_callback=None,
 ) -> Tuple[bool, str, List[str]]:
     """
-    Instala binário + estrutura/config da guia oficial.
+    Instala binário + estrutura/config do guia oficial.
 
     Retorna (ok, mensagem, notes).
     """
@@ -195,7 +195,7 @@ def apply_install_recipe(
             _write_text_if_missing(
                 readme,
                 (
-                    "Coloque aqui ficheiros .rvid convertidos com Vid2RVID.\n"
+                    "Coloque aqui arquivos .rvid convertidos com Vid2RVID.\n"
                     "Abra RocketVideoPlayer.dsi no TWiLight e navegue até /videos/.\n"
                     "Guia: https://wiki.ds-homebrew.com/ds-index/rocketvideo\n"
                 ),
@@ -208,7 +208,7 @@ def apply_install_recipe(
             _write_text_if_missing(
                 readme,
                 (
-                    "Coloque aqui ficheiros .fv (FastVideoDS Encoder 2).\n"
+                    "Coloque aqui arquivos .fv (FastVideoDS Encoder 2).\n"
                     "Abra FastVideoDS.nds no TWiLight ou associe .fv no menu.\n"
                 ),
                 log,

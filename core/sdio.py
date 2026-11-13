@@ -198,7 +198,7 @@ class UndoStack:
         self._actions.append(action)
 
     def push_remove(self, path: str) -> None:
-        """Remove path no rollback se existir (ficheiro ou pasta)."""
+        """Remove path no rollback se existir (arquivo ou pasta)."""
 
         def _undo(p=path):
             if os.path.isdir(p):
@@ -329,7 +329,7 @@ def preflight(
     except OSError as e:
         write_err = e
     finally:
-        # Sempre tentar remover o ficheiro de teste (mesmo se fsync falhou).
+        # Sempre tentar remover o arquivo de teste (mesmo se fsync falhou).
         try:
             if os.path.exists(test_path):
                 os.remove(test_path)
@@ -339,6 +339,6 @@ def preflight(
     if write_err is not None:
         return False, f"Cartão não gravável: {write_err}", drive
     if os.path.exists(test_path):
-        return False, "Cartão não gravável: não foi possível limpar ficheiro de teste.", drive
+        return False, "Cartão não gravável: não foi possível limpar arquivo de teste.", drive
 
     return True, "ok", drive

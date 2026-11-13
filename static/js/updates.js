@@ -26,7 +26,7 @@
     const el = panel();
     if (!el) return;
     el.classList.remove("hidden");
-    el.innerHTML = '<p class="text-[12px] text-fg-mute">A verificar versões (cartão, pins da app, GitHub LNH)…</p>';
+    el.innerHTML = '<p class="text-[12px] text-fg-mute">Verificando versões (cartão, pins do app, GitHub LNH)…</p>';
     R1K.shell && R1K.shell.toggleActivity(true);
 
     try {
@@ -151,13 +151,13 @@
   const ENHANCED_CONFIRM = {
     "pico-launcher":
       "Instalar o Pico Launcher Enhanced (fork de rasalopa, não oficial)?\n\n" +
-      "• Substitui só /_picoboot.nds e os temas incluídos; jogos, saves, capas e definições ficam.\n" +
+      "• Substitui só /_picoboot.nds e os temas incluídos; jogos, saves, capas e configurações ficam.\n" +
       "• Grava favoritos e estatísticas em /_pico/gamedata.json.\n" +
       "• Problemas desta versão vão para github.com/rasalopa/pico-launcher-enhanced, não para o LNH team.\n" +
       "• Pode voltar ao oficial a qualquer momento neste painel.",
     "pico-loader":
       "Instalar o Pico Loader Enhanced (fork de rasalopa, não oficial)?\n\n" +
-      "• Só para o DSPico: noutro flashcard mantenha o loader feito para ele.\n" +
+      "• Só para o DSPico: em outro flashcard mantenha o loader feito para ele.\n" +
       "• Substitui picoLoader7.bin e picoLoader9.bin; aplist/savelist/patchlist do oficial ficam.\n" +
       "• Volta ao launcher dentro do jogo com L + R + Direita + Select; jogos DSi-enhanced e modo DSi ainda não.\n" +
       "• Problemas desta versão vão para o rasalopa, não para o LNH team.",
@@ -178,7 +178,7 @@
       const what =
         component === "picodex"
           ? "Atualizar os dados da PicoDex (manifesto de versões do Pico Loader) para a release mais recente?\n\nNão grava nada no microSD."
-          : `Instalar a versão mais recente de ${comp.label || component} a partir de github.com/${repo || "LNH-team"}?\n\nO ficheiro será verificado pelo digest SHA-256 do release.`;
+          : `Instalar a versão mais recente de ${comp.label || component} a partir de github.com/${repo || "LNH-team"}?\n\nO arquivo será verificado pelo digest SHA-256 do release.`;
       if (!confirm(what)) return;
     }
     try {

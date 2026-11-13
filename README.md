@@ -10,7 +10,7 @@ A interface é uma **janela nativa pywebview** com UI HTML/CSS/JS offline em `st
 
 ---
 
-## Descarregar (release 1.1.0)
+## Baixar (release 1.1.0)
 
 Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releases).
 
@@ -20,16 +20,16 @@ Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releas
 | **Windows** | ZIP com a pasta do app | `setup.exe` (Inno Setup) |
 | **Linux** | `.tar.gz` onedir | `.tar.gz` com script de atalho `.desktop` |
 
-Na primeira abertura no macOS/Windows, o sistema pode pedir confirmação de segurança (binário ainda não notarizado pela Apple / SmartScreen sem Authenticode). Prefira sempre descarregar da página de Releases deste repositório. Builds Windows oficiais passam a ser assinados como **Dark Room** quando o Azure Artifact Signing estiver configurado ([guia](docs/WINDOWS_SIGNING.md)).
+Na primeira abertura no macOS/Windows, o sistema pode pedir confirmação de segurança (binário ainda não notarizado pela Apple / SmartScreen sem Authenticode). Prefira sempre baixar da página de Releases deste repositório. Builds Windows oficiais passam a ser assinados como **Dark Room** quando o Azure Artifact Signing estiver configurado ([guia](docs/WINDOWS_SIGNING.md)).
 
-Se preferir correr a partir do código-fonte, use a secção [Como abrir o aplicativo](#como-abrir-o-aplicativo) abaixo.
+Se preferir rodar a partir do código-fonte, use a seção [Como abrir o aplicativo](#como-abrir-o-aplicativo) abaixo.
 
 ---
 
 ## Para quem é este app?
 
 - Você tem um **DSPico** e quer preparar o microSD com o pacote oficial, organizar jogos em `Games/`, pôr capas e emuladores e manter tudo atualizado.
-- Você usa o **Pico Launcher Enhanced** e quer ver e corrigir favoritos, jogos concluídos e tempo de jogo no computador, ou ver as capturas de ecrã que fez no console.
+- Você usa o **Pico Launcher Enhanced** e quer ver e corrigir favoritos, jogos concluídos e tempo de jogo no computador, ou ver as capturas de tela que fez no console.
 - Você quer **desbloquear o DSi** (SD-direct com TWiLight Menu++ e Unlaunch) ou montar o MicroSD de um flashcard GEi / R4: isso está em **Mais ferramentas**.
 
 Se é a primeira vez: abra **DSPico → Preparar SD**. O **Assistente** continua a guiar o softmod do DSi passo a passo.
@@ -41,20 +41,20 @@ Se é a primeira vez: abra **DSPico → Preparar SD**. O **Assistente** continua
 O separador **DSPico → RouteDex** lê e escreve diretamente no microSD, sem browser e sem servidor:
 
 - **Biblioteca:** favoritos, concluídos, número de partidas, tempo de jogo e últimos jogados de `/_pico/gamedata.json`, com edição à mão. Campos que o Route Pico não conhece são preservados, e um `gamedata.json` que não faz parse nunca é sobrescrito.
-- **Saúde do cartão:** ficheiros do loader em falta, versão do Pico Loader e do launcher identificadas offline por hash (incluindo ficheiros de releases misturadas ou de outro flashcard), saves sem jogo, saves em duplicado, capas órfãs e lixo do macOS. Tudo o que é removido é copiado antes para o computador.
-- **Capturas:** as capturas do Enhanced (`shotNNN_top/bot.bmp`) com as duas telas empilhadas, para guardar em PNG ou apagar.
+- **Saúde do cartão:** arquivos do loader ausente, versão do Pico Loader e do launcher identificadas offline por hash (incluindo arquivos de releases misturadas ou de outro flashcard), saves sem jogo, saves em duplicado, capas órfãs e lixo do macOS. Tudo o que é removido é copiado antes para o computador.
+- **Capturas:** as capturas do Enhanced (`shotNNN_top/bot.bmp`) com as duas telas empilhadas, para salvar em PNG ou apagar.
 - **Pastas:** `banner.bnr` (ícone e nome mostrado), `cover.bmp` de pasta.
-- **Fundos noturnos** dos temas (`*_night.bin`) e **cheats** (`usrcheat.dat` importado de um ficheiro seu, validado antes de ir para o cartão).
+- **Fundos noturnos** dos temas (`*_night.bin`) e **cheats** (`usrcheat.dat` importado de um arquivo seu, validado antes de ir para o cartão).
 
 O RouteDex é um port nativo das regras do [PicoDex](https://github.com/rasalopa/picodex) de rasalopa (licença MIT; aviso em [`docs/licenses/`](docs/licenses/)). Onde o app e a PicoDex fazem a mesma coisa, vale a regra da PicoDex: pastas por sistema em `Games/` (`nds`, `gba`, `gb`, `gen`, `sms`, `gg`, `nes`, `snes`, `ws`, `ngp`), onde gravar capas e ícones, escolha de capas no catálogo libretro-thumbnails (primeira fonte, antes de SteamGridDB e GameTDB) e versão do Pico Loader pelo manifesto que a própria PicoDex mantém.
 
 ## Fontes oficiais
 
-O Route Pico usa e atualiza-se a partir de cinco repositórios, e só deles: [PicoDex](https://github.com/rasalopa/picodex), [Pico Launcher](https://github.com/LNH-team/pico-launcher), [Pico Loader](https://github.com/LNH-team/pico-loader), [Pico Launcher Enhanced](https://github.com/rasalopa/pico-launcher-enhanced) e [Pico Loader Enhanced](https://github.com/rasalopa/pico-loader). As versões em uso e os SHA-256 ficam em `core/data/upstreams.lock.json`; `tools/sync_upstreams.py --apply` traz as releases mais recentes e o workflow semanal abre um PR com elas. No app, **Verificar atualizações** compara o cartão com a versão da app e com a release mais recente de cada fonte, e permite atualizar os dados da PicoDex sem nova versão do Route Pico.
+O Route Pico usa e atualiza-se a partir de cinco repositórios, e só deles: [PicoDex](https://github.com/rasalopa/picodex), [Pico Launcher](https://github.com/LNH-team/pico-launcher), [Pico Loader](https://github.com/LNH-team/pico-loader), [Pico Launcher Enhanced](https://github.com/rasalopa/pico-launcher-enhanced) e [Pico Loader Enhanced](https://github.com/rasalopa/pico-loader). As versões em uso e os SHA-256 ficam em `core/data/upstreams.lock.json`; `tools/sync_upstreams.py --apply` traz as releases mais recentes e o workflow semanal abre um PR com elas. No app, **Verificar atualizações** compara o cartão com a versão do app e com a release mais recente de cada fonte, e permite atualizar os dados da PicoDex sem nova versão do Route Pico.
 
 ## Route Pico no console (em desenvolvimento)
 
-Em [`nds/`](nds/) está o app `.nds` do Route Pico: um gestor de ficheiros do microSD que corre no próprio DS a partir do Pico Launcher, com proteção de `_picoboot.nds` e `_pico/`. As próximas fases ligam-no ao desktop por USB (protocolo [R1USB](protocol/R1USB.md)), com cópia verificada por SHA-256 sem tirar o cartão do cartucho. Estado e fases: [`docs/console/PLAN.md`](docs/console/PLAN.md). O `.nds` ainda não foi validado em hardware.
+Em [`nds/`](nds/) está o app `.nds` do Route Pico: um gerenciador de arquivos do microSD que roda no próprio DS a partir do Pico Launcher, com proteção de `_picoboot.nds` e `_pico/`. As próximas fases ligam-no ao desktop por USB (protocolo [R1USB](protocol/R1USB.md)), com cópia verificada por SHA-256 sem tirar o cartão do cartucho. Estado e fases: [`docs/console/PLAN.md`](docs/console/PLAN.md). O `.nds` ainda não foi validado em hardware.
 
 ## Pico Launcher Enhanced (opcional, recomendado)
 
@@ -69,11 +69,11 @@ São forks **não oficiais**: problemas com elas vão para o repositório do ras
 1. **Console** — Nintendo DSi / DSi XL (slot lateral) e/ou um DS/DSi com flashcard Slot-1.
 2. **Cartão SD / MicroSD** — de preferência um cartão de **teste** na primeira utilização. Tamanhos comuns: 2–32 GB (FAT32).
 3. **Leitor de cartão** ligado ao computador.
-4. **Computador** com macOS, Windows ou Linux e ligação à internet **só** para o app descarregar os binários oficiais na primeira vez (depois ficam em cache local).
+4. **Computador** com macOS, Windows ou Linux e conexão com a internet **só** para o app baixar os binários oficiais na primeira vez (depois ficam em cache local).
 
 ### Aviso importante (leia antes de gravar no console)
 
-O Route Pico **prepara ficheiros no cartão SD**. **Não grava na NAND** do DSi por si só.
+O Route Pico **prepara arquivos no cartão SD**. **Não grava na NAND** do DSi por si só.
 
 Ferramentas como o **Unlaunch**, quando executadas **no console**, **escrevem na memória interna**. Há um risco real (ainda que pequeno) de *brick*. **Não salte o backup da NAND** (`nand.bin`) e guarde uma cópia segura no computador. Siga também o guia da comunidade: [dsi.cfw.guide](https://dsi.cfw.guide/).
 
@@ -128,9 +128,9 @@ Para jogar pelo cartão SD do **lado do DSi**, sem flashcard:
 3. Selecione o cartão do **slot lateral** (não o MicroSD de um flashcard).
 4. O app prepara o **Passo 1** (Memory Pit + dumpTool como `boot.nds`).
 5. No DSi, abra a Câmera, aceda ao cartão SD e siga o **dumpTool** para criar o `nand.bin`.
-6. Volte o cartão ao PC: o app valida o backup e guarda uma cópia no computador.
+6. Volte o cartão ao PC: o app valida o backup e salva uma cópia no computador.
 7. O app prepara o **Passo 2** (TWiLight Menu++ + instalador seguro do Unlaunch).
-8. No DSi, execute o instalador do Unlaunch e configure o arranque (conforme o guia oficial).
+8. No DSi, execute o instalador do Unlaunch e configure a inicialização (conforme o guia oficial).
 9. Se quiser, organize jogos e finalize.
 
 ### 2. Atualizar SD-direct
@@ -166,19 +166,19 @@ Faz backup preventivo (quando aplicável) e atualiza o kernel GEi ou R4.
 
 ## Modo DSPico
 
-Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-hardware) (LNH-team). Referências: [manual do utilizador](https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf) (ChiScart), [GUIDE](https://github.com/LNH-team/dspico/blob/develop/GUIDE.md) e repos [pico-launcher](https://github.com/LNH-team/pico-launcher) / [pico-loader](https://github.com/LNH-team/pico-loader) / [dspico-firmware](https://github.com/LNH-team/dspico-firmware).
+Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-hardware) (LNH-team). Referências: [manual do usuário](https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf) (ChiScart), [GUIDE](https://github.com/LNH-team/dspico/blob/develop/GUIDE.md) e repos [pico-launcher](https://github.com/LNH-team/pico-launcher) / [pico-loader](https://github.com/LNH-team/pico-loader) / [dspico-firmware](https://github.com/LNH-team/dspico-firmware).
 
 1. **Estado** — checklist do microSD (`_picoboot.nds`, `_pico/`, `Games/`, bios/emunand, emuladores).
-2. **Preparar SD** — descarrega e escreve **Pico Launcher** + **Pico Loader DSPICO** oficiais (SHA-256 pinado; só `github.com/LNH-team/`).
-3. **Jogos** — importar/remover ROMs em `Games/`; **Organizar pastas** limpa outros sistemas e coloca os jogos por franquia, plataforma, soltos em `Games/` ou na raiz ao lado do launcher (preserva `/ROMs/`, `_gba/`, `Emulators/`, `data/` dos emuladores). Clique num jogo para **capa/ícone** Pico Launcher (pesquisa SteamGridDB + GameTDB + Libretro, opções semelhantes, ficheiro manual → BMP em `/_pico/covers/` e `/_pico/icons/`).
-4. **Emuladores** — seleccionar e instalar emuladores do guia [Pico-Launcher](https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/) (GBARunner, GameYob, nesDS, Atari, Sega, etc.): NDS em `/_pico/emulators/` (ou `/Emulators/` se só manual), pastas `/ROMs/…` e `fileAssociations` no `settings.json`. BIOS proprietária **não** é descarregada.
+2. **Preparar SD** — baixa e escreve **Pico Launcher** + **Pico Loader DSPICO** oficiais (SHA-256 pinado; só `github.com/LNH-team/`).
+3. **Jogos** — importar/remover ROMs em `Games/`; **Organizar pastas** limpa outros sistemas e coloca os jogos por franquia, plataforma, soltos em `Games/` ou na raiz ao lado do launcher (preserva `/ROMs/`, `_gba/`, `Emulators/`, `data/` dos emuladores). Clique em um jogo para **capa/ícone** Pico Launcher (pesquisa SteamGridDB + GameTDB + Libretro, opções semelhantes, arquivo manual → BMP em `/_pico/covers/` e `/_pico/icons/`).
+4. **Emuladores** — seleccionar e instalar emuladores do guia [Pico-Launcher](https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/) (GBARunner, GameYob, nesDS, Atari, Sega, etc.): NDS em `/_pico/emulators/` (ou `/Emulators/` se só manual), pastas `/ROMs/…` e `fileAssociations` no `settings.json`. BIOS proprietária **não** é baixada.
 5. **Emunand** — pastas oficiais + importar o *seu* `biosnds7.rom` / `TWLFontTable.dat` (sem download de BIOS).
-6. **Definições** — editar `/_pico/settings.json` (chaves documentadas no Usage do Launcher).
-7. **Firmware** — detectar volume `RPI-RP2` e gravar `.uf2` **apenas** se existir asset pinado em [dspico-firmware](https://github.com/LNH-team/dspico-firmware/releases). Enquanto as releases LNH não publicarem o UF2, o botão fica desactivado (o GUIDE oficial manda compilar); builds de terceiros não são aceites.
+6. **Configurações** — editar `/_pico/settings.json` (chaves documentadas no Usage do Launcher).
+7. **Firmware** — detectar volume `RPI-RP2` e gravar `.uf2` **apenas** se existir asset pinado em [dspico-firmware](https://github.com/LNH-team/dspico-firmware/releases). Enquanto as releases LNH não publicarem o UF2, o botão fica desativado (o GUIDE oficial manda compilar); builds de terceiros não são aceites.
 
 ## Navegação
 
-A barra lateral tem quatro entradas: **Início**, **DSPico**, **Mais ferramentas** e **Definições**. O cartão escolhe-se uma vez, no seletor da barra de cima. Pelo teclado, as setas mudam de aba, Alt+1 a Alt+4 mudam de vista e Esc fecha a gaveta Atividade, que abre sozinha durante operações.
+A barra lateral tem quatro entradas: **Início**, **DSPico**, **Mais ferramentas** e **Configurações**. O cartão é escolhido uma vez, no seletor da barra de cima. Pelo teclado, as setas mudam de aba, Alt+1 a Alt+4 mudam de vista e Esc fecha a gaveta Atividade, que abre sozinha durante operações.
 
 | Vista | Abas |
 |------|-----------|
@@ -197,11 +197,11 @@ Só entram unidades removíveis (SD / USB). Remonte o cartão, troque de leitor 
 **A Câmera não dispara o exploit.**  
 Confirme Com/Sem Facebook no Assistente; formate em FAT32; fotos antigas em `DCIM` podem atrapalhar — use a quarentena de fotos do app quando sugerida.
 
-**O flashcard não arranca.**  
+**O flashcard não inicia.**  
 Confirme marca/kernel (GEi vs clone R4). Formate FAT32 com cluster 32 KB e reinstale o kernel pelo app.
 
 **Posso fechar o app a meio de uma gravação?**  
-Não. Aguarde o fim da operação. O app tenta bloquear o fecho se houver escrita em curso.
+Não. Aguarde o fim da operação. O app tenta bloquear o fechamento se houver escrita em curso.
 
 ---
 
@@ -214,7 +214,7 @@ No cabeçalho (ícone de paleta):
 - **Dracula**
 - **Retro** — Game Boy · DS Lite
 
-A escolha fica guardada no computador entre sessões.
+A escolha fica salva no computador entre sessões.
 
 ---
 
@@ -222,12 +222,12 @@ A escolha fica guardada no computador entre sessões.
 
 Este software é oferecido **“como está” (AS IS)**, **sem garantias** de qualquer tipo — expressas ou implícitas — incluindo, sem limitação, comercialização, adequação a um fim específico e não violação. Na máxima extensão permitida pela lei aplicável, os autores e contribuidores **não respondem** por danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos (perda de dados, dano a hardware, impossibilidade de uso do console, etc.) decorrentes do uso ou da impossibilidade de uso do Route Pico.
 
-Ao usar o app, você assume **toda a responsabilidade** pelas operações no cartão SD e pelas ações subsequentes na consola (incluindo instalação de Unlaunch ou outro software).
+Ao usar o app, você assume **toda a responsabilidade** pelas operações no cartão SD e pelas ações subsequentes no console (incluindo instalação de Unlaunch ou outro software).
 
 ### Risco de brick e papel do app
 
-- O Route Pico **prepara ficheiros no cartão SD**. **Não grava na NAND** do Nintendo DSi por si só.
-- O **Unlaunch** (e fluxos semelhantes), quando executados **na consola**, **escrevem na NAND**. Há um **risco real, ainda que pequeno, de brick**. Só avance se tiver **backup da NAND** e compreender o guia oficial ([dsi.cfw.guide](https://dsi.cfw.guide/)).
+- O Route Pico **prepara arquivos no cartão SD**. **Não grava na NAND** do Nintendo DSi por si só.
+- O **Unlaunch** (e fluxos semelhantes), quando executados **no console**, **escrevem na NAND**. Há um **risco real, ainda que pequeno, de brick**. Só avance se tiver **backup da NAND** e compreender o guia oficial ([dsi.cfw.guide](https://dsi.cfw.guide/)).
 - Binários incorretos, incompletos ou de origem não verificada no cartão podem causar falhas graves se forem instalados via Unlaunch ou outros instaladores.
 - A UI do Assistente reforça estes avisos nas etapas críticas; leia-os antes de continuar.
 
@@ -239,19 +239,19 @@ O Route Pico **não é afiliado, endossado ou patrocinado** pela Nintendo Co., L
 
 O **código-fonte do Route Pico** (Python, HTML/CSS/JS da UI embutida, scripts e documentação deste repositório, salvo indicação em contrário) está licenciado sob a **GNU General Public License versão 3** — ver [`LICENSE`](LICENSE).
 
-### Componentes descarregados (terceiros)
+### Componentes baixados (terceiros)
 
-Durante o uso, o app pode **descarregar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++, e apps do catálogo Homebrew com releases no GitHub). Esses componentes:
+Durante o uso, o app pode **baixar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++, e apps do catálogo Homebrew com releases no GitHub). Esses componentes:
 
 - mantêm as **licenças, autores e termos dos projetos originais**;
-- **não** são “relicenciados” sob a GPL-3.0 do Route Pico só por serem descarregados ou copiados para o SD;
+- **não** são “relicenciados” sob a GPL-3.0 do Route Pico só por serem baixados ou copiados para o SD;
 - são obtidos de URLs documentadas em `core/cache.py`, com verificação **SHA-256 pinada** (integridade, não uma garantia de isenção de risco).
 
-Respeite as licenças e créditos de cada projeto ao redistribuir ou modificar esses ficheiros fora do fluxo do app.
+Respeite as licenças e créditos de cada projeto ao redistribuir ou modificar esses arquivos fora do fluxo do app.
 
 ### ROMs, dumps e conteúdo no cartão
 
-O organizador de ROMs **não fornece** jogos, ROMs nem dumps protegidos por direitos de autor. Apenas reorganiza ficheiros que **você** coloca no cartão. É **sua responsabilidade** garantir que possui o direito legal de possuir e usar esse conteúdo na sua jurisdição.
+O organizador de ROMs **não fornece** jogos, ROMs nem dumps protegidos por direitos de autor. Apenas reorganiza arquivos que **você** coloca no cartão. É **sua responsabilidade** garantir que possui o direito legal de possuir e usar esse conteúdo na sua jurisdição.
 
 ### Formatação e unidades
 
@@ -265,18 +265,18 @@ Para reportar vulnerabilidades, consulte [`SECURITY.md`](SECURITY.md).
 
 ## Documentação técnica
 
-Secção destinada a desenvolvedores, mantenedores e utilizadores avançados. Linguagem e detalhe orientados à manutenção do código. Para o fluxo de produto e agentes de IA, ver também [`AGENTS.md`](AGENTS.md) e `.cursor/rules/`.
+Secção destinada a desenvolvedores, mantenedores e usuários avançados. Linguagem e detalhe orientados à manutenção do código. Para o fluxo de produto e agentes de IA, ver também [`AGENTS.md`](AGENTS.md) e `.cursor/rules/`.
 
 ### Arquitetura (visão geral)
 
 | Camada | Papel |
 |--------|--------|
 | **Shell** | Python 3.10+ + pywebview (janela nativa; sem servidor HTTP) |
-| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar Início / DSPico / Mais ferramentas / Definições |
+| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar Início / DSPico / Mais ferramentas / Configurações |
 | **Bridge** | `Api` em `app.py` (`js_api`) + `services/FilePickerPort` / `web_events` |
 | **Core** | Módulos em `core/` (discos, exploits, TWiLight, ROMs, cache, sdio, validate, …) |
 
-Escritas no SD: `_run_mount_op` + `OP_LOCK` (`blocking=False`); o **preflight** corre **dentro** do lock. Fecho da janela: se `OP_LOCK.locked()`, o close é bloqueado.
+Escritas no SD: `_run_mount_op` + `OP_LOCK` (`blocking=False`); o **preflight** roda **dentro** do lock. Fechamento da janela: se `OP_LOCK.locked()`, o close é bloqueado.
 
 Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths (`core.privacy`).
 
@@ -293,7 +293,7 @@ Respostas tipicamente `{success: bool, error?: str, ...}` com redação de paths
 | `core/twilight.py` | TWiLight Menu++, kernels GEi / R4 |
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
 | `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB (NDS) + Libretro Thumbnails |
-| `core/steamgriddb.py` | Cliente SteamGridDB (chave em Definições / env `STEAMGRIDDB_API_KEY`) |
+| `core/steamgriddb.py` | Cliente SteamGridDB (chave em Configurações / env `STEAMGRIDDB_API_KEY`) |
 | `core/boxart.py` | Compat: reexporta `core.artwork` |
 | `core/sd_utils.py` | Homebrew do catálogo, cheats, relatório de cluster, cópia de `nand.bin` |
 | `core/cleaner.py` | Backup do SD, limpeza de metadados macOS |
@@ -378,13 +378,13 @@ Requer PyInstaller (`pip install "pyinstaller>=6.11,<7"`) fora do lock com hashe
 # Fases no CI: ROUTE1KIT_WIN_PHASE=build|package — ver docs/WINDOWS_SIGNING.md
 ```
 
-Tags `v*` disparam o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml), que publica os artefactos na Release do GitHub. Assinatura Authenticode Windows (publisher **Dark Room**) activa-se quando os secrets/vars Azure estiverem configurados — guia em [`docs/WINDOWS_SIGNING.md`](docs/WINDOWS_SIGNING.md).
+Tags `v*` disparam o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml), que publica os artefatos na Release do GitHub. Assinatura Authenticode Windows (publisher **Dark Room**) activa-se quando os secrets/vars Azure estiverem configurados — guia em [`docs/WINDOWS_SIGNING.md`](docs/WINDOWS_SIGNING.md).
 
 ### Assets e identidade visual (manutenção)
 
 O símbolo é uma **placa de rota** com o número **1**, silhueta de cartão SD e estrada ao horizonte. Gradiente da marca: `#4F72F8 → #6A47EC`. Tipografia embutida: **Sora** (UI) e **IBM Plex Mono** (paths / logs).
 
-| Ficheiro | Uso |
+| Arquivo | Uso |
 |----------|-----|
 | `static/assets/logo.svg` | Marca completa |
 | `static/assets/logo-small.svg` | Favicon / 16–48 px |
@@ -396,7 +396,7 @@ O símbolo é uma **placa de rota** com o número **1**, silhueta de cartão SD 
 python tools/build_icons.py
 ```
 
-Temas da app: sete temas inspirados em menus de consolas (Dupla Tela é o padrão), cada um com paleta Original e modos Claro (Catppuccin Latte) e Noturno (Catppuccin Mocha); escolhem-se no botão de tema da barra de cima ou em Definições. As paletas vivem em `tools/build_themes.py` (gera `static/themes.css` e `static/theme-data.js`, com contraste AA verificado) e a assinatura visual de cada tema em `static/skins.css`. Temas Pico Launcher: `/_pico/themes/` em DSPico → Launcher.
+Temas do app: sete temas inspirados em menus de consoles (Dupla Tela é o padrão), cada um com paleta Original e modos Claro (Catppuccin Latte) e Noturno (Catppuccin Mocha); escolhem-se no botão de tema da barra de cima ou em Configurações. As paletas vivem em `tools/build_themes.py` (gera `static/themes.css` e `static/theme-data.js`, com contraste AA verificado) e a assinatura visual de cada tema em `static/skins.css`. Temas Pico Launcher: `/_pico/themes/` em DSPico → Launcher.
 
 ### Invariantes (não negociáveis)
 

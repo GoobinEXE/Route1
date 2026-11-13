@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Privacidade em logs e respostas
 
-Este app é desktop local — ainda assim **não** registar nem devolver o home absoluto do utilizador (`/Users/…`, `C:\Users\…`).
+Este app é desktop local — ainda assim **não** registar nem devolver o home absoluto do usuário (`/Users/…`, `C:\Users\…`).
 
 ## Obrigatório
 

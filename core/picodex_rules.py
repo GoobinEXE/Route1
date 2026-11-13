@@ -1,7 +1,7 @@
 """Regras da PicoDex (rasalopa/picodex, MIT) usadas pelo Route Pico.
 
 Onde o Route Pico e a PicoDex fazem a mesma coisa, o Route Pico segue a PicoDex.
-Este módulo é o port em Python das partes partilhadas; a versão de origem está
+Este módulo é o port em Python das partes compartilhadas; a versão de origem está
 fixada em ``core/data/upstreams.lock.json`` (entrada ``picodex``) e
 ``tools/sync_upstreams.py`` avisa quando a PicoDex publica uma versão nova.
 
@@ -9,7 +9,7 @@ fixada em ``core/data/upstreams.lock.json`` (entrada ``picodex``) e
 * Onde gravar capa/ícone para o launcher a encontrar (``src/lib/artPaths.ts``)
 * Correspondência de títulos com o catálogo libretro-thumbnails
   (``src/lib/matching.ts`` + ``src/lib/thumbnails.ts``)
-* Título do banner NDS quando o nome do ficheiro não diz nada
+* Título do banner NDS quando o nome do arquivo não diz nada
   (``src/views/CoversView.tsx``)
 
 A identificação da versão do Pico Loader usa o manifesto da própria PicoDex
@@ -107,10 +107,10 @@ def is_usable_game_code(code: Optional[str]) -> bool:
 def resolve_art_target(
     mount_path: str, kind_folder: str, file_name: str, system: Optional[System], game_code: Optional[str]
 ) -> str:
-    """Ficheiro onde uma capa/ícone NOVO tem de ser gravado (um só destino).
+    """Arquivo onde uma capa/ícone NOVO precisa ser gravado (um só destino).
 
-    Um ``user/<ficheiro>.bmp`` já no cartão tem prioridade no launcher e é
-    substituído no sítio; senão sistemas por game code com código utilizável
+    Um ``user/<arquivo>.bmp`` já no cartão tem prioridade no launcher e é
+    substituído no lugar; senão sistemas por game code com código utilizável
     vão para ``<nds|gba>/<CODE>.bmp``; o resto vai para ``user/``.
     ``kind_folder``: "covers" | "icons" | "banners".
     """
@@ -273,7 +273,7 @@ def _cache_path(repo: str) -> str:
 def fetch_catalog(repo: str, *, timeout: int = 20, opener=urllib.request.urlopen) -> list[str]:
     """Nomes das capas de um repo libretro-thumbnails (cache em disco 7 dias).
 
-    A API do GitHub permite 60 pedidos/hora sem conta; a cache evita gastar
+    A API do GitHub permite 60 pedidos/hora sem conta; o cache evita gastar
     um pedido por jogo. Uma cache expirada continua a servir se a rede falhar.
     """
     if not _REPO_RE.match(repo or ""):

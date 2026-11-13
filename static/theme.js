@@ -1,7 +1,7 @@
 /**
  * Temas — Route Pico
  *
- * Dois eixos: o tema (sete, inspirados em menus de consolas) e o modo
+ * Dois eixos: o tema (sete, inspirados em menus de consoles) e o modo
  * (Original, Claro = Catppuccin Latte, Noturno = Catppuccin Mocha, ou Sistema).
  * Carregado no <head> depois de theme-data.js (gerado por tools/build_themes.py)
  * para aplicar data-family / data-mode / data-scheme antes do primeiro paint.
@@ -88,7 +88,7 @@ const Theme = (() => {
     return { family: pref.family, mode: resolvedMode(pref), preference: pref.mode };
   }
 
-  /* ---------- seletor (menu do topo e Definições usam o mesmo) ---------- */
+  /* ---------- seletor (menu do topo e Configurações usam o mesmo) ---------- */
 
   function esc(s) {
     return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -140,7 +140,7 @@ const Theme = (() => {
   function renderList(host) {
     if (host) listHost = host;
     if (!listHost) return;
-    listHost.setAttribute("aria-label", "Tema e modo da app");
+    listHost.setAttribute("aria-label", "Tema e modo do app");
     listHost.innerHTML = pickerHtml("list");
     bind(listHost);
   }

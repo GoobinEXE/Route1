@@ -167,7 +167,7 @@ def test_browse_lists_retro_in_games(tmp_path):
 
 
 def test_dup_index_cache_reused(tmp_path):
-    """Índice de duplicatas partilha o mesmo objecto em cache (TTL)."""
+    """Índice de duplicatas compartilha o mesmo objeto em cache (TTL)."""
     from tests.conftest import make_nds
 
     _minimal_dspico_sd(tmp_path)

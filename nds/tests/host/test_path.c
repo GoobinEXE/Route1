@@ -35,7 +35,7 @@ int main(void)
     expect(r1_protect_is_critical("_picoboot.nds"), "picoboot crítico");
     expect(r1_protect_is_critical("_pico/settings.json"), "_pico filho crítico");
     expect(!r1_protect_is_critical("Games/foo.nds"), "jogo não crítico");
-    expect(strcmp(r1_err_str_pt(R1_E_DENIED), "Operação negada (ficheiro protegido).") == 0,
+    expect(strcmp(r1_err_str_pt(R1_E_DENIED), "Operação negada (arquivo protegido).") == 0,
            "err pt");
 
     if (fails) {

@@ -37,7 +37,7 @@ const Wizard = (() => {
   }
 
   function onBusyChange() {
-    // Re-render só se estamos num CTA que muda estado visual
+    // Re-render só se estamos em um CTA que muda estado visual
     const root = document.getElementById("wizard-root");
     if (root && !root.classList.contains("hidden")) {
       // botões já são desabilitados por setBusy
@@ -176,7 +176,7 @@ const Wizard = (() => {
             "Ejete o MicroSD com segurança no sistema operativo.",
             "Insira-o no cartucho DSPico e o cartucho no DSi/DS.",
             "O microSD já tem Pico Launcher + Loader oficiais LNH.",
-            "Para firmware UF2, emunand e mais jogos, use o separador <strong>DSPico</strong> na app.",
+            "Para firmware UF2, emunand e mais jogos, use a aba <strong>DSPico</strong> no app.",
           ]
         : [
             "Ejete o MicroSD com segurança no sistema operativo.",
@@ -202,7 +202,7 @@ const Wizard = (() => {
       },
       {
         id: "camera",
-        title: "Qual versão da app Câmera?",
+        title: "Qual versão do app Câmera?",
         where: "PC",
         render: renderCameraPick,
       },
@@ -236,7 +236,7 @@ const Wizard = (() => {
       },
       {
         id: "nand-dump",
-        title: "No DSi — guardar cópia da memória interna",
+        title: "No DSi — salvar cópia da memória interna",
         where: "DSi",
         render: renderNandDumpDsi,
       },
@@ -260,7 +260,7 @@ const Wizard = (() => {
       },
       {
         id: "unlaunch-opts",
-        title: "No DSi — arranque automático no menu",
+        title: "No DSi — inicialização automática no menu",
         where: "DSi",
         render: renderUnlaunchOpts,
       },
@@ -283,9 +283,9 @@ const Wizard = (() => {
         render: renderDone({
           lines: [
             "Ejete o SD com segurança.",
-            "Insira-o no slot lateral do DSi e ligue a console.",
+            "Insira-o no slot lateral do DSi e ligue o console.",
             "Se instalou hiyaCFW: Unlaunch A+B → OPTIONS → NO BUTTON → hiyaCFW. Não faça system update.",
-            "Sem hiya: deve arrancar no TWiLight (NO BUTTON → BOOT.NDS).",
+            "Sem hiya: deve iniciar no TWiLight (NO BUTTON → BOOT.NDS).",
           ],
         }),
       },
@@ -347,7 +347,7 @@ const Wizard = (() => {
         render: renderDone({
           lines: [
             "Ejete o SD com segurança e volte a colocá-lo no DSi.",
-            "Não é necessário reinstalar o Unlaunch se a console já arranca no menu.",
+            "Não é necessário reinstalar o Unlaunch se o console já inicia no menu.",
             "Se instalou/atualizou hiyaCFW: NO BUTTON → hiyaCFW; não faça system update.",
           ],
         }),
@@ -527,7 +527,7 @@ const Wizard = (() => {
             ${goalCard(
               "flash-new",
               "Criar flashcard do zero",
-              "MicroSD vazio ou a limpar: formata em FAT32 e instala o kernel/pacote do cartucho.",
+              "MicroSD vazio ou para limpar: formata em FAT32 e instala o kernel/pacote do cartucho.",
               "Formata o cartão (apaga tudo)."
             )}
           </div>
@@ -538,7 +538,7 @@ const Wizard = (() => {
             ${pathBadge("dsi")}
             <h3 class="goal-section-title">SD do DSi (slot lateral)</h3>
             <p class="goal-section-sub">
-              Softmod no cartão do slot lateral: exploit da Câmera, cópia de segurança, menu TWiLight e Unlaunch.
+              Softmod no cartão do slot lateral: exploit da Câmera, backup, menu TWiLight e Unlaunch.
               DS / DS Lite / 3DS não usam este caminho.
             </p>
           </div>
@@ -547,7 +547,7 @@ const Wizard = (() => {
               "sd-new",
               "Instalar softmod completo",
               "Primeira vez: Memory Pit → cópia da memória interna → Unlaunch → hiyaCFW (opcional) → TWiLight.",
-              "Inclui escrita na memória interna da consola (Unlaunch)."
+              "Inclui escrita na memória interna do console (Unlaunch)."
             )}
             ${goalCard(
               "sd-update",
@@ -641,7 +641,7 @@ const Wizard = (() => {
 
   function driveSummaryText() {
     if (typeof selectedDrive === "undefined" || !selectedDrive) {
-      return "Nenhum cartão escolhido. Ligue o SD e escolha-o na barra de cima.";
+      return "Nenhum cartão escolhido. Conecte o SD e escolha-o na barra de cima.";
     }
     const d = selectedDrive;
     return `${d.name || d.mount_path} · ${d.fs_type || "?"} · ${d.total_size_gb} GB (livre ${d.free_size_gb} GB)`;
@@ -673,7 +673,7 @@ const Wizard = (() => {
       </p>
       ${glossBlock(
         "FAT32",
-        "Sistema de ficheiros do cartão. A Câmera do DSi e a maioria dos flashcards só funcionam bem em FAT32 (não exFAT)."
+        "Sistema de arquivos do cartão. A Câmera do DSi e a maioria dos flashcards só funcionam bem em FAT32 (não exFAT)."
       )}
       <div class="note note--warn mt-3">
         <strong>Atenção:</strong> formatar apaga <em>todos</em> os dados do volume selecionado.
@@ -683,7 +683,7 @@ const Wizard = (() => {
       <ol class="guide-list list-decimal">
         <li>Confirme o volume selecionado abaixo.</li>
         <li>Clique em Formatar FAT32 e confirme o diálogo.</li>
-        <li>Aguarde terminar — a seguir terá de re-selecionar a unidade.</li>
+        <li>Aguarde terminar — depois será preciso selecionar a unidade de novo.</li>
       </ol>
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-format">Formatar FAT32 (apaga o cartão)</button>
     `;
@@ -715,13 +715,13 @@ const Wizard = (() => {
   function renderBackupOptional(el) {
     el.innerHTML = `
       <p class="opt-does">
-        Copia o conteúdo do cartão para o Ambiente de Trabalho antes de gravar. Recomendado se já tiver jogos ou saves.
+        Copia o conteúdo do cartão para a Área de Trabalho antes de gravar. Recomendado se já tiver jogos ou saves.
       </p>
-      <p class="opt-when">Pode saltar se o cartão estiver vazio ou se já tiver cópia noutro sítio.</p>
+      <p class="opt-when">Pode pular se o cartão estiver vazio ou se já tiver cópia em outro lugar.</p>
       ${drivePanelHtml()}
       <div class="flex flex-col sm:flex-row gap-2">
         <button type="button" class="btn-primary wizard-cta" id="wiz-backup">Fazer backup para o Desktop</button>
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-backup-skip">Saltar backup</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-backup-skip">Pular backup</button>
       </div>
     `;
     bindDrivePanel();
@@ -740,7 +740,7 @@ const Wizard = (() => {
       el.innerHTML = `
         <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("flash")}</div>
         <p class="opt-does">
-          O app descarrega automaticamente o <strong>Pico Launcher</strong> e o <strong>Pico Loader DSPICO</strong>
+          O app baixa automaticamente o <strong>Pico Launcher</strong> e o <strong>Pico Loader DSPICO</strong>
           oficiais (SHA-256 pinado) e monta <code>_picoboot.nds</code> + <code>_pico/</code> no microSD.
         </p>
         <div class="note note--warn">
@@ -769,13 +769,13 @@ const Wizard = (() => {
               <li>Clique em Verificar pacote.</li>
             </ol>`
           : `<div class="note">
-              O app <strong>não descarrega</strong> o kernel R4 automaticamente (risco de firmware errado).
+              O app <strong>não baixa</strong> o kernel R4 automaticamente (risco de firmware errado).
               Extraia o zip oficial do seu clone para a pasta <code>Downloads</code>.
             </div>
             <ol class="guide-list list-decimal">
               <li>Extraia o firmware <strong>exato</strong> do seu clone R4 para Downloads.</li>
               <li>A pasta deve ter arquivos como <code>_DS_MENU.DAT</code>, <code>R4.dat</code> ou semelhantes — sem jogos.</li>
-              <li>Clique em Procurar e escolha a pasta correcta se houver várias.</li>
+              <li>Clique em Procurar e escolha a pasta correta se houver várias.</li>
             </ol>`
       }
       <div id="wiz-kernel-status" class="text-[12px] text-fg-mute">Ainda não procurado.</div>
@@ -863,10 +863,10 @@ const Wizard = (() => {
       : isGei
         ? [
             "<code>_DS_MENU.DAT</code> e <code>_DS_MSHL.NDS</code> (kernel GEi v4.2 EN)",
-            "Ficheiros auxiliares do pacote oficial na raiz do microSD",
+            "Arquivos auxiliares do pacote oficial na raiz do microSD",
           ]
         : [
-            "Ficheiros do kernel R4 da pasta escolhida (marcadores do clone)",
+            "Arquivos do kernel R4 da pasta escolhida (marcadores do clone)",
             "Não copia pastas <code>roms/</code> da origem",
           ];
     el.innerHTML = `
@@ -874,7 +874,7 @@ const Wizard = (() => {
       <p class="opt-does">
         ${
           isDspico
-            ? "Descarrega (se necessário), verifica e copia o pacote DSPico oficial para o MicroSD do cartucho."
+            ? "Baixa (se necessário), verifica e copia o pacote DSPico oficial para o MicroSD do cartucho."
             : "Copia e verifica os arquivos do kernel para o MicroSD selecionado."
         }
       </p>
@@ -913,7 +913,7 @@ const Wizard = (() => {
       if (res.success) {
         alert(
           isDspico
-            ? "MicroSD DSPico pronto. Ejecte com segurança e coloque-o no cartucho."
+            ? "MicroSD DSPico pronto. Ejete com segurança e coloque-o no cartucho."
             : "Kernel instalado. Ejetar o cartão com segurança quando terminar as etapas seguintes."
         );
         goNext();
@@ -926,7 +926,7 @@ const Wizard = (() => {
 
   function renderHiyaInstall(el) {
     el.innerHTML = `
-      <div class="note">A inspecionar o cartão…</div>
+      <div class="note">Inspecionando o cartão…</div>
     `;
     (async () => {
       const gen = renderGen;
@@ -947,16 +947,16 @@ const Wizard = (() => {
         </div>
         <p class="opt-does">
           Monta uma cópia do sistema do DSi <strong>no cartão</strong> a partir do <code>nand.bin</code>.
-          O app <strong>não</strong> grava na memória interna da consola.
+          O app <strong>não</strong> grava na memória interna do console.
         </p>
         <p class="opt-when">Quando usar: depois do Unlaunch, com dump válido e ~512&nbsp;MB livres. Pode demorar vários minutos.</p>
         ${glossBlock(
           "hiyaCFW",
-          "Permite correr o menu do sistema a partir do SD (SDNAND), em vez de só da memória interna. Requer Unlaunch e o dump que fez com o dumpTool."
+          "Permite rodar o menu do sistema a partir do SD (SDNAND), em vez de só da memória interna. Requer Unlaunch e o dump que fez com o dumpTool."
         )}
         ${glossBlock(
           "NAND",
-          "Memória interna do DSi. O ficheiro <code>nand.bin</code> é a cópia de segurança (~240&nbsp;MiB) feita pelo dumpTool."
+          "Memória interna do DSi. O arquivo <code>nand.bin</code> é a backup (~240&nbsp;MiB) feita pelo dumpTool."
         )}
         ${writesList([
           "Árvore SDNAND e <code>hiya.dsi</code> (pipeline TWLMagician pinado)",
@@ -970,7 +970,7 @@ const Wizard = (() => {
           }>
             ${hasHiya && !plausible.length ? "Atualizar hiyaCFW no SD" : "Escrever hiyaCFW no SD"}
           </button>
-          <button type="button" class="btn-secondary wizard-cta" id="wiz-hiya-skip">Saltar hiyaCFW</button>
+          <button type="button" class="btn-secondary wizard-cta" id="wiz-hiya-skip">Pular hiyaCFW</button>
         </div>
         <div class="note note--ok mt-3">
           Depois no DSi: Unlaunch <strong>A+B</strong> → OPTIONS → <strong>NO BUTTON</strong> → hiyaCFW.
@@ -1007,7 +1007,7 @@ const Wizard = (() => {
         <label class="choice">
           <input type="radio" name="${name}" value="console" checked>
           <span>
-            <span class="choice-title">Por consola</span>
+            <span class="choice-title">Por console</span>
             <span class="choice-sub"><code>/roms/nds/</code></span>
           </span>
         </label>
@@ -1021,7 +1021,7 @@ const Wizard = (() => {
         <label class="choice">
           <input type="radio" name="${name}" value="both">
           <span>
-            <span class="choice-title">Consola + franquia</span>
+            <span class="choice-title">Console + franquia</span>
             <span class="choice-sub"><code>/roms/nds/Pokemon/</code></span>
           </span>
         </label>
@@ -1040,12 +1040,12 @@ const Wizard = (() => {
       <p class="opt-does">
         Se já copiou jogos para o cartão, organiza-os conforme a opção abaixo (cria pastas e remove as vazias). Saves e estados GameYob vão com o jogo. Apps em <code>/roms/apps/</code>.
       </p>
-      <p class="opt-when">Pode saltar e copiar os jogos depois — esta etapa é opcional.</p>
+      <p class="opt-when">Pode pular e copiar os jogos depois — esta etapa é opcional.</p>
       ${drivePanelHtml()}
       ${organizeLayoutChoicesHtml("wiz-organize-layout")}
       <div class="flex flex-col sm:flex-row gap-2">
         <button type="button" class="btn-primary wizard-cta" id="wiz-roms">Organizar jogos no cartão</button>
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Saltar</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Pular</button>
       </div>
     `;
     bindDrivePanel();
@@ -1064,14 +1064,14 @@ const Wizard = (() => {
   function renderDspicoGamesOptional(el) {
     el.innerHTML = `
       <p class="opt-does">
-        O Pico Launcher navega o cartão como browser de ficheiros. O kit usa a pasta
+        O Pico Launcher navega o cartão como browser de arquivos. O kit usa a pasta
         <code>Games/</code> na raiz do microSD (recomendado pelo GUIDE LNH).
       </p>
-      <p class="opt-when">Opcional — pode saltar e usar o separador <strong>DSPico</strong> depois.</p>
+      <p class="opt-when">Opcional — pode pular e usar a aba <strong>DSPico</strong> depois.</p>
       ${drivePanelHtml()}
       <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button type="button" class="btn-primary wizard-cta" id="wiz-dspico-games">Adicionar jogos a Games/</button>
-        <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Saltar</button>
+        <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Pular</button>
         <button type="button" class="btn-ghost wizard-cta" id="wiz-open-dspico">Abrir área DSPico</button>
       </div>
     `;
@@ -1116,7 +1116,7 @@ const Wizard = (() => {
 
   function renderRomsAndCleanOptional(el) {
     el.innerHTML = `
-      <p class="opt-does">Opcional: organizar ROMs ou limpar ficheiros lixo do macOS (<code>._*</code>, <code>.DS_Store</code>).</p>
+      <p class="opt-does">Opcional: organizar ROMs ou limpar arquivos lixo do macOS (<code>._*</code>, <code>.DS_Store</code>).</p>
       ${drivePanelHtml()}
       ${organizeLayoutChoicesHtml("wiz-organize-layout-clean")}
       <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
@@ -1181,12 +1181,12 @@ const Wizard = (() => {
     el.innerHTML = `
       <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
       <p class="opt-does">
-        Isto escolhe o ficheiro do exploit (<strong>Memory Pit</strong>) — <em>não</em> é sobre rede social.
+        Isto escolhe o arquivo do exploit (<strong>Memory Pit</strong>) — <em>não</em> é sobre rede social.
         No DSi, abra a Câmera e veja se aparece o ícone do Facebook na barra inferior.
       </p>
       ${glossBlock(
         "Memory Pit",
-        "Exploit que abre ao ver o Álbum da Câmera com o cartão SD. O ficheiro <code>pit.bin</code> tem de corresponder à versão da app Câmera (com ou sem Facebook)."
+        "Exploit que abre ao ver o Álbum da Câmera com o cartão SD. O arquivo <code>pit.bin</code> precisa corresponder à versão do app Câmera (com ou sem Facebook)."
       )}
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
         <label class="choice">
@@ -1298,7 +1298,7 @@ const Wizard = (() => {
       </p>
       ${glossBlock(
         "Memory Pit",
-        "O ficheiro <code>pit.bin</code> escolhido pela versão da Câmera (${fb}). Pit errado = Álbum normal, sem exploit."
+        "O arquivo <code>pit.bin</code> escolhido pela versão da Câmera (${fb}). Pit errado = Álbum normal, sem exploit."
       )}
       ${writesList([
         `<code>pit.bin</code> do Memory Pit (${fb})`,
@@ -1333,13 +1333,13 @@ const Wizard = (() => {
   function renderExploitDsi(el) {
     el.innerHTML = `
       <ol class="guide-list list-decimal">
-        <li>Insira o SD no <strong>slot lateral</strong> do DSi e ligue a console.</li>
+        <li>Insira o SD no <strong>slot lateral</strong> do DSi e ligue o console.</li>
         <li>Abra a <strong>Câmera Nintendo DSi</strong>.</li>
         <li>Toque no ícone do <strong>cartão SD</strong> (canto superior direito).</li>
         <li>Abra o <strong>Álbum</strong> com o botão grande à direita.</li>
       </ol>
       <div class="space-y-2">
-        <div class="note note--ok"><strong>Tela magenta</strong> — exploit correcto; deve aparecer o dumpTool.</div>
+        <div class="note note--ok"><strong>Tela magenta</strong> — exploit correto; deve aparecer o dumpTool.</div>
         <div class="note note--warn"><strong>Tela verde</strong> — falta <code>boot.nds</code>. Volte ao PC e refaça o Passo 1.</div>
         <div class="note"><strong>Álbum normal</strong> — pit errado (Facebook) ou ainda existe pasta <code>DCIM</code>.</div>
       </div>
@@ -1351,17 +1351,17 @@ const Wizard = (() => {
   function renderNandDumpDsi(el) {
     el.innerHTML = `
       <p class="opt-does">
-        O dumpTool grava uma cópia da memória interna (~240&nbsp;MiB) numa pasta <code>DT…</code> no SD.
-        Guarde-a depois noutro sítio — é a sua rede de segurança antes do Unlaunch.
+        O dumpTool grava uma cópia da memória interna (~240&nbsp;MiB) em uma pasta <code>DT…</code> no SD.
+        Salve-a depois em outro lugar — é a sua rede de segurança antes do Unlaunch.
       </p>
       ${glossBlock(
         "NAND",
         "Memória interna do DSi. O Unlaunch grava nesta memória; o dump (<code>nand.bin</code>) permite recuperar ou instalar hiyaCFW."
       )}
       <ol class="guide-list list-decimal">
-        <li>No dumpTool, carregue em <strong>A</strong> para iniciar o backup (~7 minutos).</li>
-        <li><strong>Não desligue</strong> a console nem retire o SD.</li>
-        <li>Quando terminar, carregue em <strong>START</strong> e desligue o DSi.</li>
+        <li>No dumpTool, pressione <strong>A</strong> para iniciar o backup (~7 minutos).</li>
+        <li><strong>Não desligue</strong> o console nem retire o SD.</li>
+        <li>Quando terminar, pressione <strong>START</strong> e desligue o DSi.</li>
       </ol>
       <div class="note note--warn">Copie a pasta DT… para o Desktop no próximo passo, se ainda não o fez.</div>
       <button type="button" class="btn-primary wizard-cta" id="wiz-nand-next">Já terminei o dump — vou ao PC</button>
@@ -1380,7 +1380,7 @@ const Wizard = (() => {
         <input type="checkbox" id="wiz-nand-risk">
         <span>
           <span class="choice-title text-warn">Avançar sem dump neste cartão (risco)</span>
-          <span class="choice-sub">Só se já tiver nand.bin noutro sítio. Desaconselhado.</span>
+          <span class="choice-sub">Só se já tiver nand.bin em outro lugar. Não recomendado.</span>
         </span>
       </label>
       <div class="flex flex-col sm:flex-row gap-2 mt-2">
@@ -1440,7 +1440,7 @@ const Wizard = (() => {
       </p>
       ${glossBlock(
         "Unlaunch",
-        "Bootloader permanente na memória interna do DSi. É a <strong>única</strong> etapa deste kit que grava na consola — há um risco pequeno de brick; só avance com o dump feito."
+        "Bootloader permanente na memória interna do DSi. É a <strong>única</strong> etapa deste kit que grava no console — há um risco pequeno de brick; só avance com o dump feito."
       )}
       ${writesList([
         "TWiLight Menu++ (<code>BOOT.NDS</code>, pasta <code>_nds/</code>, …)",
@@ -1448,7 +1448,7 @@ const Wizard = (() => {
         "dumpTool movido para <code>dumptool.nds</code> (se existir)",
       ])}
       <div class="note note--warn">
-        Se o firmware do DSi for exatamente <strong>1.4.2</strong>, o guia oficial recomenda atualizar o sistema nas Definições antes do Unlaunch. Não automatizamos esse passo.
+        Se o firmware do DSi for exatamente <strong>1.4.2</strong>, o guia oficial recomenda atualizar o sistema nas Configurações antes do Unlaunch. Não automatizamos esse passo.
       </div>
       ${drivePanelHtml()}
       <button type="button" class="btn-primary wizard-cta btn-primary--ok" id="wiz-s2">Escrever Passo 2 no SD</button>
@@ -1472,7 +1472,7 @@ const Wizard = (() => {
         <span class="risk-chip">Memória interna</span>
       </div>
       <div class="note note--warn">
-        <strong>Atenção:</strong> o Unlaunch grava na NAND da console — é a <strong>única escrita na memória interna</strong> deste fluxo.
+        <strong>Atenção:</strong> o Unlaunch grava na NAND do console — é a <strong>única escrita na memória interna</strong> deste fluxo.
         Há um risco pequeno de brick. Só continue se tiver o backup da NAND. Use o instalador seguro v2.6 preparado pelo app.
       </div>
       <ol class="guide-list list-decimal">
@@ -1491,7 +1491,7 @@ const Wizard = (() => {
   function renderUnlaunchOpts(el) {
     el.innerHTML = `
       <p class="opt-does">
-        Se ao ligar aparecer o Filemenu do Unlaunch (lista de arquivos), configure o arranque automático no TWiLight.
+        Se ao ligar aparecer o Filemenu do Unlaunch (lista de arquivos), configure a inicialização automática no TWiLight.
         Sem isto, parece que “o menu não instalou”.
       </p>
       <ol class="guide-list list-decimal">
@@ -1500,8 +1500,8 @@ const Wizard = (() => {
         <li>Em <strong>NO BUTTON</strong>, escolha TWiLight Menu++ (<code>sdmc:/BOOT.NDS</code>).</li>
         <li><strong>SAVE &amp; EXIT</strong> e desligue.</li>
       </ol>
-      <div class="note note--ok">No próximo arranque (sem botões) deve ir direto ao TWiLight.</div>
-      <button type="button" class="btn-primary wizard-cta" id="wiz-opts-next">Já configurei / já arranca no TWiLight</button>
+      <div class="note note--ok">Na próxima inicialização (sem botões) deve ir direto ao TWiLight.</div>
+      <button type="button" class="btn-primary wizard-cta" id="wiz-opts-next">Já configurei / já inicia no TWiLight</button>
     `;
     document.getElementById("wiz-opts-next").onclick = () => goNext();
   }
@@ -1510,13 +1510,13 @@ const Wizard = (() => {
     el.innerHTML = `
       <div class="flex items-center gap-2 flex-wrap mb-2">${pathBadge("dsi")}</div>
       <p class="opt-does">
-        Atualiza o TWiLight Menu++ no cartão. <strong>Não</strong> reinstala o Unlaunch na consola.
+        Atualiza o TWiLight Menu++ no cartão. <strong>Não</strong> reinstala o Unlaunch no console.
       </p>
       <div class="note note--warn">
-        <strong>Não</strong> abra o instalador Unlaunch no DSi se a console já arranca no menu ou no Filemenu.
+        <strong>Não</strong> abra o instalador Unlaunch no DSi se o console já inicia no menu ou no Filemenu.
       </div>
       ${writesList([
-        "Ficheiros do TWiLight Menu++ atualizados",
+        "Arquivos do TWiLight Menu++ atualizados",
         "Pode colocar de novo <code>unlaunch-installer.dsi</code> — ignore-o no DSi",
       ])}
       ${drivePanelHtml()}

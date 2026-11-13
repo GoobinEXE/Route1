@@ -83,7 +83,7 @@ def _color_ok(obj: Any) -> bool:
 def _validate_theme_folder(folder_path: str) -> tuple[bool, str, Optional[dict[str, Any]]]:
     theme_json = os.path.join(folder_path, "theme.json")
     if not os.path.isfile(theme_json):
-        return False, "theme.json em falta.", None
+        return False, "theme.json ausente.", None
     try:
         data = _json_load(theme_json)
     except Exception as e:

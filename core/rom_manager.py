@@ -65,21 +65,21 @@ def invalidate_rom_dup_index(mount_path: Optional[str] = None) -> None:
         key = mount_path
     _DUP_INDEX_CACHE.pop(key, None)
 
-# Como o TWiLight Menu++ corre cada plataforma (texto PT para a gaveta).
+# Como o TWiLight Menu++ roda cada plataforma (texto PT para a gaveta).
 RUN_INFO_BY_PLATFORM = {
     "nds": {
         "title": "Nintendo DS (nativo)",
-        "body": "Corre no hardware DS/DSi via nds-bootstrap do TWiLight Menu++.",
+        "body": "Roda no hardware DS/DSi via nds-bootstrap do TWiLight Menu++.",
         "requirements": ["TWiLight Menu++", "nds-bootstrap"],
     },
     "dsi": {
         "title": "DSiWare / DSi",
-        "body": "Títulos DSi correm via nds-bootstrap / ambiente DSi do TWiLight.",
+        "body": "Títulos DSi rodam via nds-bootstrap / ambiente DSi do TWiLight.",
         "requirements": ["TWiLight Menu++", "nds-bootstrap"],
     },
     "apps": {
         "title": "Homebrew / app",
-        "body": "Aplicação NDS na pasta apps — abre directamente no TWiLight.",
+        "body": "Aplicação NDS na pasta apps — abre diretamente no TWiLight.",
         "requirements": ["TWiLight Menu++"],
     },
     "gba": {
@@ -418,7 +418,7 @@ def _sanitize_dir_name(name: str) -> str:
 
 
 def _file_entry(full: str, roms_root: str) -> Optional[dict[str, Any]]:
-    """Metadados de um ficheiro ROM (None se não for ROM listável)."""
+    """Metadados de um arquivo ROM (None se não for ROM listável)."""
     name = os.path.basename(full)
     if name.startswith("._") or name.endswith(".partial") or name == ".DS_Store":
         return None
@@ -490,7 +490,7 @@ def _file_entry(full: str, roms_root: str) -> Optional[dict[str, Any]]:
 
 
 def list_rom_dir(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
-    """Lista pastas e ROMs num nível sob /roms/<rel_dir>."""
+    """Lista pastas e ROMs em um nível sob /roms/<rel_dir>."""
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente.", "dirs": [], "files": []}
 
@@ -607,7 +607,7 @@ def list_rom_tree(mount_path: str) -> dict[str, Any]:
 
 def browse_roms(mount_path: str, rel_dir: str = "") -> dict[str, Any]:
     """
-    Snapshot atómico do explorador: pasta actual + árvore.
+    Snapshot atómico do explorador: pasta atual + árvore.
     Uma só chamada evita corrida de OP_LOCK entre list_rom_dir e list_rom_tree.
     """
     dir_res = list_rom_dir(mount_path, rel_dir)
@@ -804,7 +804,7 @@ def move_roms(
 
 
 def _companion_saves_near(host_path: str) -> list[str]:
-    """Ficheiros de save/estado com o mesmo stem ao lado da ROM no computador."""
+    """Arquivos de save/estado com o mesmo stem ao lado da ROM no computador."""
     stem = os.path.splitext(os.path.basename(host_path))[0]
     stem_l = stem.lower()
     parent = os.path.dirname(host_path)
@@ -876,7 +876,7 @@ def _index_roms_by_dup_key(
 
 
 def find_duplicate_roms(mount_path: str) -> dict[str, Any]:
-    """Grupos de jogos iguais sob /roms/ (≥2 ficheiros por chave)."""
+    """Grupos de jogos iguais sob /roms/ (≥2 arquivos por chave)."""
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente.", "groups": []}
     index = _index_roms_by_dup_key(mount_path)
@@ -915,7 +915,7 @@ def _collect_import_jobs(
     for src in rom_paths:
         if not os.path.isfile(src):
             if log:
-                log(f"⚠️ Ignorado (não é ficheiro): {redact_path(src)}")
+                log(f"⚠️ Ignorado (não é arquivo): {redact_path(src)}")
             skipped += 1
             continue
         try:
@@ -1031,7 +1031,7 @@ def check_rom_import_conflicts(
                 "conflicts": [],
             }
     if not isinstance(host_paths, (list, tuple)) or not host_paths:
-        return {"success": False, "error": "Nenhum ficheiro selecionado.", "conflicts": []}
+        return {"success": False, "error": "Nenhum arquivo selecionado.", "conflicts": []}
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente.", "conflicts": []}
 
@@ -1041,7 +1041,7 @@ def check_rom_import_conflicts(
             mount_path, list(host_paths)
         )
     except Exception as e:
-        return {"success": False, "error": f"Falha ao preparar ficheiros: {e}", "conflicts": []}
+        return {"success": False, "error": f"Falha ao preparar arquivos: {e}", "conflicts": []}
 
     try:
         if not jobs:
@@ -1122,7 +1122,7 @@ def import_roms(
             return False, f"Destino /roms/{dest_norm}/ inexistente.", {}
 
     if not isinstance(host_paths, (list, tuple)) or not host_paths:
-        return False, "Nenhum ficheiro selecionado.", {}
+        return False, "Nenhum arquivo selecionado.", {}
 
     roms_root = _roms_root(mount_path)
     os.makedirs(roms_root, exist_ok=True)
@@ -1133,7 +1133,7 @@ def import_roms(
             mount_path, list(host_paths), log=log
         )
     except Exception as e:
-        return False, f"Falha ao preparar ficheiros: {e}", {}
+        return False, f"Falha ao preparar arquivos: {e}", {}
 
     for err in expand_errors:
         log(f"⚠️ {err}")
@@ -1308,7 +1308,7 @@ def import_roms(
     if imported == 0 and failures:
         undo.rollback(log_callback=log_callback, mount_path=mount_path)
         cleanup_expand_staging(expand_stats)
-        return False, f"Nenhum ficheiro copiado ({failures} erro(s)).", {"failures": failures}
+        return False, f"Nenhum arquivo copiado ({failures} erro(s)).", {"failures": failures}
 
     mb = bytes_copied / (1024 * 1024)
     msg = (
@@ -1384,7 +1384,7 @@ def _is_png_file(path: str, max_bytes: int = MAX_ARTWORK_BYTES) -> tuple[bool, s
     if not isinstance(path, str) or not path.strip():
         return False, "Caminho de imagem inválido."
     if not os.path.isfile(path):
-        return False, "Ficheiro de imagem inexistente."
+        return False, "Arquivo de imagem inexistente."
     try:
         size = os.path.getsize(path)
     except OSError as e:
@@ -1399,7 +1399,7 @@ def _is_png_file(path: str, max_bytes: int = MAX_ARTWORK_BYTES) -> tuple[bool, s
     except OSError as e:
         return False, f"Não foi possível ler a imagem: {e}"
     if magic != PNG_MAGIC:
-        return False, "Só são aceites ficheiros PNG."
+        return False, "Só são aceites arquivos PNG."
     return True, ""
 
 
@@ -1413,7 +1413,7 @@ def _read_image_as_png_bytes(
     if not isinstance(path, str) or not path.strip():
         return None, "Caminho de imagem inválido."
     if not os.path.isfile(path):
-        return None, "Ficheiro de imagem inexistente."
+        return None, "Arquivo de imagem inexistente."
     try:
         size = os.path.getsize(path)
     except OSError as e:
@@ -1444,7 +1444,7 @@ def _read_image_as_png_bytes(
             return image_bytes_to_preview_png(raw, max_side=512), ""
         except ValueError as e:
             return None, f"BMP inválido: {e}"
-    return None, "Só são aceites ficheiros PNG ou BMP (não JPEG/WebP)."
+    return None, "Só são aceites arquivos PNG ou BMP (não JPEG/WebP)."
 
 
 def _png_data_url(path: Optional[str]) -> Optional[str]:
@@ -1476,7 +1476,7 @@ def run_info_for_platform(platform: Optional[str]) -> dict[str, Any]:
     return {
         "title": f"Plataforma {label}",
         "body": (
-            "O TWiLight Menu++ tenta abrir este ficheiro com o emulador "
+            "O TWiLight Menu++ tenta abrir este arquivo com o emulador "
             "associado à pasta/extensão, se o add-on Virtual Console estiver instalado."
         ),
         "requirements": ["TWiLight Menu++"],
@@ -1505,7 +1505,7 @@ def _artwork_dest_path(
 
 
 def rom_details(mount_path: str, rel_path: str) -> dict[str, Any]:
-    """Metadados + capa/ícone TWiLight + como corre (só leitura)."""
+    """Metadados + capa/ícone TWiLight + como roda (só leitura)."""
     if not os.path.isdir(mount_path):
         return {"success": False, "error": "Cartão inexistente."}
     if not isinstance(rel_path, str) or not rel_path.strip():
@@ -1518,7 +1518,7 @@ def rom_details(mount_path: str, rel_path: str) -> dict[str, Any]:
 
     entry = _file_entry(full, roms_root)
     if not entry:
-        return {"success": False, "error": "Ficheiro não é uma ROM listável."}
+        return {"success": False, "error": "Arquivo não é uma ROM listável."}
 
     basename = os.path.basename(full)
     game_code = entry.get("game_code")

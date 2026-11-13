@@ -1,6 +1,6 @@
 ---
 name: Route Pico
-description: App de secretária para preparar e manter o microSD do DSPico, com sete temas inspirados em menus de consolas.
+description: App de secretária para preparar e manter o microSD do DSPico, com sete temas inspirados em menus de consoles.
 colors:
   ground: "#e2e6ea"
   surface: "#ffffff"
@@ -122,18 +122,18 @@ components:
 
 ## Overview
 
-**Creative North Star: "A Sala de Estar da Consola"**
+**Creative North Star: "A Sala de Estar do Console"**
 
-Route Pico é uma ferramenta de trabalho com um só esqueleto: barra lateral, barra de cima, abas em cápsula e painéis claros. Por cima desse esqueleto, cada um dos sete temas troca três coisas e só três: o chão (o padrão de fundo do `body`), o acabamento dos painéis e o gesto de seleção. Layout, navegação, controlos e tipografia são iguais em todos os temas; quem muda de tema reconhece a sua consola sem reaprender o app.
+Route Pico é uma ferramenta de trabalho com um só esqueleto: barra lateral, barra de cima, abas em cápsula e painéis claros. Por cima desse esqueleto, cada um dos sete temas troca três coisas e só três: o chão (o padrão de fundo do `body`), o acabamento dos painéis e o gesto de seleção. Layout, navegação, controlos e tipografia são iguais em todos os temas; quem muda de tema reconhece a seu console sem reaprender o app.
 
 O sistema tem dois eixos independentes. O tema (`data-family`: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D, Híbrido) e o modo (`data-mode`: Original, Claro = Catppuccin Latte, Noturno = Catppuccin Mocha; Sistema resolve para Claro ou Noturno). O `theme.js` deriva um terceiro atributo, `data-scheme` (light/dark), que escolhe as sombras. As 21 combinações saem de um gerador que falha a construção se alguma não passar em WCAG AA. A densidade é média: painéis com 22 a 28px de respiro, linhas de lista planas, nada de cartão dentro de cartão.
 
-As rejeições confirmadas pelo utilizador são duas. Nada de logótipos, ícones, fontes, sons ou nomes de marca da Nintendo; os temas têm nomes genéricos. E nada de traje de consola: sem moldura de hardware, botões falsos ou cópia literal de menus. A inspiração vive no chão, no vidro dos painéis e no gesto de seleção.
+As rejeições confirmadas pelo usuário são duas. Nada de logotipos, ícones, fontes, sons ou nomes de marca da Nintendo; os temas têm nomes genéricos. E nada de traje de console: sem moldura de hardware, botões falsos ou cópia literal de menus. A inspiração vive no chão, no vidro dos painéis e no gesto de seleção.
 
 **Key Characteristics:**
-- Um só seletor partilhado de seleção-assinatura, redefinido por tema em `static/skins.css`.
+- Um só seletor compartilhado de seleção-assinatura, redefinido por tema em `static/skins.css`.
 - Cores só por tokens em triplas RGB, geradas e verificadas contra WCAG AA.
-- Nunito variável embutida em toda a UI, títulos em 800, rótulos de secção em minúsculas de frase.
+- Nunito variável embutida em toda a UI, títulos em 800, rótulos de seção em minúsculas de frase.
 - Cápsulas para ações e abas; raios generosos nos painéis, variáveis por tema.
 - Foco (contorno da cor do texto) separado da seleção (cor `select`).
 
@@ -152,7 +152,7 @@ Neutros frios e claros com um acento de ação e uma cor de seleção por tema; 
 - **Seleção Preenchida** (select-fill) e **Tinta sobre Seleção** (on-select): o par para quando a seleção é um preenchimento com texto (etiqueta da Câmera Dupla, números dos Primeiros passos). O preenchimento só escurece o necessário para o texto passar 4.5:1.
 
 ### Tertiary
-- **Verde Estado** (ok), **Âmbar Estado** (warn), **Vermelho Estado** (danger): estados de presença, aviso e erro, cada um garantido a 4.5:1 sobre os três fundos. Aparecem como cor de texto e de ícone de estado, nunca como fundo de secção.
+- **Verde Estado** (ok), **Âmbar Estado** (warn), **Vermelho Estado** (danger): estados de presença, aviso e erro, cada um garantido a 4.5:1 sobre os três fundos. Aparecem como cor de texto e de ícone de estado, nunca como fundo de seção.
 
 ### Neutral
 - **Chão Cinza-Névoa** (ground, `--c-bg`): fundo da janela, por baixo do padrão do tema.
@@ -162,9 +162,9 @@ Neutros frios e claros com um acento de ação e uma cor de seleção por tema; 
 - **Tinta** (ink, `--c-fg`, 7:1), **Tinta Suave** (ink-soft, `--c-fg-soft`) e **Tinta Discreta** (ink-mute, `--c-fg-mute`), estas duas a 4.5:1: hierarquia de texto.
 
 ### Named Rules
-**The Triplet Rule.** Toda a cor é uma tripla RGB (`--c-accent: 47 125 225`) lida como `rgb(var(--c-accent))` ou `rgb(var(--c-accent) / 0.1)`, e o Tailwind expõe-na como `rgb(var(--c-x) / <alpha-value>)`. Hex literal num componente é um defeito: não muda com o tema.
+**The Triplet Rule.** Toda a cor é uma tripla RGB (`--c-accent: 47 125 225`) lida como `rgb(var(--c-accent))` ou `rgb(var(--c-accent) / 0.1)`, e o Tailwind expõe-na como `rgb(var(--c-x) / <alpha-value>)`. Hex literal em um componente é um defeito: não muda com o tema.
 
-**The Generated Palette Rule.** `static/themes.css` e `static/theme-data.js` são gerados por `tools/build_themes.py` e nunca se editam à mão. Uma cor nova entra na paleta do gerador; `python tools/build_themes.py --check` falha se os ficheiros estiverem desatualizados, e a geração aborta se uma combinação não passar em AA.
+**The Generated Palette Rule.** `static/themes.css` e `static/theme-data.js` são gerados por `tools/build_themes.py` e nunca se editam à mão. Uma cor nova entra na paleta do gerador; `python tools/build_themes.py --check` falha se os arquivos estiverem desatualizados, e a geração aborta se uma combinação não passar em AA.
 
 **The Two Colors Rule.** Acento é para agir, seleção é para estar. O botão primário usa `accent`; o item ativo, os anéis e a barra de uso usam `select`. Não trocar um pelo outro, mesmo nos temas onde coincidem.
 
@@ -174,30 +174,30 @@ Neutros frios e claros com um acento de ação e uma cor de seleção por tema; 
 **Body Font:** Nunito (a mesma família)
 **Label/Mono Font:** IBM Plex Mono 400/500, embutida, para caminhos, versões e `<code>`
 
-**Character:** Uma sans arredondada única dá o tom amigável das consolas; o peso 800 nos títulos e rótulos faz a hierarquia sem precisar de segunda família.
+**Character:** Uma sans arredondada única dá o tom amigável dos consoles; o peso 800 nos títulos e rótulos faz a hierarquia sem precisar de segunda família.
 
 ### Hierarchy
 - **Display** (800, 34px, -0.02em): título do painel principal do Início. O `.hero-title` fora do Início fica em 28px.
 - **Headline** (800, 26px, -0.015em): título de cada vista (`.page-title`); no tema Híbrido desce para 700.
-- **Title** (800, 15px): rótulos de secção (`.section-label`), nome do cartão, títulos de passo e de objetivo. Títulos de painel do Início em 18px/800.
+- **Title** (800, 15px): rótulos de seção (`.section-label`), nome do cartão, títulos de passo e de objetivo. Títulos de painel do Início em 18px/800.
 - **Body** (400, 14px, 1.5): subtítulos de vista e texto de painel, até 52ch no Início.
 - **Label** (700, 13px): navegação (14px/700), abas, botões fantasma; botão primário em 13px/800 com 0.01em.
 - **Small** (12px): dicas do seletor de tema, pílulas de estado, texto secundário de linhas.
 
 ### Named Rules
-**The Sentence-Case Label Rule.** O rótulo de secção é Nunito 15px/800 na cor do texto, em minúsculas de frase, sem tracking e sem maiúsculas. O estilo antigo (11px, maiúsculas, 0.06em, cor discreta) continua em `style.css` e é anulado por `skins.css`; não o reativar.
+**The Sentence-Case Label Rule.** O rótulo de seção é Nunito 15px/800 na cor do texto, em minúsculas de frase, sem tracking e sem maiúsculas. O estilo antigo (11px, maiúsculas, 0.06em, cor discreta) continua em `style.css` e é anulado por `skins.css`; não o reativar.
 
 **The +1px Rule.** A Nunito tem altura-x menor que a fonte anterior, por isso a escala pequena sobe 1px: os utilitários `text-[10px]`, `text-[11px]`, `text-[12px]` e `text-[13px]` renderizam a 11, 12, 13 e 14px. Nenhum texto funcional fica abaixo de 11px.
 
 ## Layout
 
-Shell de produto fixo: grelha de duas colunas com a barra lateral (220px) e o conteúdo; a barra de cima (56px) leva o seletor de cartão, o progresso e o seletor de tema. A barra lateral tem a marca e as quatro vistas (Início, DSPico, Mais ferramentas, Definições); DSPico e Mais ferramentas abrem abas em cápsula. Há um só seletor de cartão (barra de cima) e um só registo (gaveta Atividade).
+Shell de produto fixo: grelha de duas colunas com a barra lateral (220px) e o conteúdo; a barra de cima (56px) leva o seletor de cartão, o progresso e o seletor de tema. A barra lateral tem a marca e as quatro vistas (Início, DSPico, Mais ferramentas, Configurações); DSPico e Mais ferramentas abrem abas em cápsula. Há um só seletor de cartão (barra de cima) e um só registro (gaveta Atividade).
 
 O Início é uma grelha de duas colunas (1.65fr e 1fr, 16px de intervalo): o painel DSPico domina e contém o estado do cartão (nome, barra de uso, ações); Mais ferramentas fica ao lado como lista de ligações; os Primeiros passos ocupam a largura toda por baixo, em três colunas numeradas.
 
 O ritmo de espaçamento assenta em 4, 8, 12, 16 e 24px; os painéis do Início usam 22 a 28px de padding. A lista de navegação tem 6px de folga negativa para os anéis da seleção-assinatura não serem cortados pelo contentor com scroll.
 
-Pontos de quebra observados: a 1060px a barra lateral passa a 176px, o conteúdo fica com 18px/16px de padding, o distintivo de papel do cartão esconde-se e o Início empilha numa coluna (os passos também). A 860px a barra lateral passa a 156px, a navegação desce para 13px com 9px/10px de padding e o subtítulo da marca esconde-se; os rótulos ficam inteiros.
+Pontos de quebra observados: a 1060px a barra lateral passa a 176px, o conteúdo fica com 18px/16px de padding, o distintivo de papel do cartão esconde-se e o Início empilha em uma coluna (os passos também). A 860px a barra lateral passa a 156px, a navegação desce para 13px com 9px/10px de padding e o subtítulo da marca esconde-se; os rótulos ficam inteiros.
 
 ## Elevation & Depth
 
@@ -219,7 +219,7 @@ Raios generosos e variáveis por tema, em três degraus (`--radius-sm`, `--radiu
 ## Components
 
 ### Buttons
-Cápsulas firmes, como os botões dos menus de consola.
+Cápsulas firmes, como os botões dos menus de console.
 - **Shape:** cápsula completa (999px) em todas as variantes, primária, fantasma e ícone.
 - **Primary:** preenchimento `accent`, texto `on-accent`, 13px/800, padding 0.62rem 1.25rem, com brilho interior de 1px no topo e sombra curta (`0 1px 0 rgb(255 255 255 / 0.18) inset, 0 2px 5px rgb(0 0 0 / 0.16)`).
 - **Hover / Active:** hover passa a `accent-strong` com sombra mais funda; active desce 1px e usa `--shadow-press`. Transições de 180ms com `cubic-bezier(0.22, 1, 0.36, 1)`.
@@ -248,7 +248,7 @@ Cápsulas firmes, como os botões dos menus de consola.
 - **Teclado:** setas nas abas, Alt+1 a Alt+4 nas vistas.
 
 ### Seleção-Assinatura (Signature Component)
-Um só seletor partilhado aplica-se a `.nav-item--active`, `.adv-tab--active`, `.theme-item[aria-checked="true"]` e `.theme-mode[aria-checked="true"]`. A base é painel, texto `ink` e anel de 2px na cor de seleção; cada tema substitui só a decoração:
+Um só seletor compartilhado vale para `.nav-item--active`, `.adv-tab--active`, `.theme-item[aria-checked="true"]` e `.theme-mode[aria-checked="true"]`. A base é painel, texto `ink` e anel de 2px na cor de seleção; cada tema substitui só a decoração:
 - **Dupla Tela:** moldura azul dupla (anel interior de 2px, espaço de 2px na cor do painel, anel exterior de 2px) sobre fundo da seleção a 10%. Chão: papel quadriculado de 16px.
 - **Câmera Dupla:** etiqueta preenchida (`select-fill` com `on-select`) e um bico de 12×7px que aponta para baixo nas abas e para a direita na navegação. Chão: faixas horizontais suaves de 22px.
 - **Canais:** anel ciano interior de 2px com halo difuso. Chão: risca fina horizontal a cada 4px.
@@ -266,10 +266,10 @@ O foco de teclado é um contorno de 2px na cor do texto (`ink`), com 3px de afas
 Listas planas sem cartão: ligações de Mais ferramentas e objetivos do assistente são linhas de largura total com fio de 1px em cima e em baixo, texto 14–15px/800, chevron SVG de 16px em `ink-mute` à direita que passa a `ink` no hover, e hover em `surface-2`. Os objetivos do assistente juntam uma linha de "o que faz" (13px, `ink-soft`) e "quando" (12px, `ink-mute`).
 
 ### Ícones de estado
-SVG inline de 16px, traço de 2px, pontas e junções redondas, `currentColor`, sempre acompanhados de texto `sr-only` ("Presente:" / "Em falta:"). A cor vem da linha (`ok` ou `ink-mute`). As marcas do RouteDex (favorito, concluído) usam o mesmo traço dentro de botões redondos; o favorito ativo preenche o coração.
+SVG inline de 16px, traço de 2px, pontas e junções redondas, `currentColor`, sempre acompanhados de texto `sr-only` ("Presente:" / "Faltando:"). A cor vem da linha (`ok` ou `ink-mute`). As marcas do RouteDex (favorito, concluído) usam o mesmo traço dentro de botões redondos; o favorito ativo preenche o coração.
 
 ### Primeiros passos
-Lista ordenada em três colunas com o número num círculo de 30px em `select-fill` / `on-select`, título de 15px/800 e texto de 13px.
+Lista ordenada em três colunas com o número em um círculo de 30px em `select-fill` / `on-select`, título de 15px/800 e texto de 13px.
 
 ## Do's and Don'ts
 
@@ -277,16 +277,16 @@ Lista ordenada em três colunas com o número num círculo de 30px em `select-fi
 - **Do** usar cores só como `rgb(var(--c-x))` ou `rgb(var(--c-x) / alfa)`, ou pelas classes Tailwind que as envolvem (`bg-accent/10`, `text-fg-mute`).
 - **Do** acrescentar ou ajustar cores em `tools/build_themes.py` e regenerar com `python tools/build_themes.py`; confirmar com `--check` e `tests/test_themes.py`.
 - **Do** colocar a assinatura de um tema (chão, acabamento, seleção) em `static/skins.css`, sob `html[data-family="…"]`, e mais nada.
-- **Do** aplicar a seleção-assinatura através do seletor partilhado; um controlo novo de "item escolhido" entra nessa lista em vez de inventar o seu próprio estado ativo.
+- **Do** aplicar a seleção-assinatura através do seletor compartilhado; um controlo novo de "item escolhido" entra nessa lista em vez de inventar o seu próprio estado ativo.
 - **Do** manter o foco como contorno de 2px na cor do texto, separado da seleção.
 - **Do** usar cápsulas (999px) para botões, abas e chips, e o raio do tema (`--radius`, `--radius-lg`) para itens e painéis.
-- **Do** escrever rótulos de secção em minúsculas de frase, Nunito 15px/800.
+- **Do** escrever rótulos de seção em minúsculas de frase, Nunito 15px/800.
 - **Do** desenhar ícones como SVG inline com `currentColor`, traço de 2px e pontas redondas.
 
 ### Don't:
 - **Don't** editar `static/themes.css` ou `static/theme-data.js` à mão.
-- **Don't** usar logótipos, ícones, fontes, sons ou nomes de marca da Nintendo, nem dar nomes de consola aos temas.
-- **Don't** imitar hardware: sem bezel, botões falsos ou cópia literal de menus de consola.
+- **Don't** usar logotipos, ícones, fontes, sons ou nomes de marca da Nintendo, nem dar nomes de console aos temas.
+- **Don't** imitar hardware: sem bezel, botões falsos ou cópia literal de menus de console.
 - **Don't** mudar layout, navegação, tamanhos ou controlos por tema; um tema só troca chão, acabamento e gesto de seleção.
 - **Don't** usar a assinatura nas abas internas do RouteDex nem em sub-abas; a seleção discreta mantém a hierarquia.
 - **Don't** pôr texto sobre `select` cru; texto sobre a seleção usa `select-fill` com `on-select`.

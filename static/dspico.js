@@ -8,7 +8,7 @@ function stateIcon(ok) {
   const body = ok
     ? '<circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/>'
     : '<circle cx="8" cy="8" r="6.5" stroke-dasharray="2.4 2.2"/>';
-  return `<svg class="state-icon" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg><span class="sr-only">${ok ? "Presente:" : "Em falta:"}</span>`;
+  return `<svg class="state-icon" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg><span class="sr-only">${ok ? "Presente:" : "Faltando:"}</span>`;
 }
 const Dspico = (() => {
   let section = "cartao";
@@ -30,7 +30,7 @@ const Dspico = (() => {
   let drivePollTimer = null;
   let lastPolledMount = null;
   const GAMES_VIRTUAL_THRESHOLD = 80;
-  // Aba → secções renderizadas dentro dela (ids dspico-section-<secção>).
+  // Aba → seções renderizadas dentro dela (ids dspico-section-<seção>).
   const TABS = {
     cartao: ["status", "setup"],
     games: ["games"],
@@ -75,7 +75,7 @@ const Dspico = (() => {
         ? isHardBusy()
         : typeof busy !== "undefined" && busy;
     if (hard) {
-      alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
+      alert("Aguarde a operação em andamento terminar antes de mudar de seção.");
       return;
     }
     selectSection(name);
@@ -360,18 +360,18 @@ const Dspico = (() => {
         <div>
           <h3 class="section-label">Preparar microSD</h3>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
-            Descarrega e verifica (SHA-256) o <strong>Pico Launcher</strong> e o
+            Baixa e verifica (SHA-256) o <strong>Pico Launcher</strong> e o
             <strong>Pico Loader DSPICO</strong> oficiais e escreve
             <code>_picoboot.nds</code> + <code>_pico/</code> + <code>Games/</code>.
           </p>
         </div>
         <div class="note">
-          O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado na app.
+          O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado no app.
         </div>
         <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / atualizar pacote oficial</button>
         <div class="enhanced-card">
           <h4>Depois: Pico Launcher Enhanced <span class="enhanced-tag">Recomendado</span><span class="enhanced-tag enhanced-tag--warn">Não oficial</span></h4>
-          <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de ecrã e,
+          <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de tela e,
           com o Loader Enhanced, a volta ao launcher de dentro do jogo. É opcional, troca só o <code>_picoboot.nds</code>
           (e os <code>picoLoader*.bin</code>, se escolher o loader) e pode voltar ao oficial quando quiser. O RouteDex usa estes dados.</p>
           <p class="enhanced-disclaimer">Não é suportado pelo LNH team: problemas com a variante Enhanced vão para github.com/rasalopa/pico-launcher-enhanced.</p>
@@ -480,7 +480,7 @@ const Dspico = (() => {
             </div>
           </div>
           <div id="dspico-games-drop" class="dspico-games-drop rounded-md border border-dashed border-line p-2">
-            <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">A listar…</p>
+            <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">Listando…</p>
             <div id="dspico-games-list" class="dspico-games-list space-y-0.5"></div>
           </div>
           <div id="dspico-conflict-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true">
@@ -572,7 +572,7 @@ const Dspico = (() => {
       delBtn.onclick = async () => {
         const mountPath = mount();
         if (!mountPath || !selectedRels.size) return;
-        if (!confirm(`Remover ${selectedRels.size} ficheiro(s)?`)) return;
+        if (!confirm(`Remover ${selectedRels.size} arquivo(s)?`)) return;
         setBusy(true);
         try {
           const api2 = getApi() || (await waitForApi());
@@ -623,7 +623,7 @@ const Dspico = (() => {
         if (paths.length) importPaths(paths);
         else
           appendLog(
-            "Não foi possível ler os caminhos dos ficheiros arrastados. Use Adicionar.",
+            "Não foi possível ler os caminhos dos arquivos arrastados. Use Adicionar.",
             "warn"
           );
       };
@@ -800,9 +800,9 @@ const Dspico = (() => {
     const crumbHost = document.getElementById("dspico-games-crumb");
     if (listEl) {
       destroyGamesListVlist();
-      listEl.innerHTML = `<p class="text-fg-mute text-[12px] p-2">A listar jogos…</p>`;
+      listEl.innerHTML = `<p class="text-fg-mute text-[12px] p-2">Listando jogos…</p>`;
     }
-    if (hint) hint.textContent = "A listar…";
+    if (hint) hint.textContent = "Listando…";
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.browse_dspico_games(m, gamesCwd);
@@ -864,7 +864,7 @@ const Dspico = (() => {
       if (hint) {
         hint.textContent =
           dirs.length + files.length
-            ? `${dirs.length} pasta(s) · ${files.length} ficheiro(s) — arraste ROMs para aqui`
+            ? `${dirs.length} pasta(s) · ${files.length} arquivo(s) — arraste ROMs para aqui`
             : "Pasta vazia — arraste ROMs ou use Adicionar";
       }
       if (!listEl) return;
@@ -980,13 +980,13 @@ const Dspico = (() => {
     try {
       const api = getApi() || (await waitForApi());
       if (!api || typeof api.pick_dspico_rom_files !== "function") {
-        appendLog("API de selecção de jogos indisponível.", "error");
+        appendLog("API de seleção de jogos indisponível.", "error");
         return;
       }
       const picked = await api.pick_dspico_rom_files();
       if (!picked || !picked.success) {
         appendLog(
-          `Erro ao escolher ficheiros: ${(picked && picked.error) || "falha"}`,
+          `Erro ao escolher arquivos: ${(picked && picked.error) || "falha"}`,
           "error"
         );
         return;
@@ -994,7 +994,7 @@ const Dspico = (() => {
       if (picked.cancelled) return;
       const paths = picked.paths || [];
       if (!paths.length) {
-        appendLog("Nenhum ficheiro selecionado.", "warn");
+        appendLog("Nenhum arquivo selecionado.", "warn");
         return;
       }
       await importPaths(paths);
@@ -1196,20 +1196,20 @@ const Dspico = (() => {
       </div>` +
       `<div class="dspico-art-actions">
         <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="dspico-art-auto">Buscar online</button>
-        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="dspico-art-manual">Escolher ficheiro do PC…</button>
+        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="dspico-art-manual">Escolher arquivo do PC…</button>
       </div>` +
       `<p class="dspico-art-local-hint">Do teu PC: PNG ou BMP (JPEG não suportado).</p>` +
       (state.searching || artSearching
-        ? `<p class="text-[12px] text-fg-mute">A procurar na Internet…</p>`
+        ? `<p class="text-[12px] text-fg-mute">Procurando na Internet…</p>`
         : "") +
       (state.message
         ? `<p class="text-[12px] text-fg-soft">${escapeHtml(state.message)}</p>`
         : "") +
       (candidates.length
         ? `<div class="dspico-art-grid">${opts}</div>
-           <p class="text-[11px] text-fg-mute">Clique numa opção para gravar no formato Pico Launcher (BMP).</p>`
+           <p class="text-[11px] text-fg-mute">Clique em uma opção para gravar no formato Pico Launcher (BMP).</p>`
         : !(state.searching || artSearching)
-          ? `<p class="text-[12px] text-fg-mute">Use «Pesquisar» ou «Buscar online» para ver capas/ícones, ou escolha um ficheiro do PC.</p>`
+          ? `<p class="text-[12px] text-fg-mute">Use «Pesquisar» ou «Buscar online» para ver capas/ícones, ou escolha um arquivo do PC.</p>`
           : "");
 
     bindArtControls(candidates);
@@ -1246,13 +1246,13 @@ const Dspico = (() => {
         return `<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded border border-line text-[12px]" data-miss-idx="${idx}">
           <div>
             <div class="font-medium text-fg">${name}</div>
-            <div class="text-[11px] text-fg-mute">Em falta: ${escapeHtml(need)}</div>
+            <div class="text-[11px] text-fg-mute">Faltando: ${escapeHtml(need)}</div>
           </div>
           <div class="flex flex-wrap gap-1">
             <button type="button" class="btn-secondary !text-[11px] !py-1 !px-2" data-miss-search="${rel}">Pesquisar</button>
             <button type="button" class="btn-ghost !text-[11px] !py-1 !px-2" data-miss-file="${rel}" data-miss-kind="${
               item.missing_cover ? "cover" : "icon"
-            }">Escolher ficheiro</button>
+            }">Escolher arquivo</button>
           </div>
         </div>`;
       })
@@ -1260,7 +1260,7 @@ const Dspico = (() => {
     el.innerHTML = `
       <div class="rounded-lg border border-line p-3 space-y-2 bg-surface-2/40">
         <p class="text-[12px] font-semibold text-fg">Jogos sem capa/ícone após o lote</p>
-        <p class="text-[11px] text-fg-mute">Pesquise online ou escolha um ficheiro. Só DSPico — não afecta TWiLight.</p>
+        <p class="text-[11px] text-fg-mute">Pesquise online ou escolha um arquivo. Só DSPico — não afecta TWiLight.</p>
         <div class="space-y-2 max-h-56 overflow-y-auto">${rows}</div>
       </div>`;
     el.querySelectorAll("[data-miss-search]").forEach((btn) => {
@@ -1302,9 +1302,9 @@ const Dspico = (() => {
       }
       setBusy(true, null, {
         op: "generate_dspico_artwork_batch",
-        label: "A buscar capas e ícones…",
+        label: "Buscando capas e ícones…",
       });
-      appendLog("A buscar capas e ícones DSPico em lote…", "info");
+      appendLog("Buscando capas e ícones DSPico em lote…", "info");
       const res = await fn.call(api, m);
       if (res && res.success) {
         appendLog(res.message || "Lote concluído.", "success");
@@ -1348,7 +1348,7 @@ const Dspico = (() => {
       kind: artKind,
       query: artQueryDraft,
       searching: false,
-      message: "A carregar…",
+      message: "Carregando…",
       candidates: [],
     });
     try {
@@ -1385,7 +1385,7 @@ const Dspico = (() => {
         candidates: [],
         searching: false,
         message:
-          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um ficheiro do PC.",
+          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um arquivo do PC.",
       });
     } catch (e) {
       if (gen !== artGen) return;
@@ -1426,7 +1426,7 @@ const Dspico = (() => {
       kind: artKind,
       query: artQueryDraft,
       searching: true,
-      message: "A procurar na Internet…",
+      message: "Procurando na Internet…",
       candidates: [],
       current:
         artKind === "icon"
@@ -1508,7 +1508,7 @@ const Dspico = (() => {
       const api = getApi() || (await waitForApi());
       setBusy(true);
       appendLog(
-        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
+        artKind === "icon" ? "Gravando ícone…" : "Gravando capa…",
         "info"
       );
       const res = await api.apply_dspico_artwork_url(
@@ -1559,7 +1559,7 @@ const Dspico = (() => {
       if (picked.cancelled || !picked.path) return;
       setBusy(true);
       appendLog(
-        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
+        artKind === "icon" ? "Gravando ícone…" : "Gravando capa…",
         "info"
       );
       const res = await api.set_dspico_artwork(
@@ -1631,7 +1631,7 @@ const Dspico = (() => {
           return (
             `<div class="rom-x-dupe-group">` +
             `<p class="rom-x-dupe-group-title">${name}</p>` +
-            `<p class="rom-x-dupe-group-sub">A importar: ${src}</p>` +
+            `<p class="rom-x-dupe-group-sub">Importando: ${src}</p>` +
             (existing
               ? `<ul class="text-[11px] text-fg-mute mb-2 list-disc pl-4">${existing}</ul>`
               : "") +
@@ -1678,7 +1678,7 @@ const Dspico = (() => {
     const list = Array.isArray(paths) ? paths.filter(Boolean) : [];
     if (!list.length) return;
     setBusy(true);
-    appendLog("A verificar duplicatas…", "info");
+    appendLog("Verificando duplicatas…", "info");
     let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
@@ -1702,7 +1702,7 @@ const Dspico = (() => {
         setBusy(true);
       }
       appendLog(
-        `A importar ${list.length} item(ns) para Games/…`,
+        `Importando ${list.length} item(ns) para Games/…`,
         "info"
       );
       const res = await api.import_dspico_games(
@@ -1843,10 +1843,10 @@ const Dspico = (() => {
       return;
     }
     const total = toDeleteGames.length + toDeleteRetro.length;
-    if (!confirm(`Apagar ${total} ficheiro(s) duplicado(s)?`)) return;
+    if (!confirm(`Apagar ${total} arquivo(s) duplicado(s)?`)) return;
 
     setBusy(true);
-    appendLog(`A remover ${total} duplicata(s)…`, "info");
+    appendLog(`Removendo ${total} duplicata(s)…`, "info");
     try {
       const api = getApi() || (await waitForApi());
       if (toDeleteGames.length) {
@@ -1887,7 +1887,7 @@ const Dspico = (() => {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A carregar catálogo…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Carregando catálogo…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.list_dspico_emulators(m || "");
@@ -1958,7 +1958,7 @@ const Dspico = (() => {
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Copia NDS para <code>/_pico/emulators/</code> (ou <code>/Emulators/</code> se manual),
               cria <code>/ROMs/…</code> e configura <code>fileAssociations</code>.
-              Jogos NDS/DSi ficam em <code>Games/</code>. BIOS proprietária não é descarregada.
+              Jogos NDS/DSi ficam em <code>Games/</code>. BIOS proprietária não é baixada.
               Se escolher GBARunner3 e 2, só o 3 fica associado a <code>.gba</code>.
             </p>
           </div>
@@ -2082,9 +2082,9 @@ const Dspico = (() => {
         <div>
           <h3 class="section-label">Emunand / DSiWare</h3>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
-            Conforme o README do Pico Loader: DSiWare e ROMs com secure area encriptada
+            Conforme o README do Pico Loader: DSiWare e ROMs com secure area criptografada
             precisam de <code>/_pico/biosnds7.rom</code> (BIOS ARM7 de <strong>DS</strong>, não DSi)
-            e pastas NAND no cartão. Importe apenas dumps <em>seus</em> — o app não descarrega BIOS/NAND.
+            e pastas NAND no cartão. Importe apenas dumps <em>seus</em> — o app não baixa BIOS/NAND.
           </p>
         </div>
         <ul class="text-[12px] space-y-1">
@@ -2101,7 +2101,7 @@ const Dspico = (() => {
           <button type="button" class="btn-ghost" id="dspico-import-font">Importar TWLFontTable.dat…</button>
         </div>
         <div class="note note--warn">
-          Não use dumps de terceiros. Obtenha o BIOS/font a partir da sua consola.
+          Não use dumps de terceiros. Obtenha o BIOS/font a partir do seu console.
         </div>
       </section>`;
     document.getElementById("dspico-emunand-skel").onclick = async () => {
@@ -2144,7 +2144,7 @@ const Dspico = (() => {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A ler settings…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Lendo settings…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.get_dspico_settings(m);
@@ -2167,7 +2167,7 @@ const Dspico = (() => {
         <section class="panel p-5 space-y-4">
           <div>
             <h3 class="section-label">Pico Launcher: settings.json</h3>
-            <p class="text-[12px] text-fg-mute mt-1">Ficheiro <code>/_pico/settings.json</code> (chaves documentadas no Usage oficial).</p>
+            <p class="text-[12px] text-fg-mute mt-1">Arquivo <code>/_pico/settings.json</code> (chaves documentadas no Usage oficial).</p>
           </div>
           <label class="block text-[12px]">
             <span class="text-fg-mute">Tema (pasta em _pico/themes/)</span>
@@ -2207,7 +2207,7 @@ const Dspico = (() => {
               s.language || "english"
             )}">
           </label>
-          <button type="button" class="btn-primary" id="dspico-save-settings">Guardar definições</button>
+          <button type="button" class="btn-primary" id="dspico-save-settings">Salvar configurações</button>
         </section>`;
       document.getElementById("dspico-save-settings").onclick = async () => {
         const patch = {
@@ -2238,7 +2238,7 @@ const Dspico = (() => {
     const el = document.getElementById("dspico-section-firmware");
     if (!el) return;
     // Firmware não precisa do SD selecionado, mas mostramos contexto
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A procurar RPI-RP2…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Procurando RPI-RP2…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.list_rp2_volumes();
@@ -2271,19 +2271,19 @@ const Dspico = (() => {
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               O firmware <strong>não</strong> vai no microSD. Em BOOTSEL aparece o volume
               <code>RPI-RP2</code>. Só gravamos o <code>.uf2</code> oficial pinado de
-              <code>LNH-team/dspico-firmware</code> — sem ficheiros de terceiros.
+              <code>LNH-team/dspico-firmware</code> — sem arquivos de terceiros.
             </p>
           </div>
           <ol class="guide-list list-decimal text-[12px] text-fg-soft space-y-1">
             <li>Retire o microSD do cartucho (ou use BOOTSEL se o firmware já estiver instalado).</li>
-            <li>Ligue o DSPico ao PC por USB até aparecer <code>RPI-RP2</code>.</li>
+            <li>Conecte o DSPico ao PC por USB até aparecer <code>RPI-RP2</code>.</li>
             <li>Atualize a lista abaixo e grave o UF2 oficial (quando disponível nas releases LNH).</li>
           </ol>
           <div class="note ${ready ? "note--ok" : "note--warn"}">
             ${
               ready
                 ? "Asset .uf2 oficial pinado — pode gravar."
-                : "As releases LNH actuais <strong>não publicam</strong> DSpico.uf2 (é preciso compilar via GUIDE). O botão de gravação fica desactivado até existir pin oficial — builds community/hybrid são rejeitados."
+                : "As releases LNH atuais <strong>não publicam</strong> DSpico.uf2 (é preciso compilar via GUIDE). O botão de gravação fica desativado até existir pin oficial — builds community/hybrid são rejeitados."
             }
           </div>
           <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
@@ -2295,7 +2295,7 @@ const Dspico = (() => {
           </div>
           <button type="button" class="btn-primary" id="dspico-flash-uf2" ${
             ready && vols.length ? "" : "disabled"
-          }>Descarregar e gravar UF2 oficial</button>
+          }>Baixar e gravar UF2 oficial</button>
           ${linksHtml(links)}
         </section>`;
       bindLinkButtons(el);

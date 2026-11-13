@@ -25,7 +25,7 @@
 | `ui/` | Ecrãs, input, confirmações | I/O bruto no SD |
 | `fs/` | Listar, mkdir, rename, unlink, copy local | USB frames |
 | `integrity/` | SHA-256, partial path, promote, manifesto | UI |
-| `usb/` | Sessão, chunks, estado da ligação | Layout de pastas DSPico |
+| `usb/` | Sessão, chunks, estado da conexão | Layout de pastas DSPico |
 | `util/` | Strings, path safe, logging local | Política de produto |
 
 ## Regras de dependência
@@ -44,7 +44,7 @@ Proibido: `fs` importar `ui`; `integrity` importar `usb`.
 
 ### A — MSC (Fase 2)
 
-O DSi corre mass-storage (base LNH). O PC monta o volume e o **Route Pico desktop** escreve com as regras de integridade que já usa (`copy_verified`, `OP_LOCK`).
+O DSi roda mass-storage (base LNH). O PC monta o volume e o **Route Pico desktop** escreve com as regras de integridade que já usa (`copy_verified`, `OP_LOCK`).
 
 O app do console: UI de “modo USB” + bloqueio de writes locais.
 
@@ -54,7 +54,7 @@ Endpoints bulk (ou interface além de MSC). Frames em [`protocol/R1USB.md`](../.
 
 ## Integridade (contrato)
 
-Para qualquer escrita de ficheiro completo:
+Para qualquer escrita de arquivo completo:
 
 1. Destino final `path`  
 2. Escrever `path.partial` (ou nome staging acordado)  
@@ -72,7 +72,7 @@ Mutex lógico `sd_op_lock`:
 - Ops `fs` de escrita  
 - Receção USB que escreve  
 
-Leitura (listagem) pode partilhar com cuidado; durante USB MSC activo, preferir **só leitura** ou UI bloqueada.
+Leitura (listagem) pode compartilhar com cuidado; durante USB MSC ativo, preferir **só leitura** ou UI bloqueada.
 
 ## Layout SD (referência DSPico)
 
@@ -83,7 +83,7 @@ Não reinventar. Seguir manual LNH / ChiScart:
 - `Games/` jogos  
 - `Apps/` homebrew (destino do `RoutePico.nds`)  
 
-O gestor deve **proteger** markers críticos com confirmação extra.
+O gerenciador deve **proteger** markers críticos com confirmação extra.
 
 ## Fronteira com o desktop
 

@@ -33,7 +33,7 @@ const RouteDex = (() => {
     return typeof isHardBusy === "function" ? isHardBusy() : !!(typeof busy !== "undefined" && busy);
   }
 
-  /** Corre uma escrita no SD com a UI bloqueada; devolve a resposta ou null. */
+  /** Roda uma escrita no SD com a UI bloqueada; devolve a resposta ou null. */
   async function write(method, args, okMsg) {
     if (hardBusy()) {
       alert("Aguarde a operação em andamento terminar.");
@@ -133,7 +133,7 @@ const RouteDex = (() => {
 
   function loading(msg) {
     const b = body();
-    if (b) b.innerHTML = `<p class="text-[12px] text-fg-mute">${esc(msg || "A ler o cartão…")}</p>`;
+    if (b) b.innerHTML = `<p class="text-[12px] text-fg-mute">${esc(msg || "Lendo o cartão…")}</p>`;
   }
 
   function errorHtml(msg) {
@@ -334,7 +334,7 @@ const RouteDex = (() => {
       <div id="routedex-list" class="routedex-list"></div>
       ${
         stale.length
-          ? `<div class="note mt-3"><strong>${stale.length} entrada(s) de jogos que já não estão no cartão.</strong>
+          ? `<div class="note mt-3"><strong>${stale.length} entrada(s) de jogos que não estão mais no cartão.</strong>
               <span class="text-fg-mute">${esc(stale.slice(0, 5).map((e) => e.fileName).join(", "))}${stale.length > 5 ? "…" : ""}</span>
               <div class="mt-2"><button type="button" class="btn-ghost !text-[11px]" id="routedex-prune">Remover entradas órfãs</button></div></div>`
           : ""
@@ -363,7 +363,7 @@ const RouteDex = (() => {
     const prune = b.querySelector("#routedex-prune");
     if (prune)
       prune.onclick = async () => {
-        if (!confirm(`Remover ${stale.length} entrada(s) do gamedata.json?\n\nUma cópia do ficheiro fica no computador.`)) return;
+        if (!confirm(`Remover ${stale.length} entrada(s) do gamedata.json?\n\nUma cópia do arquivo fica no computador.`)) return;
         const res = await write("prune_routedex_entries", [stale.map((e) => e.fileName)], "Entradas órfãs removidas.");
         if (res) draw(true);
       };
@@ -377,7 +377,7 @@ const RouteDex = (() => {
     const variant = ld.variant === "enhanced" ? ` + Loader Enhanced ${esc(ld.enhanced_version || "")}` : "";
     if (s === "no-loader") return `<span class="text-danger">Sem Pico Loader em /_pico.</span>`;
     if (s === "mixed")
-      return `<span class="text-warn">Ficheiros de releases diferentes (mais próximo: ${esc(
+      return `<span class="text-warn">Arquivos de releases diferentes (mais próximo: ${esc(
         ld.mismatch && ld.mismatch.best_fit
       )}; fora: ${esc(((ld.mismatch && ld.mismatch.odd_ones_out) || []).join(", "))}).</span>`;
     if (s === "unrecognised") return `<span class="text-warn">Versão não reconhecida (build própria ou release mais nova que esta app).</span>`;
@@ -411,7 +411,7 @@ const RouteDex = (() => {
   }
 
   async function drawHealth(my) {
-    loading("A verificar o cartão…");
+    loading("Verificando o cartão…");
     let h;
     try {
       h = await (await api()).check_routedex_health(mountPath);
@@ -438,14 +438,14 @@ const RouteDex = (() => {
         <div><span class="stat-label">Biblioteca</span><span>${esc(h.games_count)} jogo(s) · ${esc(h.saves_count)} save(s)</span></div>
         ${
           h.missing_optional.length
-            ? `<div><span class="stat-label">Opcionais em falta</span><span class="text-fg-mute">${esc(h.missing_optional.join(", "))}</span></div>`
+            ? `<div><span class="stat-label">Opcionais ausentes</span><span class="text-fg-mute">${esc(h.missing_optional.join(", "))}</span></div>`
             : ""
         }
       </div>
-      ${problems ? `<div class="note note--warn"><strong>A corrigir</strong><ul class="routedex-ul">${problems}</ul></div>` : `<div class="note note--ok">Nenhum problema que impeça o arranque.</div>`}
+      ${problems ? `<div class="note note--warn"><strong>Para corrigir</strong><ul class="routedex-ul">${problems}</ul></div>` : `<div class="note note--ok">Nenhum problema que impeça a inicialização.</div>`}
       ${
         dups
-          ? `<div class="note"><strong>Saves em duplicado</strong> (ao lado da ROM e em <code>saves/</code>). Com <code>"saveLocation": "saves"</code> o launcher usa o da pasta <code>saves/</code>; confira qual é o mais recente antes de apagar o outro.<ul class="routedex-ul">${dups}</ul></div>`
+          ? `<div class="note"><strong>Saves duplicados</strong> (ao lado da ROM e em <code>saves/</code>). Com <code>"saveLocation": "saves"</code> o launcher usa o da pasta <code>saves/</code>; confira qual é o mais recente antes de apagar o outro.<ul class="routedex-ul">${dups}</ul></div>`
           : ""
       }
       ${checkList("Lixo do macOS", h.junk, "junk")}
@@ -455,7 +455,7 @@ const RouteDex = (() => {
         removable
           ? `<div class="flex items-center gap-3 flex-wrap mt-2">
               <button type="button" class="btn-primary" id="routedex-remove">Remover selecionados</button>
-              <span class="text-[11px] text-fg-mute">Cada ficheiro é copiado para o computador antes de sair do cartão.</span>
+              <span class="text-[11px] text-fg-mute">Cada arquivo é copiado para o computador antes de sair do cartão.</span>
             </div>`
           : ""
       }`;
@@ -517,15 +517,15 @@ const RouteDex = (() => {
       return;
     }
     b.innerHTML = `
-      <p class="text-[12px] text-fg-mute">${shots.length} captura(s). As duas telas aparecem empilhadas numa só imagem.</p>
+      <p class="text-[12px] text-fg-mute">${shots.length} captura(s). As duas telas aparecem empilhadas em uma só imagem.</p>
       <div class="routedex-shots">${shots
         .map(
           (s) => `<figure class="routedex-shot" data-id="${esc(s.id)}">
-            <div class="routedex-shot-img"><span class="text-[11px] text-fg-mute">a carregar…</span></div>
+            <div class="routedex-shot-img"><span class="text-[11px] text-fg-mute">carregando…</span></div>
             <figcaption>
               <span>${s.number != null ? `#${esc(s.number)}` : esc(s.id)}</span>
               <span class="flex gap-1">
-                <button type="button" class="btn-ghost !text-[11px]" data-act="save">Guardar PNG</button>
+                <button type="button" class="btn-ghost !text-[11px]" data-act="save">Salvar PNG</button>
                 <button type="button" class="btn-ghost btn-ghost--muted !text-[11px]" data-act="del">Apagar</button>
               </span>
             </figcaption>
@@ -537,8 +537,8 @@ const RouteDex = (() => {
       const id = fig.getAttribute("data-id");
       fig.querySelector('[data-act="save"]').onclick = async () => {
         const res = await a.export_routedex_screenshot(mountPath, id);
-        if (res && res.success && !res.cancelled) appendLog(`Captura guardada em ${res.path}`, "ok");
-        else if (res && !res.success) alert(res.error || "Falha ao guardar.");
+        if (res && res.success && !res.cancelled) appendLog(`Captura salva em ${res.path}`, "ok");
+        else if (res && !res.success) alert(res.error || "Falha ao salvar.");
       };
       fig.querySelector('[data-act="del"]').onclick = async () => {
         if (!confirm("Apagar esta captura do cartão? Fica uma cópia no computador.")) return;
@@ -615,7 +615,7 @@ const RouteDex = (() => {
   async function drawFolderDetail(my) {
     const box = host.querySelector("#routedex-folder-detail");
     if (!box) return;
-    box.innerHTML = `<p class="text-[12px] text-fg-mute">A ler a pasta…</p>`;
+    box.innerHTML = `<p class="text-[12px] text-fg-mute">Lendo a pasta…</p>`;
     const a = await api();
     const st = await a.get_routedex_folder_art(mountPath, folderSel);
     if (my !== gen) return;
@@ -689,7 +689,7 @@ const RouteDex = (() => {
   async function renderNight(m, el) {
     if (!el) return;
     const card = (inner) => `<section class="panel p-5 space-y-3"><h3 class="section-label">Fundos noturnos</h3>${inner}</section>`;
-    el.innerHTML = card('<p class="text-[12px] text-fg-mute">A ler temas…</p>');
+    el.innerHTML = card('<p class="text-[12px] text-fg-mute">Lendo temas…</p>');
     const a = await api();
     let r;
     try {
@@ -707,8 +707,8 @@ const RouteDex = (() => {
     const themes = r.themes || [];
     const b = el;
     b.innerHTML = card(`
-      <div class="note">O Pico Launcher Enhanced usa <code>topbg_night.bin</code> e <code>bottombg_night.bin</code> de um tema das 20:00 às 6:59, conferido ao arrancar. As cores são escurecidas e arrefecidas com a mesma fórmula do <code>make_night_bg.py</code> do Enhanced.${
-        enhanced === false ? " <strong>O launcher oficial ignora estes ficheiros.</strong>" : ""
+      <div class="note">O Pico Launcher Enhanced usa <code>topbg_night.bin</code> e <code>bottombg_night.bin</code> de um tema das 20:00 às 6:59, conferido ao iniciar. As cores são escurecidas e arrefecidas com a mesma fórmula do <code>make_night_bg.py</code> do Enhanced.${
+        enhanced === false ? " <strong>O launcher oficial ignora estes arquivos.</strong>" : ""
       }</div>
       ${
         themes.length
@@ -766,9 +766,9 @@ const RouteDex = (() => {
     b.innerHTML = `
       ${state}
       <p class="text-[12px] text-fg-mute leading-relaxed">O Pico Launcher lê os cheats de <code>/_pico/usrcheat.dat</code> (no DS: Y sobre um jogo).
-      Não existe uma fonte oficial com versão fixa para esta base, por isso o Route Pico não a descarrega: escolha um
-      <code>usrcheat.dat</code> que já tenha. O ficheiro é validado (cabeçalho <code>R4 CheatCode</code>) antes de ir para o cartão,
-      e o anterior fica guardado no computador.</p>
+      Não existe uma fonte oficial com versão fixa para esta base, por isso o Route Pico não a baixa: escolha um
+      <code>usrcheat.dat</code> que já tenha. O arquivo é validado (cabeçalho <code>R4 CheatCode</code>) antes de ir para o cartão,
+      e o anterior fica salvo no computador.</p>
       <button type="button" class="btn-primary" id="routedex-cheats-import">Importar usrcheat.dat…</button>`;
     b.querySelector("#routedex-cheats-import").onclick = async () => {
       const p = await a.pick_usrcheat_file();

@@ -15,7 +15,7 @@ def test_op_label_pt_known_and_fallback():
 
 def test_build_payload_omits_unknown_totals():
     events = []
-    t = ProgressTracker("cache_download", label="A descarregar…", emit_fn=events.append)
+    t = ProgressTracker("cache_download", label="Baixando…", emit_fn=events.append)
     t.add_bytes(1024)
     t.tick(force=True)
     assert events

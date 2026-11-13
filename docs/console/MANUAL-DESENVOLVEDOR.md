@@ -19,7 +19,7 @@ make host-sim
 ./build/routepico_host --sd tests/fixtures/fake_sd
 ```
 
-O `pytest` da raiz corre os mesmos testes C (`tests/test_nds_host.py`) e a conformidade do protocolo (`tests/test_protocol_messages.py`).
+O `pytest` da raiz roda os mesmos testes C (`tests/test_nds_host.py`) e a conformidade do protocolo (`tests/test_protocol_messages.py`).
 
 Teclas no host: `W/S` ou setas, `A` abrir, `B` subir, `X` apagar, `Y` Games, `R` Apps, `Q` sair.
 
@@ -36,7 +36,7 @@ Para USB DSPico (Fase 2+): https://github.com/LNH-team/dspico-usb-examples
 
 ```
 nds/src/main.c      — entrada
-src/app/browser.c   — gestor (Fase 1)
+src/app/browser.c   — gerenciador (Fase 1)
 src/ui/             — ui_host.c / ui_nds.c
 src/input/          — input_host.c / input_nds.c
 src/fs/             — fs.c (POSIX host) / fs_nds.c (libfat)
@@ -45,14 +45,14 @@ src/integrity/      — hash / partial / promote
 src/util/           — path, protect, err
 nds/include/route1/ — API interna
 nds/tests/          — testes C no host + fixtures/fake_sd
-protocol/           — spec R1USB (partilhada com o desktop)
+protocol/           — spec R1USB (compartilhada com o desktop)
 ```
 
 Os caminhos `src/…` acima são relativos a `nds/`.
 
 ## Regras de implementação
 
-1. Toda escrita de ficheiro completo passa por `integrity`.
+1. Toda escrita de arquivo completo passa por `integrity`.
 2. Paths: validar com helper único (`r1_path_is_safe`).
 3. Mensagens UI em PT; códigos de erro de protocolo estáveis em inglês (`E_HASH`).
 4. Alterar frames → bump em `protocol/messages.json`, `version.h` e `protocol/R1USB.md` no mesmo commit (ver «Alterar o protocolo» na spec).

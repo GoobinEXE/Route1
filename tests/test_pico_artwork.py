@@ -186,7 +186,7 @@ def test_search_dspico_artwork_candidates(fake_sd, monkeypatch):
     )
     assert data["success"] is True
     assert data["candidates"]
-    # Pesquisa sonda existência (HEAD) mas não descarrega o PNG.
+    # Pesquisa sonda existência (HEAD) mas não baixa o PNG.
     assert called["get"] == 0
     assert called["exists"] > 0
     preview = data["candidates"][0]["preview"]

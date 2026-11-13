@@ -50,7 +50,7 @@ _R4_LAUNCHER_NDS = {"akmenu4.nds", "r4.nds", "ttmenu.nds", "_ds_mshl.nds"}
 
 
 def _stage_file_copy(undo: UndoStack, src: str, dst: str, log_callback=None, expected_sha256=None):
-    """Copia verificada com rollback: restaura backup ou remove ficheiro novo."""
+    """Copia verificada com rollback: restaura backup ou remove arquivo novo."""
     bak = None
     if os.path.exists(dst):
         bak = dst + ".bak_install"
@@ -65,8 +65,8 @@ def _stage_file_copy(undo: UndoStack, src: str, dst: str, log_callback=None, exp
 def _stage_dir_copy(undo: UndoStack, src: str, dst: str, log_callback=None) -> int:
     """
     Copia árvore verificada. Se dst não existia, rollback remove a pasta inteira.
-    Se já existia, cada ficheiro fica protegido pelo verify-before-replace
-    (parcial: ficheiros já promovidos permanecem; o caller de etapa pode
+    Se já existia, cada arquivo fica protegido pelo verify-before-replace
+    (parcial: arquivos já promovidos permanecem; o caller de etapa pode
     remover a pasta se ela era nova).
     """
     if not os.path.isdir(dst):
@@ -345,7 +345,7 @@ def install_r4_kernel(mount_path: str, source_dir: str, log_callback=None):
 
     log(f"Origem dos arquivos R4: {source_dir}")
     log(
-        f"A copiar: {len(planned['files'])} arquivo(s), "
+        f"Copiando: {len(planned['files'])} arquivo(s), "
         f"{len(planned['dirs'])} pasta(s)."
     )
 
@@ -530,7 +530,7 @@ def twilight_vc_tree_ok(path: str):
         return False, "Pasta do add-on Virtual Console inexistente"
     gameyob = os.path.join(path, _VC_GAMEYOB_REL)
     if not os.path.isfile(gameyob):
-        return False, "gameyob.nds em falta no add-on Virtual Console"
+        return False, "gameyob.nds ausente no add-on Virtual Console"
     ok, msg = validate_nds_header(gameyob)
     if not ok:
         return False, f"gameyob.nds inválido: {msg}"
@@ -682,7 +682,7 @@ def install_twilight_menu(mount_path, log_callback=None):
                 undo.push_remove(dst_sub)
         ensure_twilight_rom_folders(mount_path)
 
-        # Placeholders oficiais do add-on (ficheiros de texto) — best-effort
+        # Placeholders oficiais do add-on (arquivos de texto) — best-effort
         vc_roms = os.path.join(vc_src, "roms")
         if os.path.isdir(vc_roms):
             for name in os.listdir(vc_roms):
@@ -719,7 +719,7 @@ def install_twilight_menu(mount_path, log_callback=None):
 
 def install_twilight_virtual_console(mount_path, log_callback=None):
     """
-    Instala só o add-on Virtual Console (GameYob) num SD que já tem TWiLight.
+    Instala só o add-on Virtual Console (GameYob) em um SD que já tem TWiLight.
     """
     log = lambda msg: emit_log(log_callback, msg)
     log("=== Instalando Virtual Console (GameYob) ===")

@@ -1,6 +1,6 @@
 # Paridade de UI — Route Pico v2
 
-Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode desaparecer; só mudar de sítio.
+Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de usuário pode desaparecer; só mudar de lugar.
 
 ## Orçamento de performance
 
@@ -16,14 +16,14 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 
 ## Navegação alvo
 
-Barra lateral com quatro entradas; o cartão escolhe-se só no seletor da barra de cima. Teclado: setas mudam de aba, Alt+1…4 mudam de vista, Esc fecha a gaveta Atividade.
+Barra lateral com quatro entradas; o cartão é escolhido só no seletor da barra de cima. Teclado: setas mudam de aba, Alt+1…4 mudam de vista, Esc fecha a gaveta Atividade.
 
 | Vista | Abas |
 |-------|------|
 | Início | Cartão DSPico (Abrir, Jogos, RouteDex) e cartão Mais ferramentas (Softmod DSi, Flashcards R4/GEi); resumo do cartão escolhido |
 | DSPico | Cartão (estado, atualizações + Enhanced, preparar SD) · Jogos · RouteDex · Launcher (`settings.json`, temas do launcher, fundos noturnos) · Emuladores e apps (emuladores, apps USB LNH) · Avançado (emunand, firmware) |
 | Mais ferramentas | Softmod DSi (identificar, assistente, passos manuais) · Flashcards R4/GEi · Biblioteca TWiLight (`/roms/`, organizar, cheats, capas) · Apps homebrew · Manutenção do cartão |
-| Definições | SteamGridDB, Aparência (mesma lista do botão de tema), Sobre |
+| Configurações | SteamGridDB, Aparência (mesma lista do botão de tema), Sobre |
 
 ## Métodos `Api` → destino
 
@@ -31,7 +31,7 @@ Barra lateral com quatro entradas; o cartão escolhe-se só no seletor da barra 
 |--------|---------|
 | `get_disks` | Barra superior (volume) — global |
 | `get_logs` / `clear_logs` | Gaveta Atividade (abre sozinha durante operações) |
-| `get_about` / `open_external_url` | Definições → Sobre |
+| `get_about` / `open_external_url` | Configurações → Sobre |
 | `get_homebrew_catalog` | Mais ferramentas → Apps homebrew |
 | `inspect_sd` / `probe_kernels` / `quarantine_dcim` | Mais ferramentas → Softmod DSi / Flashcards R4/GEi |
 | `setup_nand_dump` / `setup_unlaunch` / `setup_hiya` | Mais ferramentas → Softmod DSi (assistente + passos manuais) |
@@ -59,7 +59,7 @@ Barra lateral com quatro entradas; o cartão escolhe-se só no seletor da barra 
 | `check_dspico_updates` / `install_dspico_component` (variante `official` / `enhanced`) | DSPico → Cartão → Atualizações |
 | `list/set/import/create_pico_*_theme` | DSPico → Launcher |
 | `install_dspico_usb_apps` | DSPico → Emuladores e apps |
-| `get_prefs` / `set_prefs` | Definições (incl. chave SteamGridDB) |
+| `get_prefs` / `set_prefs` | Configurações (incl. chave SteamGridDB) |
 
 ## Secções legadas → destino
 
@@ -81,6 +81,6 @@ A vista avançada escondida (`view-advanced`) e a realocação de painéis em te
 
 - [x] Todos os métodos `Api` da tabela têm UI alcançável
 - [x] Confirmação tipada `FORMATAR` preservada (prompt); `APAGAR` nas mensagens de limpeza
-- [x] Temas da app funcionam (Definições e botão de tema usam a mesma lista)
+- [x] Temas do app funcionam (Configurações e botão de tema usam a mesma lista)
 - [x] `pytest -q` verde (201)
 - [x] Orçamento: virtual grid >200; push `web_events`; CSS tailwind+app ≈ 21 KB; shell sidebar

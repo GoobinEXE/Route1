@@ -27,7 +27,7 @@ TWILIGHT_ICON_SIZE = 32
 def decode_png_rgba(data: bytes) -> tuple[int, int, bytes]:
     """
     Decodifica PNG RGB/RGBA/paleta/cinza (8-bit) → (w, h, rgba_bytes).
-    Suficiente para GameTDB / Libretro / PNG escolhido pelo utilizador.
+    Suficiente para GameTDB / Libretro / PNG escolhido pelo usuário.
     """
     if not data.startswith(b"\x89PNG\r\n\x1a\n"):
         raise ValueError("Não é PNG.")

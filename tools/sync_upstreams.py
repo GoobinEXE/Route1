@@ -8,7 +8,7 @@
   * pacotes (launcher/loader oficiais e Enhanced): última release, asset pela
     regra ``asset_re``, digest SHA-256 publicado pelo GitHub conferido contra o
     download; grava tag/asset/sha256 no lock;
-  * PicoDex: última release, copia os ficheiros de ``files`` dessa tag para
+  * PicoDex: última release, copia os arquivos de ``files`` dessa tag para
     core/data/picodex/ e grava tag, commit e sha256 de cada um. Um
     loaderReleases.json com menos releases do que o atual é recusado (mesma
     regra de crescimento do gerador da PicoDex).

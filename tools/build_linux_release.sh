@@ -56,5 +56,5 @@ tar -C "$OUT" -czf "$INSTALL_TGZ" RoutePico-install
 rm -rf "$INSTALL_DIR"
 
 echo
-echo "Artefactos em ${OUT}:"
+echo "Artefatos em ${OUT}:"
 ls -lh "$OUT"

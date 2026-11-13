@@ -1,4 +1,4 @@
-"""Capas e ícones multi-consola para TWiLight Menu++.
+"""Capas e ícones multiconsole para TWiLight Menu++.
 
 Ordem: SteamGridDB (principal) → GameTDB (NDS) → Libretro → jsDelivr.
 """
@@ -167,7 +167,7 @@ def libretro_sanitize_name(name: str) -> str:
 
 def libretro_name_candidates(filename: str) -> list[str]:
     """
-    Candidatos de nome a partir do ficheiro ROM (sem extensão).
+    Candidatos de nome a partir do arquivo ROM (sem extensão).
     Mantém tags No-Intro; depois remove tags finais progressivamente.
     """
     stem = os.path.splitext(os.path.basename(filename or ""))[0].strip()
@@ -323,7 +323,7 @@ def _write_png_bytes(
     """Grava PNG validado via .partial + os.replace.
 
     Se ``kind`` for boxart|icon, redimensiona e ajusta (paleta/tamanho)
-    antes de gravar — aplica-se a downloads e ficheiros locais.
+    antes de gravar — vale para downloads e arquivos locais.
     """
     payload = data
     if kind in ("boxart", "icon"):
@@ -358,7 +358,7 @@ def _fetch_first_ok(
     workers: int = _BATCH_HTTP_WORKERS,
 ) -> Optional[bytes]:
     """
-    Descarrega candidatas em paralelo; devolve o 1.º PNG válido.
+    Baixa candidatas em paralelo; devolve o 1.º PNG válido.
     Sem sleep entre misses — o pool substitui o pacing sequencial.
     """
     if not urls:
@@ -650,7 +650,7 @@ def fetch_rom_artwork(
     force: bool = False,
 ) -> tuple[bool, str, dict[str, Any]]:
     """
-    Descarrega capa (+ ícone) para um ROM sob /roms/<rel_path>.
+    Baixa capa (+ ícone) para um ROM sob /roms/<rel_path>.
     Ordem: SteamGridDB → GameTDB (NDS) → Libretro / jsDelivr.
     """
     from core.steamgriddb import (
@@ -793,7 +793,7 @@ def install_artwork(mount_path: str, log_callback=None) -> tuple[bool, str]:
     if not is_safe_mount_path(mount_path):
         return False, "Unidade não reconhecida como volume removível/USB/SD."
 
-    log("=== Instalar capas e ícones (multi-consola) ===")
+    log("=== Instalar capas e ícones (multiconsole) ===")
     boxart_dir = _twilight_dir(mount_path, "boxart")
     icon_dir = _twilight_dir(mount_path, "icons")
     os.makedirs(boxart_dir, exist_ok=True)
@@ -827,7 +827,7 @@ def install_artwork(mount_path: str, log_callback=None) -> tuple[bool, str]:
         return False, str(err)
 
     log(
-        "No TWiLight Menu++, ative capas/ícones personalizados nas definições "
+        "No TWiLight Menu++, ative capas/ícones personalizados nas configurações "
         "se ainda não estiver ativo."
     )
     msg = str(res.get("message") or "Capas e ícones atualizados.")
@@ -1115,7 +1115,7 @@ def generate_twilight_artwork_batch(
             tracker.current = idx
             tracker.tick(force=True)
     except OperationCancelled as e:
-        msg = str(e) or "Operação cancelada pelo utilizador."
+        msg = str(e) or "Operação cancelada pelo usuário."
         log(f"⚠️ {msg} ({written} gravada(s) antes).")
         tracker.written = written
         tracker.skipped = skipped
@@ -1263,11 +1263,11 @@ def search_rom_artwork(
         query=q,
     )
     log(
-        f"A listar opções de {'capa' if kind_n == 'boxart' else 'ícone'} "
+        f"Listando opções de {'capa' if kind_n == 'boxart' else 'ícone'} "
         f"TWiLight para {meta['display_name']}…"
     )
 
-    # Preview actual no cartão
+    # Preview atual no cartão
     box_dir = _twilight_dir(mount_path, "boxart")
     icon_dir = _twilight_dir(mount_path, "icons")
     current = None
@@ -1361,12 +1361,12 @@ def search_rom_artwork(
     ) and not has_api_key():
         msg = (
             "Sem fonte online para esta plataforma — "
-            "configure SteamGridDB em Definições ou escolha um ficheiro PNG/BMP."
+            "configure SteamGridDB em Configurações ou escolha um arquivo PNG/BMP."
         )
     else:
         msg = (
             "Nenhuma imagem encontrada — tente outro nome/TID "
-            "ou escolha um ficheiro PNG/BMP."
+            "ou escolha um arquivo PNG/BMP."
         )
     if candidates:
         log(f"✅ {msg}")
@@ -1406,7 +1406,7 @@ def apply_rom_artwork_url(
     url: str,
     log_callback=None,
 ) -> tuple[bool, str, dict[str, Any]]:
-    """Descarrega URL allowlisted e grava PNG TWiLight."""
+    """Baixa URL allowlisted e grava PNG TWiLight."""
     log = lambda msg: emit_log(log_callback, msg)
     stats: dict[str, Any] = {}
     kind_n = (kind or "boxart").strip().lower()
@@ -1435,9 +1435,9 @@ def apply_rom_artwork_url(
         )
 
     os.makedirs(os.path.dirname(dest), exist_ok=True)
-    log("A descarregar e ajustar a imagem para o cartão…")
+    log("Baixando e ajustando a imagem para o cartão…")
     if not _download_png(url, dest, kind=kind_n):
-        return False, "Falha ao descarregar ou converter a imagem.", stats
+        return False, "Falha ao baixar ou converter a imagem.", stats
     try:
         sync_volume(mount_path)
     except Exception:

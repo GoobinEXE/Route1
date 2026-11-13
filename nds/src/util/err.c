@@ -16,7 +16,7 @@ const char *r1_err_str_pt(int err)
     case R1_E_CANCEL:
         return "Cancelado.";
     case R1_E_DENIED:
-        return "Operação negada (ficheiro protegido).";
+        return "Operação negada (arquivo protegido).";
     case R1_E_NOMEM:
         return "Memória insuficiente.";
     case R1_E_NOTFOUND:

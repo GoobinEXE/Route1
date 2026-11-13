@@ -1,4 +1,4 @@
-"""Redação de caminhos com home do utilizador (PII em logs/UI)."""
+"""Redação de caminhos com home do usuário (PII em logs/UI)."""
 
 from __future__ import annotations
 

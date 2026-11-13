@@ -36,7 +36,7 @@ const ACTION_MAP = {
   "copy-nand": "copy_nand_backup",
 };
 
-/** Vista actual da shell (home | dspico | tools | settings). */
+/** Vista atual da shell (home | dspico | tools | settings). */
 function currentView() {
   return window.R1K && R1K.shell && R1K.shell.current ? R1K.shell.current() : "home";
 }
@@ -276,8 +276,8 @@ const _OP_LABELS_PT = {
   backup_sd: "Backup do cartão",
   backup_drive: "Backup do cartão",
   backup: "Backup do cartão",
-  download: "Descarregar",
-  cache_download: "Descarregar",
+  download: "Baixar",
+  cache_download: "Baixar",
 };
 
 function opLabelPt(op, fallback) {
@@ -438,7 +438,7 @@ function updateOpProgress(payload) {
   const metricsText = parts.join(" · ");
   if (metricsEl) metricsEl.textContent = metricsText;
   if (countEl) countEl.textContent = metricsText || (payload.done ? "Concluído" : "…");
-  labelEl.textContent = String(payload.label || (payload.done ? "Concluído" : "A processar…"));
+  labelEl.textContent = String(payload.label || (payload.done ? "Concluído" : "Processando…"));
 
   const determinate = pct != null;
   bar.classList.toggle("r1k-op-progress-bar--indeterminate", !determinate && !payload.done);
@@ -650,7 +650,7 @@ function findActionButton(endpoint) {
 }
 
 /**
- * Operação partilhada pelo painel avançado e pelo assistente.
+ * Operação compartilhada pelo painel avançado e pelo assistente.
  * options: {
  *   method: 'setup_nand_dump' | ...,
  *   hasFacebook?: boolean,
@@ -689,14 +689,14 @@ async function runMountOp(options = {}) {
       layoutLine = "• mover jogos para /roms/<franquia>/ (ex. Pokemon, Mario)\n";
     } else if (layout === "both") {
       layoutLine =
-        "• mover jogos para /roms/<consola>/<franquia>/ (ex. /roms/nds/Pokemon/)\n";
+        "• mover jogos para /roms/<console>/<franquia>/ (ex. /roms/nds/Pokemon/)\n";
     } else {
-      layoutLine = "• mover jogos para /roms/<consola>/ (ex. /roms/nds/)\n";
+      layoutLine = "• mover jogos para /roms/<console>/ (ex. /roms/nds/)\n";
     }
     const conf = confirm(
       "Organizar jogos e apps irá:\n" +
         layoutLine +
-        "• criar as pastas de destino em falta\n" +
+        "• criar as pastas de destino ausentes\n" +
         "• mover homebrew/apps para /roms/apps/\n" +
         "• sincronizar saves e estados de emuladores (GameYob .sav/.yss, …)\n" +
         "• remover pastas vazias sobrantes\n" +
@@ -726,7 +726,7 @@ async function runMountOp(options = {}) {
         layoutLine +
         "• apps/homebrew em Games/Apps/\n" +
         "• sincronizar saves junto de cada jogo\n" +
-        "• REMOVER pastas/ficheiros de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
+        "• REMOVER pastas/arquivos de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
         "• manter: _picoboot.nds, _pico/, Games/, Emulators/, _gba/, data/, emunand e snemul.cfg\n" +
         "  (ROMs/ só se tiver BIOS — jogos retro migram para Games/)\n\n" +
         "Esta ação é destrutiva para conteúdo que não seja DSPico.\n\n" +
@@ -747,11 +747,11 @@ async function runMountOp(options = {}) {
   if (methodName === "install_boxarts") {
     const conf = confirm(
       "Instalar capas e ícones irá:\n" +
-        "• descarregar capas GameTDB para jogos NDS (por game code)\n" +
-        "• descarregar capas e ecrãs de título Libretro para outras consolas\n" +
+        "• baixar capas GameTDB para jogos NDS (por game code)\n" +
+        "• baixar capas e telas de título Libretro para outros consoles\n" +
         "• e/ou importar packs PNG/zip de Downloads/Desktop\n" +
         "• gravar em /_nds/TWiLightMenu/boxart/ e icons/\n\n" +
-        "No TWiLight, ative capas/ícones personalizados nas definições.\n\n" +
+        "No TWiLight, ative capas/ícones personalizados nas configurações.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };
@@ -760,7 +760,7 @@ async function runMountOp(options = {}) {
   if (methodName === "copy_nand_backup") {
     const conf = confirm(
       "Copiar dump(s) NAND (DT*/nand.bin) para uma pasta no Desktop?\n" +
-        "O ficheiro no cartão NÃO será apagado."
+        "O arquivo no cartão NÃO será apagado."
     );
     if (!conf) return { success: false, error: "cancelled" };
   }
@@ -1084,7 +1084,7 @@ async function installHomebrewApp(btn) {
 
   let msg =
     `Instalar ${title} no cartão?\n` +
-    "Será descarregado (SHA-256), copiado para /roms/apps/ e aplicada a configuração da guia GameBrew (pastas/ficheiros).";
+    "Será baixado (SHA-256), copiado para /roms/apps/ e aplicada a configuração do guia GameBrew (pastas/arquivos).";
   if (warnNand) {
     msg +=
       "\n\nAVISO: esta ferramenta pode alterar a NAND do DSi. " +
