@@ -320,8 +320,8 @@ def create_pico_material_theme(
         payload = {
             "type": "material",
             "name": folder,
-            "description": "Tema material criado pelo Route 1 Kit.",
-            "author": "Route 1 Kit",
+            "description": "Tema material criado pelo Route Pico.",
+            "author": "Route Pico",
             "primaryColor": {"r": rgb[0], "g": rgb[1], "b": rgb[2]},
             "darkTheme": bool(dark),
         }

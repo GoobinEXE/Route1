@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-Route 1 Kit — App desktop multiplataforma (pywebview + HTML/CSS/JS).
+Route Pico — App desktop multiplataforma (pywebview + HTML/CSS/JS).
 """
 
 import os
+import re
 import sys
 import threading
 import webbrowser
@@ -1653,7 +1654,7 @@ class Api:
             return _reject(e)
 
     @_run_mount_op(min_free_mb=8)
-    def install_dspico_component(self, mount_path, component, channel="pinned"):
+    def install_dspico_component(self, mount_path, component, channel="pinned", variant="official"):
         from core.updates import install_dspico_component as _install
 
         if not isinstance(component, str) or not component.strip():
@@ -1663,11 +1664,14 @@ class Api:
             "latest",
         ):
             return _reject("Canal inválido (pinned ou latest).")
+        if not isinstance(variant, str) or variant.strip().lower() not in ("official", "enhanced"):
+            return _reject("Variante inválida (official ou enhanced).")
         return _install(
             mount_path,
             component.strip(),
             channel.strip().lower(),
             log_callback=add_log,
+            variant=variant.strip().lower(),
         )
 
     @_run_mount_op(min_free_mb=4)
@@ -1763,6 +1767,214 @@ class Api:
 
         return do_generate_twilight_artwork_batch(mount_path, log_callback=add_log)
 
+    # --- RouteDex (biblioteca nativa; baseado no PicoDex de rasalopa, MIT) ---
+
+    def _routedex_read(self, mount_path, fn, *args):
+        """Leitura RouteDex: valida a montagem, corre sob OP_LOCK sem preflight de escrita."""
+        from core.routedex import RouteDexError
+
+        path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
+        if not OP_LOCK.acquire(blocking=False):
+            return _reject("Outra operação já está em andamento. Aguarde.")
+        try:
+            return fn(path, *args)
+        except RouteDexError as e:
+            return _reject(str(e))
+        except Exception as e:
+            return _reject(e)
+        finally:
+            OP_LOCK.release()
+
+    @staticmethod
+    def _host_file(path_value, label):
+        p, err = _as_path_str(path_value, label=label)
+        if err:
+            return None, err
+        p = expand_user_path(p) if p.startswith("~") else p
+        if not os.path.isfile(p):
+            return None, f"{label}: ficheiro não encontrado."
+        return p, None
+
+    def get_routedex_overview(self, mount_path):
+        from core.routedex import gamedata_overview
+
+        return self._routedex_read(mount_path, gamedata_overview)
+
+    @_run_mount_op(min_free_mb=1)
+    def toggle_routedex_flag(self, mount_path, rel, flag="favorite"):
+        from core.routedex import toggle_flag
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return toggle_flag(mount_path, r, str(flag or ""), log=add_log)
+
+    @_run_mount_op(min_free_mb=1)
+    def set_routedex_stats(self, mount_path, rel, launch_count, play_minutes):
+        from core.routedex import set_stats
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return set_stats(mount_path, r, launch_count, play_minutes, log=add_log)
+
+    @_run_mount_op(min_free_mb=1)
+    def prune_routedex_entries(self, mount_path, file_names):
+        from core.routedex import prune_stale_entries
+
+        if not isinstance(file_names, list):
+            return _reject("Lista inválida.")
+        return prune_stale_entries(mount_path, [str(n) for n in file_names][:5000], log=add_log)
+
+    def check_routedex_health(self, mount_path):
+        from core.routedex import check_health
+
+        return self._routedex_read(mount_path, check_health)
+
+    @_run_mount_op(min_free_mb=1)
+    def remove_routedex_items(self, mount_path, rels):
+        from core.routedex import remove_card_items
+
+        if not isinstance(rels, list):
+            return _reject("Lista inválida.")
+        return remove_card_items(mount_path, [str(r) for r in rels][:5000], log=add_log)
+
+    def list_routedex_screenshots(self, mount_path):
+        from core.routedex import list_screenshots
+
+        return self._routedex_read(mount_path, list_screenshots)
+
+    def get_routedex_screenshot(self, mount_path, shot_id):
+        from core.routedex import screenshot_data_url
+
+        return self._routedex_read(
+            mount_path, lambda p, s: {"success": True, "image": screenshot_data_url(p, s)}, str(shot_id or "")
+        )
+
+    def export_routedex_screenshot(self, mount_path, shot_id):
+        from core.routedex import export_screenshot
+
+        if self._picker is None:
+            return _reject("Diálogo de ficheiros indisponível.")
+        cancelled, folder = self._picker.open_folder(caption="Guardar captura em")
+        if cancelled or not folder:
+            return {"success": True, "cancelled": True}
+        sid = str(shot_id or "")
+        safe = re.sub(r"[^A-Za-z0-9._-]", "_", sid) or "captura"
+        dest = os.path.join(folder, f"RoutePico_{safe}.png")
+        return self._routedex_read(mount_path, export_screenshot, sid, dest)
+
+    @_run_mount_op(min_free_mb=1)
+    def delete_routedex_screenshot(self, mount_path, shot_id):
+        from core.routedex import delete_screenshot
+
+        return delete_screenshot(mount_path, str(shot_id or ""), log=add_log)
+
+    def get_routedex_folder_art(self, mount_path, rel_folder):
+        from core.routedex import folder_art_status
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        return self._routedex_read(mount_path, folder_art_status, rf)
+
+    @_run_mount_op(min_free_mb=1)
+    def write_routedex_folder_banner(self, mount_path, rel_folder, title, rom_name="", image_path=""):
+        from core.routedex import write_folder_banner
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        img = ""
+        if isinstance(image_path, str) and image_path.strip():
+            img, err = self._host_file(image_path, "imagem")
+            if err:
+                return _reject(err)
+        return write_folder_banner(
+            mount_path, rf, str(title or "")[:127], rom_name=str(rom_name or ""), image_path=img, log=add_log
+        )
+
+    @_run_mount_op(min_free_mb=1)
+    def write_routedex_folder_cover(self, mount_path, rel_folder, image_path):
+        from core.routedex import write_folder_cover
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        img, err = self._host_file(image_path, "imagem")
+        if err:
+            return _reject(err)
+        return write_folder_cover(mount_path, rf, img, log=add_log)
+
+    @_run_mount_op(min_free_mb=1)
+    def remove_routedex_folder_art(self, mount_path, rel_folder, kind):
+        from core.routedex import remove_folder_art
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        return remove_folder_art(mount_path, rf, str(kind or ""), log=add_log)
+
+    def list_routedex_night_themes(self, mount_path):
+        from core.routedex import list_night_themes
+
+        return self._routedex_read(mount_path, list_night_themes)
+
+    @_run_mount_op(min_free_mb=1)
+    def generate_routedex_night_backgrounds(self, mount_path, theme_folder):
+        from core.routedex import generate_night_backgrounds
+
+        return generate_night_backgrounds(mount_path, str(theme_folder or ""), log=add_log)
+
+    @_run_mount_op(min_free_mb=1)
+    def remove_routedex_night_backgrounds(self, mount_path, theme_folder):
+        from core.routedex import remove_night_backgrounds
+
+        return remove_night_backgrounds(mount_path, str(theme_folder or ""), log=add_log)
+
+    def get_routedex_cheats(self, mount_path):
+        from core.routedex import cheats_status
+
+        return self._routedex_read(mount_path, cheats_status)
+
+    def pick_usrcheat_file(self):
+        """Escolher usrcheat.dat local (base de cheats R4/Pico Launcher)."""
+        if self._picker is None:
+            return _reject("Diálogo de ficheiros indisponível.")
+        try:
+            cancelled, paths = self._picker.open_files(
+                caption="Base de cheats",
+                filters=("Base de cheats (*.dat)", "Todos os ficheiros (*.*)"),
+                multiple=False,
+            )
+        except Exception as e:
+            return _reject(e)
+        if cancelled or not paths:
+            return {"success": True, "cancelled": True, "path": ""}
+        return {"success": True, "cancelled": False, "path": redact_path(paths[0])}
+
+    @_run_mount_op(min_free_mb=64)
+    def import_routedex_cheats(self, mount_path, source_path):
+        from core.routedex import RouteDexError, import_usrcheat
+
+        src, err = self._host_file(source_path, "usrcheat.dat")
+        if err:
+            return _reject(err)
+        try:
+            return import_usrcheat(mount_path, src, log=add_log)
+        except RouteDexError as e:
+            return _reject(str(e))
+
+    def get_routedex_credits(self):
+        from core.routedex import CREDITS
+
+        return {"success": True, "credits": CREDITS}
+
     def get_prefs(self):
         from core.prefs import load_prefs
         from core.steamgriddb import normalize_api_key
@@ -1839,10 +2051,10 @@ def start_app():
     web_events.start()
 
     print("\n=======================================================")
-    print(f"  Route 1 Kit {__version__} — App Desktop")
+    print(f"  Route Pico {__version__} — App Desktop")
     print("  Feche a janela para encerrar.")
     print("=======================================================\n")
-    add_log(f"Route 1 Kit {__version__} iniciado (pywebview).")
+    add_log(f"Route Pico {__version__} iniciado (pywebview).")
 
     icon_path = None
     for candidate in ("app-icon-512.png", "app-icon-256.png", "app-icon.png"):
@@ -1855,7 +2067,7 @@ def start_app():
     # Mesma cor do tema padrão (Studio Escuro, --c-bg) para não piscar branco
     # antes do HTML carregar.
     window = webview.create_window(
-        "Route 1 Kit",
+        "Route Pico",
         url=index_path,
         js_api=api,
         width=1180,

@@ -746,7 +746,7 @@ def _macos_run_admin_shell(shell_cmd):
     script = (
         f"with timeout of {timeout_s} seconds\n"
         f"do shell script {json.dumps(shell_cmd)} "
-        f'with prompt "Route 1 Kit precisa de administrador para definir cluster 32 KB." '
+        f'with prompt "Route Pico precisa de administrador para definir cluster 32 KB." '
         f"with administrator privileges\n"
         "end timeout"
     )
@@ -777,7 +777,7 @@ def _macos_terminal_newfs(newfs_bin, volume_name, parent_disk, part_id):
             f'LOG="{log_path}"\n'
             f'OK="{ok_path}"\n'
             f'FAIL="{fail_path}"\n'
-            "echo 'Route 1 Kit: a definir cluster 32 KB — confirma a palavra-passe do sudo.' | tee \"$LOG\"\n"
+            "echo 'Route Pico: a definir cluster 32 KB — confirma a palavra-passe do sudo.' | tee \"$LOG\"\n"
             f'{_DISKUTIL_BIN} unmountDisk force /dev/{parent_disk} 2>&1 | tee -a "$LOG"\n'
             f"sudo {newfs_bin} -F 32 -S 512 -c {spc} -v {volume_name} /dev/{part_id} 2>&1 | tee -a \"$LOG\"\n"
             'rc=${PIPESTATUS[0]}\n'

@@ -12,7 +12,7 @@ from core.logging_util import emit_log
 
 CACHE_DIR = os.path.expanduser("~/.route_1_kit_cache")
 USER_AGENT = (
-    f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Route-1-Kit/{_APP_VERSION}"
+    f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Route-Pico/{_APP_VERSION}"
 )
 
 # Pins oficiais — atualizar com tools/update_pins.py após verificar digest no GitHub.
@@ -34,6 +34,15 @@ DSPICO_CACHE_KEYS = frozenset(
         "pico_launcher",
         "pico_loader_dspico",
         "dspico_firmware_uf2",
+    }
+)
+# Variantes Enhanced (rasalopa/pico-launcher-enhanced, Zlib): fork não oficial,
+# instalado só quando o utilizador escolhe. Allowlist própria para nunca se
+# misturar com o pacote LNH oficial (DSPICO_CACHE_KEYS).
+DSPICO_ENHANCED_CACHE_KEYS = frozenset(
+    {
+        "pico_launcher_enhanced",
+        "pico_loader_enhanced_dspico",
     }
 )
 # dspico_firmware_uf2: não entra em PINNED_SHA256/URLS até o LNH publicar o .uf2

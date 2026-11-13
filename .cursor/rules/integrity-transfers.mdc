@@ -1,0 +1,42 @@
+---
+description: Integridade em escritas SD e USB — partial, hash, promote
+globs: nds/src/integrity/**,nds/src/usb/**,nds/src/fs/**,protocol/**
+alwaysApply: false
+---
+
+# Integridade de transferências
+
+## Contrato
+
+1. Escrever para staging (`*.r1partial` ou equivalente documentado)
+2. Calcular SHA-256 do staging (streaming preferível)
+3. Comparar com digest esperado
+4. Só então promote/rename atómico
+5. Sync/flush do volume
+6. Só depois ACK / `success`
+
+## Em falha
+
+- Apagar **apenas** o staging
+- Destino antigo permanece
+- Nunca reportar sucesso
+
+## Concorrência
+
+- Uma escrita activa no SD de cada vez
+- Durante MSC “ocupado”, não escrever pelo gestor local
+
+## Proibido
+
+```c
+// BAD: promover antes de verificar
+rename(partial, dest);
+if (hash(dest) != expected) remove(dest);
+```
+
+```c
+// GOOD: verificar partial, depois promote
+if (hash(partial) != expected) { remove(partial); return E_HASH; }
+rename(partial, dest);
+sync_volume();
+```

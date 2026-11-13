@@ -1,12 +1,12 @@
-# Route 1 Kit
+# Route Pico
 
 Licensed under the GNU General Public License v3.0 — see [`LICENSE`](LICENSE).
 
-**Route 1 Kit** é um aplicativo desktop para **macOS, Windows e Linux** que prepara cartões SD para o **Nintendo DSi** e para flashcards (**GEi / AceKard / R4**).
+**Route Pico** (antes **Route 1 Kit**) é um aplicativo desktop para **macOS, Windows e Linux** que prepara e mantém o microSD do cartucho **DSPico**: pacote oficial do LNH team, jogos, capas, emuladores, emunand, firmware e a biblioteca **RouteDex**. O softmod do **Nintendo DSi** e os flashcards **GEi / AceKard / R4** continuam disponíveis em **Mais ferramentas**.
 
 A interface é uma **janela nativa pywebview** com UI HTML/CSS/JS offline em `static/` (Tailwind local, sem CDN e sem servidor HTTP). A lógica de cartão continua em Python (`core/`).
 
-> A pasta ou o repositório podem ainda chamar-se `DSi-SD-Studio`; o nome do produto é **Route 1 Kit**.
+> A pasta ou o repositório podem ainda chamar-se `DSi-SD-Studio` / `Route1`; o nome do produto é **Route Pico**. Preferências, cache (`~/.route_1_kit_cache`) e a pasta de backups `Route1Kit_Saves` mantêm o nome antigo para não perder dados de quem atualiza.
 
 ---
 
@@ -16,7 +16,7 @@ Builds oficiais: [Releases no GitHub](https://github.com/GoobinEXE/Route1/releas
 
 | Plataforma | Portátil | Instalável |
 |------------|----------|------------|
-| **macOS** | ZIP com `Route 1 Kit.app` | DMG (arraste para Aplicações) |
+| **macOS** | ZIP com `Route Pico.app` | DMG (arraste para Aplicações) |
 | **Windows** | ZIP com a pasta do app | `setup.exe` (Inno Setup) |
 | **Linux** | `.tar.gz` onedir | `.tar.gz` com script de atalho `.desktop` |
 
@@ -28,11 +28,35 @@ Se preferir correr a partir do código-fonte, use a secção [Como abrir o aplic
 
 ## Para quem é este app?
 
-- Você quer **desbloquear o DSi** (SD-direct com TWiLight Menu++ e Unlaunch) sem montar pastas à mão.
-- Você quer **criar ou atualizar** o MicroSD de um flashcard GEi ou R4.
-- Você já tem jogos no cartão e quer **organizar ROMs e saves**, instalar capas, cheats ou utilitários — com menos risco de apagar o volume errado.
+- Você tem um **DSPico** e quer preparar o microSD com o pacote oficial, organizar jogos em `Games/`, pôr capas e emuladores e manter tudo atualizado.
+- Você usa o **Pico Launcher Enhanced** e quer ver e corrigir favoritos, jogos concluídos e tempo de jogo no computador, ou ver as capturas de ecrã que fez no console.
+- Você quer **desbloquear o DSi** (SD-direct com TWiLight Menu++ e Unlaunch) ou montar o MicroSD de um flashcard GEi / R4: isso está em **Mais ferramentas**.
 
-Se é a primeira vez: comece pelo **Assistente**. O **Modo avançado** fica para quem já conhece o fluxo. Para o cartucho **DSPico**, use o separador dedicado **DSPico** (pacote oficial LNH, jogos em `Games/`, emunand e firmware).
+Se é a primeira vez: abra **DSPico → Preparar SD**. O **Assistente** continua a guiar o softmod do DSi passo a passo.
+
+---
+
+## RouteDex
+
+O separador **DSPico → RouteDex** lê e escreve diretamente no microSD, sem browser e sem servidor:
+
+- **Biblioteca:** favoritos, concluídos, número de partidas, tempo de jogo e últimos jogados de `/_pico/gamedata.json`, com edição à mão. Campos que o Route Pico não conhece são preservados, e um `gamedata.json` que não faz parse nunca é sobrescrito.
+- **Saúde do cartão:** ficheiros do loader em falta, versão do Pico Loader e do launcher identificadas offline por hash (incluindo ficheiros de releases misturadas ou de outro flashcard), saves sem jogo, saves em duplicado, capas órfãs e lixo do macOS. Tudo o que é removido é copiado antes para o computador.
+- **Capturas:** as capturas do Enhanced (`shotNNN_top/bot.bmp`) com as duas telas empilhadas, para guardar em PNG ou apagar.
+- **Pastas:** `banner.bnr` (ícone e nome mostrado), `cover.bmp` de pasta.
+- **Fundos noturnos** dos temas (`*_night.bin`) e **cheats** (`usrcheat.dat` importado de um ficheiro seu, validado antes de ir para o cartão).
+
+O RouteDex é um port nativo das regras do [PicoDex](https://github.com/rasalopa/picodex) de rasalopa (licença MIT; aviso em [`docs/licenses/`](docs/licenses/)).
+
+## Route Pico no console (em desenvolvimento)
+
+Em [`nds/`](nds/) está o app `.nds` do Route Pico: um gestor de ficheiros do microSD que corre no próprio DS a partir do Pico Launcher, com proteção de `_picoboot.nds` e `_pico/`. As próximas fases ligam-no ao desktop por USB (protocolo [R1USB](protocol/R1USB.md)), com cópia verificada por SHA-256 sem tirar o cartão do cartucho. Estado e fases: [`docs/console/PLAN.md`](docs/console/PLAN.md). O `.nds` ainda não foi validado em hardware.
+
+## Pico Launcher Enhanced (opcional, recomendado)
+
+Por padrão o Route Pico instala só o Pico Launcher e o Pico Loader **oficiais** do LNH team. Em **Verificar Atualizações** pode escolher as variantes [Enhanced](https://github.com/rasalopa/pico-launcher-enhanced) de rasalopa (licença Zlib): favoritos, estatísticas, recentes, capturas, slots de save e, com o Loader Enhanced, a volta ao launcher de dentro do jogo.
+
+São forks **não oficiais**: problemas com elas vão para o repositório do rasalopa, não para o LNH team. O Loader Enhanced é só para o DSPico. Os dois zips estão pinados por SHA-256 como o resto, o launcher troca só `/_picoboot.nds` (e os temas incluídos), o loader troca só `picoLoader7.bin`/`picoLoader9.bin`, e o mesmo painel tem **Voltar ao oficial**.
 
 ---
 
@@ -45,7 +69,7 @@ Se é a primeira vez: comece pelo **Assistente**. O **Modo avançado** fica para
 
 ### Aviso importante (leia antes de gravar no console)
 
-O Route 1 Kit **prepara ficheiros no cartão SD**. **Não grava na NAND** do DSi por si só.
+O Route Pico **prepara ficheiros no cartão SD**. **Não grava na NAND** do DSi por si só.
 
 Ferramentas como o **Unlaunch**, quando executadas **no console**, **escrevem na memória interna**. Há um risco real (ainda que pequeno) de *brick*. **Não salte o backup da NAND** (`nand.bin`) e guarde uma cópia segura no computador. Siga também o guia da comunidade: [dsi.cfw.guide](https://dsi.cfw.guide/).
 
@@ -87,7 +111,7 @@ Feche a janela para encerrar o app.
 
 ## Guia do iniciante: o Assistente
 
-Ao abrir, o Route 1 Kit começa no **Assistente**. Escolha o objetivo que corresponde ao que pretende fazer.
+Ao abrir, o Route Pico começa no **Assistente**. Escolha o objetivo que corresponde ao que pretende fazer.
 
 A preferência Assistente / Avançado vale **só nesta sessão**. Se fechar a meio do guia, na próxima abertura volta ao início do Assistente.
 
@@ -193,31 +217,31 @@ A escolha fica guardada no computador entre sessões.
 
 ## Aviso legal / Termos de uso
 
-Este software é oferecido **“como está” (AS IS)**, **sem garantias** de qualquer tipo — expressas ou implícitas — incluindo, sem limitação, comercialização, adequação a um fim específico e não violação. Na máxima extensão permitida pela lei aplicável, os autores e contribuidores **não respondem** por danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos (perda de dados, dano a hardware, impossibilidade de uso do console, etc.) decorrentes do uso ou da impossibilidade de uso do Route 1 Kit.
+Este software é oferecido **“como está” (AS IS)**, **sem garantias** de qualquer tipo — expressas ou implícitas — incluindo, sem limitação, comercialização, adequação a um fim específico e não violação. Na máxima extensão permitida pela lei aplicável, os autores e contribuidores **não respondem** por danos diretos, indiretos, incidentais, especiais, consequenciais ou punitivos (perda de dados, dano a hardware, impossibilidade de uso do console, etc.) decorrentes do uso ou da impossibilidade de uso do Route Pico.
 
 Ao usar o app, você assume **toda a responsabilidade** pelas operações no cartão SD e pelas ações subsequentes na consola (incluindo instalação de Unlaunch ou outro software).
 
 ### Risco de brick e papel do app
 
-- O Route 1 Kit **prepara ficheiros no cartão SD**. **Não grava na NAND** do Nintendo DSi por si só.
+- O Route Pico **prepara ficheiros no cartão SD**. **Não grava na NAND** do Nintendo DSi por si só.
 - O **Unlaunch** (e fluxos semelhantes), quando executados **na consola**, **escrevem na NAND**. Há um **risco real, ainda que pequeno, de brick**. Só avance se tiver **backup da NAND** e compreender o guia oficial ([dsi.cfw.guide](https://dsi.cfw.guide/)).
 - Binários incorretos, incompletos ou de origem não verificada no cartão podem causar falhas graves se forem instalados via Unlaunch ou outros instaladores.
 - A UI do Assistente reforça estes avisos nas etapas críticas; leia-os antes de continuar.
 
 ### Afiliação e marcas
 
-O Route 1 Kit **não é afiliado, endossado ou patrocinado** pela Nintendo Co., Ltd. nem pelas respetivas subsidiárias. **Nintendo**, **DSi** e demais marcas relacionadas são propriedade dos seus titulares. Nomes de flashcards (GEi, AceKard, R4, etc.) e de projetos homebrew são usados apenas para identificação; pertencem aos respetivos donos.
+O Route Pico **não é afiliado, endossado ou patrocinado** pela Nintendo Co., Ltd. nem pelas respetivas subsidiárias. **Nintendo**, **DSi** e demais marcas relacionadas são propriedade dos seus titulares. Nomes de flashcards (GEi, AceKard, R4, etc.) e de projetos homebrew são usados apenas para identificação; pertencem aos respetivos donos.
 
 ### Licença do código deste repositório
 
-O **código-fonte do Route 1 Kit** (Python, HTML/CSS/JS da UI embutida, scripts e documentação deste repositório, salvo indicação em contrário) está licenciado sob a **GNU General Public License versão 3** — ver [`LICENSE`](LICENSE).
+O **código-fonte do Route Pico** (Python, HTML/CSS/JS da UI embutida, scripts e documentação deste repositório, salvo indicação em contrário) está licenciado sob a **GNU General Public License versão 3** — ver [`LICENSE`](LICENSE).
 
 ### Componentes descarregados (terceiros)
 
 Durante o uso, o app pode **descarregar** binários e arquivos de projetos upstream (por exemplo Memory Pit e dumpTool via [dsi.cfw.guide](https://dsi.cfw.guide/), Unlaunch Installer, TWiLight Menu++, e apps do catálogo Homebrew com releases no GitHub). Esses componentes:
 
 - mantêm as **licenças, autores e termos dos projetos originais**;
-- **não** são “relicenciados” sob a GPL-3.0 do Route 1 Kit só por serem descarregados ou copiados para o SD;
+- **não** são “relicenciados” sob a GPL-3.0 do Route Pico só por serem descarregados ou copiados para o SD;
 - são obtidos de URLs documentadas em `core/cache.py`, com verificação **SHA-256 pinada** (integridade, não uma garantia de isenção de risco).
 
 Respeite as licenças e créditos de cada projeto ao redistribuir ou modificar esses ficheiros fora do fluxo do app.

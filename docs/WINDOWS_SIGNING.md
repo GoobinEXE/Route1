@@ -11,8 +11,8 @@ Sem certificado configurado, o CI continua a publicar ZIP + `setup.exe` **não a
 | Peça | Papel |
 |------|--------|
 | `tools/build_windows_release.sh` | Fases `build` / `package` / `all`; assinatura local opcional via `.pfx` |
-| `packaging/windows/Route1Kit.iss` | `AppPublisher=Dark Room`; `SignTool` se `ROUTE1_SIGN` |
-| `.github/workflows/release.yml` | Assina `dist\Route1Kit` e o `setup.exe` se os secrets Azure existirem |
+| `packaging/windows/RoutePico.iss` | `AppPublisher=Dark Room`; `SignTool` se `ROUTE1_SIGN` |
+| `.github/workflows/release.yml` | Assina `dist\RoutePico` e o `setup.exe` se os secrets Azure existirem |
 
 ## Passos que só tu podes fazer
 
@@ -67,17 +67,17 @@ export WINDOWS_SIGNTOOL_CMD='signtool sign /fd SHA256 /td SHA256 /tr http://time
 ## Fases do script (CI)
 
 ```bash
-# 1) PyInstaller → dist/Route1Kit/
+# 1) PyInstaller → dist/RoutePico/
 ROUTE1KIT_WIN_PHASE=build ./tools/build_windows_release.sh
 
-# 2) (CI) azure/artifact-signing-action → Route1Kit.exe
+# 2) (CI) azure/artifact-signing-action → RoutePico.exe
 # 3) ZIP + Inno
 ROUTE1KIT_WIN_PHASE=package ./tools/build_windows_release.sh
 
 # 4) (CI) assinar o setup.exe gerado
 ```
 
-No CI assinamos só `Route1Kit.exe` e o `*-setup.exe` (não todas as DLLs do PyInstaller),
+No CI assinamos só `RoutePico.exe` e o `*-setup.exe` (não todas as DLLs do PyInstaller),
 para não esgotar a quota do Artifact Signing.
 
 ## Verificar
@@ -85,8 +85,8 @@ para não esgotar a quota do Artifact Signing.
 Numa máquina Windows:
 
 ```bat
-signtool verify /pa /v Route1Kit.exe
-signtool verify /pa /v Route-1-Kit-*-windows-x64-setup.exe
+signtool verify /pa /v RoutePico.exe
+signtool verify /pa /v Route-Pico-*-windows-x64-setup.exe
 ```
 
 O publisher deve aparecer como **Dark Room** (ou o Subject do certificado Azure).

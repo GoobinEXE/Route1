@@ -107,7 +107,7 @@ def test_api_get_about():
     api = app_mod.Api()
     res = api.get_about()
     assert res["success"] is True
-    assert res["app_name"] == "Route 1 Kit"
+    assert res["app_name"] == "Route Pico"
     assert res["studio"]["name"] == "Dark Room"
     assert res["latest_release"]["version"]
 

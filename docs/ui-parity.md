@@ -1,4 +1,4 @@
-# Paridade de UI — Route 1 Kit v2
+# Paridade de UI — Route Pico v2
 
 Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode desaparecer; só mudar de sítio.
 
@@ -18,7 +18,7 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 
 | Vista sidebar | Destino |
 |---------------|---------|
-| Início | Hero DSPico + Softmod; atalhos Utilidades; estado do cartão |
+| Início | Hero DSPico (+ atalho RouteDex) e Softmod em «Mais ferramentas»; atalhos Utilidades; estado do cartão |
 | DSPico | Flagship (prioridade máxima) |
 | Softmod DSi | Wizard + extras |
 | Utilidades | Emuladores / Apps / Capas·Ícones / Temas |
@@ -45,12 +45,19 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de utilizador pode de
 | `get_dspico_settings` / `set_dspico_settings` | DSPico → Definições |
 | `list_dspico_emulators` / `install_dspico_emulators` | DSPico → Emuladores + Utilidades |
 | `list_rp2_volumes` / `flash_dspico_firmware` | DSPico → Firmware |
+| `get_routedex_overview` / `toggle_routedex_flag` / `set_routedex_stats` / `prune_routedex_entries` | DSPico → RouteDex → Biblioteca |
+| `check_routedex_health` / `remove_routedex_items` | DSPico → RouteDex → Saúde do cartão |
+| `list/get/export/delete_routedex_screenshot(s)` | DSPico → RouteDex → Capturas |
+| `get_routedex_folder_art` / `write_routedex_folder_banner` / `write_routedex_folder_cover` / `remove_routedex_folder_art` | DSPico → RouteDex → Pastas |
+| `list_routedex_night_themes` / `generate/remove_routedex_night_backgrounds` | DSPico → RouteDex → Fundos noturnos |
+| `get_routedex_cheats` / `pick_usrcheat_file` / `import_routedex_cheats` | DSPico → RouteDex → Cheats |
+| `get_routedex_credits` | Sobre (créditos de terceiros) |
 | `pick_dspico_*` / `pick_rom_files` / `pick_folder` / `pick_image_file` | Diálogos (FilePickerPort) |
 | `setup_gei` / `setup_r4` | Outros flashcards |
 | `organize_roms` / `browse_roms` / `list_roms` / `list_rom_dir` / `list_rom_tree` / `rom_details` / `mkdir_rom_dir` / `move_roms` / `import_roms` / `delete_roms` / `default_saves_backup_dir` | Cartão SD |
 | `sd_report` / `backup` / `clean_sd` / `format_sd` | Cartão SD → Manutenção |
 | `install_homebrew` | Utilidades → Apps |
-| `check_dspico_updates` / `install_dspico_component` | Início + DSPico (Verificar Atualizações) |
+| `check_dspico_updates` / `install_dspico_component` (variante `official` / `enhanced`) | Início + DSPico (Verificar Atualizações, cartões Enhanced) |
 | `list/set/import/create_pico_*_theme` | Utilidades → Temas |
 | `install_dspico_usb_apps` | Utilidades → Apps |
 | `generate_dspico_covers_batch` | Utilidades → Capas |

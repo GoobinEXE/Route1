@@ -1293,6 +1293,16 @@ function renderAboutPage(data) {
   const legal = Array.isArray(data.legal) ? data.legal : [];
   const goals = Array.isArray(project.goals) ? project.goals : [];
   const release = data.latest_release || null;
+  const credits = Array.isArray(data.credits) ? data.credits : [];
+  const creditsHtml = credits
+    .map(
+      (c) =>
+        `<li><strong>${escapeHtml(c.name || "")}</strong> · ${escapeHtml(c.author || "")} · ${escapeHtml(
+          c.license || ""
+        )}<br><span class="text-fg-mute">${escapeHtml(c.text || "")}</span>
+        <button type="button" class="btn-ghost !px-2 !py-1 text-[11px] mt-1" data-ext="${escapeHtml(c.url || "")}">Repositório</button></li>`
+    )
+    .join("");
 
   const goalsHtml = goals
     .map((g) => `<li>${escapeHtml(g)}</li>`)
@@ -1364,11 +1374,12 @@ function renderAboutPage(data) {
         <img src="assets/logo.svg" alt="" width="48" height="48" class="brand-mark">
         <div class="min-w-0">
           <h2 class="text-[15px] font-semibold text-fg leading-none">${escapeHtml(
-            data.app_name || "Route 1 Kit"
+            data.app_name || "Route Pico"
           )}</h2>
           <p class="text-[12px] text-fg-mute mt-1.5 leading-relaxed">
             ${escapeHtml(project.tagline || "")}
           </p>
+          ${data.formerly ? `<p class="text-[11px] text-fg-mute mt-1">Antes ${escapeHtml(data.formerly)}.</p>` : ""}
           <div class="about-meta">
             <span class="chip chip--accent">v${escapeHtml(data.version || "")}</span>
             <span class="chip">${escapeHtml(data.license || "GPL-3.0")}</span>
@@ -1429,6 +1440,15 @@ function renderAboutPage(data) {
         </div>
       </section>
     </div>
+
+    ${
+      creditsHtml
+        ? `<section class="panel p-5">
+      <h2 class="section-label mb-2">Créditos de terceiros</h2>
+      <ul class="about-list">${creditsHtml}</ul>
+    </section>`
+        : ""
+    }
 
     <section class="panel p-5">
       <h2 class="section-label mb-2">Avisos essenciais</h2>

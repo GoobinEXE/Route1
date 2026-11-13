@@ -1,3 +1,3 @@
-"""Route 1 Kit — core package."""
+"""Route Pico — core package."""
 
 __version__ = "1.0.3"

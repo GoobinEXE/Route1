@@ -36,6 +36,9 @@ PINNED_SHA256 = {
     "twlmagician_win": "969ebb6a36cc7f1d875dbfd0a03f48f218d07d00d0326bc1ae5115267b695b87",
     "pico_launcher": "b4ed7f2cf2713e0c74985764536a0bfb7381566c67b0f85dc8b83375bcfc495d",
     "pico_loader_dspico": "b589797da9aa24882bd8a80119d90373a915df26ded9cc4c5a3708321ea29aa3",
+    # Variantes Enhanced (rasalopa, fork Zlib do LNH) — opt-in, nunca o padrão.
+    "pico_launcher_enhanced": "6169f3ef57c46505efd81442a9f05c25c8889947f00c6e967080f16d75b2699f",
+    "pico_loader_enhanced_dspico": "cba2fe62fdb6cc5fbf0ef72bf98ba458b3dfd1d26b3a414ef841da35364e34d5",
     "hiya_launcher_usa": "8efbed489e9e5fa1c7b98035d56c708402468ad96d98fc5556f420809e418ee2",
     "hiya_launcher_eur": "a36d915f096952db7b1b9c3cd6b59cc67baf78946fa34589ed837417ab4e8b6a",
     "hiya_launcher_jpn": "4c388bed2df210aee798dcadc53f8a98fb57dd285cada53d6ff33a4945cde0d0",
@@ -172,6 +175,16 @@ PIN_META = {
         "tag": "v1.6.0",
         "asset": "Pico_Loader_DSPICO.zip",
     },
+    "pico_launcher_enhanced": {
+        "repo": "rasalopa/pico-launcher-enhanced",
+        "tag": "enhanced-v1.11.0",
+        "asset": "Pico_Launcher_Enhanced.zip",
+    },
+    "pico_loader_enhanced_dspico": {
+        "repo": "rasalopa/pico-launcher-enhanced",
+        "tag": "enhanced-v1.11.0",
+        "asset": "Pico_Loader_Enhanced_v1.0.1.zip",
+    },
 }
 
 URLS = {
@@ -251,6 +264,14 @@ URLS = {
     "pico_loader_dspico": (
         "https://github.com/LNH-team/pico-loader/releases/download/v1.6.0/"
         "Pico_Loader_DSPICO.zip"
+    ),
+    "pico_launcher_enhanced": (
+        "https://github.com/rasalopa/pico-launcher-enhanced/releases/download/"
+        "enhanced-v1.11.0/Pico_Launcher_Enhanced.zip"
+    ),
+    "pico_loader_enhanced_dspico": (
+        "https://github.com/rasalopa/pico-launcher-enhanced/releases/download/"
+        "enhanced-v1.11.0/Pico_Loader_Enhanced_v1.0.1.zip"
     ),
     "hiya_launcher_usa": (
         "https://raw.githubusercontent.com/R-YaTian/TWLMagician/main/launchers/USA"
@@ -405,6 +426,8 @@ FILENAMES = {
     "twlmagician_win": "TWLMagician_Win_v1.6.3_x64.msi",
     "pico_launcher": "Pico_Launcher.zip",
     "pico_loader_dspico": "Pico_Loader_DSPICO.zip",
+    "pico_launcher_enhanced": "Pico_Launcher_Enhanced.zip",
+    "pico_loader_enhanced_dspico": "Pico_Loader_Enhanced_v1.0.1.zip",
     "hiya_launcher_usa": "hiya_launcher_USA",
     "hiya_launcher_eur": "hiya_launcher_EUR",
     "hiya_launcher_jpn": "hiya_launcher_JPN",
@@ -470,6 +493,8 @@ MIN_SIZES = {
     "twlmagician_win": 1024 * 100,
     "pico_launcher": 1024 * 50,
     "pico_loader_dspico": 1024 * 10,
+    "pico_launcher_enhanced": 1024 * 50,
+    "pico_loader_enhanced_dspico": 1024 * 10,
     "hiya_launcher_usa": 1024,
     "hiya_launcher_eur": 1024,
     "hiya_launcher_jpn": 1024,

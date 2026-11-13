@@ -1,6 +1,6 @@
 ---
 description: Fontes oficiais DSPico (LNH + manual ChiScart) — consultar antes de inventar layout/fluxo
-globs: core/dspico*.py,core/pico_*.py,core/updates.py,static/dspico.js,static/js/*.js,tests/test_dspico*.py,tests/test_pico_*.py,tests/test_updates.py
+globs: nds/**,core/dspico*.py,core/pico_*.py,core/routedex.py,core/updates.py,static/dspico.js,static/js/*.js,tests/test_dspico*.py,tests/test_pico_*.py,tests/test_updates.py
 alwaysApply: false
 ---
 
@@ -26,12 +26,21 @@ Ao implementar, corrigir ou documentar o modo DSPico, **consultar estas fontes**
 | dspico-hardware | https://github.com/LNH-team/dspico-hardware | Hardware open-source |
 | dspico | https://github.com/LNH-team/dspico | Meta / GUIDE |
 
+## Variante Enhanced e RouteDex (rasalopa)
+
+| Fonte | URL | Usar para |
+|-------|-----|-----------|
+| pico-launcher-enhanced | https://github.com/rasalopa/pico-launcher-enhanced | Fork Zlib opt-in: `docs/Enhanced.md`, `docs/GameData.md` (formato de `gamedata.json`), capturas, `*_night.bin` |
+| picodex | https://github.com/rasalopa/picodex | Regras portadas em `core/routedex.py` (MIT, crédito obrigatório na UI e em `docs/licenses/`) |
+
+A variante Enhanced **nunca** é o padrão: só entra por escolha do utilizador (`variant="enhanced"`), com pins em `DSPICO_ENHANCED_CACHE_KEYS` e o aviso `ENHANCED_DISCLAIMER` de `core/updates.py`.
+
 Emuladores Pico (secundário): guia Sanrax + pins `DSPICO_EMU_CACHE_KEYS` — ver `core/dspico_emulators.py`.
 
 ## Como trabalhar
 
 1. **Antes** de mudar layout do microSD, nomes de markers, fluxo «Preparar SD» ou firmware RPI-RP2: alinhar com o manual + GUIDE/Usage (WebFetch / docs do repo).
-2. Downloads de pacote/firmware: **só** `DSPICO_CACHE_KEYS` / `github.com/LNH-team/` — nunca mirrors de terceiros nem BIOS proprietária.
+2. Downloads de pacote/firmware: **só** `DSPICO_CACHE_KEYS` / `github.com/LNH-team/`, mais `DSPICO_ENHANCED_CACHE_KEYS` / `github.com/rasalopa/pico-launcher-enhanced` quando o utilizador escolhe a variante Enhanced. Nunca mirrors de terceiros nem BIOS proprietária.
 3. Textos de ajuda na UI e logs: coerentes com o manual (ex. `_picoboot.nds` na raiz, loaders em `/_pico/`, jogos em `Games/`, UF2 via BOOTSEL).
 4. Em conflito entre código local e fonte oficial recente: preferir a fonte LNH/manual e actualizar o app + pins com evidência — não «adivinhar».
 5. Manter `DSPICO_OFFICIAL_LINKS` e a allowlist em `core/about.py` sincronizados com estas URLs.

@@ -53,6 +53,13 @@ def clean_macos_metadata(mount_path, log_callback=None):
         for d in dirs:
             if d in junk_dirs:
                 p = os.path.join(root, d)
+                if d == ".fseventsd":
+                    try:
+                        entries = os.listdir(p)
+                        if entries and all(n.lower() == "no_log" for n in entries):
+                            continue
+                    except OSError:
+                        pass
                 try:
                     shutil.rmtree(p, ignore_errors=True)
                     deleted_count += 1

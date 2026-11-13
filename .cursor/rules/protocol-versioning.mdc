@@ -1,0 +1,15 @@
+---
+description: Mudanças ao protocolo R1USB exigem version bump
+globs: protocol/**,nds/include/route1/version.h,nds/include/route1/err.h
+alwaysApply: false
+---
+
+# Protocolo versionado
+
+Qualquer alteração a frames, `msg_type`, erros ou limites:
+
+1. Bump da versão em `protocol/messages.json`, `nds/include/route1/version.h` e `protocol/R1USB.md` (histórico)
+2. Ajustar `tests/test_protocol_messages.py`; o teste compara a spec com os headers C
+3. Se a ponte do desktop (`core/r1usb_host.py`) for afetada, mudá-la no mesmo commit
+
+Não implementar wire “adivinhado” fora da spec draft sem actualizar estes ficheiros.

@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
 echo ================================================
-echo   Iniciando Route 1 Kit (desktop)...
+echo   Iniciando Route Pico (desktop)...
 echo ================================================
 
 if not exist ".venv\Scripts\python.exe" (

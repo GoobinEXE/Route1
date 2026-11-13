@@ -1,0 +1,41 @@
+{
+  "protocol": "R1USB",
+  "version": "0.1.0",
+  "status": "draft",
+  "msg_types": {
+    "1": "HELLO",
+    "2": "HELLO_ACK",
+    "3": "LIST",
+    "4": "LIST_RESULT",
+    "5": "PUT_BEGIN",
+    "6": "PUT_CHUNK",
+    "7": "PUT_STATUS",
+    "8": "PUT_COMMIT",
+    "9": "PUT_DONE",
+    "10": "GET_BEGIN",
+    "11": "GET_CHUNK",
+    "12": "CANCEL",
+    "13": "BYE",
+    "15": "ERROR"
+  },
+  "errors": {
+    "E_OK": 0,
+    "E_PROTO": 1,
+    "E_PATH": 2,
+    "E_IO": 3,
+    "E_HASH": 4,
+    "E_BUSY": 5,
+    "E_NOSPC": 6,
+    "E_CANCEL": 7,
+    "E_RESUME_MISMATCH": 8,
+    "E_DENIED": 9,
+    "E_NOMEM": 10
+  },
+  "limits": {
+    "max_payload": 262144,
+    "max_path_bytes": 512,
+    "chunk_prefer": 65536,
+    "partial_suffix": ".r1partial",
+    "hash": "SHA-256"
+  }
+}

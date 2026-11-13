@@ -705,7 +705,7 @@ def apply_dspico_artwork_url(
     """
     Descarrega só a URL escolhida (memória) e grava BMP directamente no cartão SD.
 
-    Não usa a cache do Route 1 Kit nem ficheiros temporários no disco do PC —
+    Não usa a cache do Route Pico nem ficheiros temporários no disco do PC —
     o destino final é `/_pico/covers|icons/...` no mount do cartão.
     """
     log = lambda msg: emit_log(log_callback, msg)

@@ -14,7 +14,7 @@ def initial_step(goal: str) -> Step:
         return steps[0]
     return {
         "id": "home",
-        "title": "Route 1 Kit",
+        "title": "Route Pico",
         "where": "PC",
         "bodyKind": "home",
     }
