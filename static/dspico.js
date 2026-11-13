@@ -99,6 +99,7 @@ const Dspico = (() => {
         tab.tabIndex = on ? 0 : -1;
       }
     }
+    if (window.R1K && R1K.shell && R1K.shell.onDspicoSection) R1K.shell.onDspicoSection(section);
   }
 
   function startDrivePoll() {

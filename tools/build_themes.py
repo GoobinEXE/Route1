@@ -44,76 +44,89 @@ MOCHA = {
 # (acento das ações, cor da seleção-assinatura) para os modos claro/noturno.
 FAMILIES = [
     {
-        "id": "dupla", "label": "Dupla Tela", "hint": "Papel quadriculado, moldura azul",
-        "radius": (10, 14, 18),
+        "id": "dupla", "label": "Dupla Tela", "hint": "Papel quadriculado, cantos azuis",
+        "radius": (6, 10, 14),
         "original": {
-            "scheme": "light", "bg": "#e2e6ea", "surface": "#ffffff", "surface2": "#f1f3f5", "line": "#cdd3da",
-            "line_strong": "#aab3be", "fg": "#1d2126", "soft": "#3b424a", "mute": "#59616b",
-            "accent": "#2f7de1", "select": "#2f7de1", "ok": "#1e8e3e", "warn": "#b4640a", "danger": "#cf2f3d",
+            "scheme": "light", "bg": "#f3f4f5", "surface": "#ffffff", "surface2": "#f2f3f4", "line": "#d6d9dc",
+            "line_strong": "#a9afb6", "fg": "#2a2d31", "soft": "#45494f", "mute": "#5d6269",
+            "accent": "#2b7fe0", "select": "#2e8cf0", "ok": "#1e8e3e", "warn": "#b4640a", "danger": "#cf2f3d",
+            "chrome": "#ffffff", "chrome_fg": "#5d6269", "hero": "#ffffff", "hero_fg": "#2a2d31",
         },
         "catppuccin": ("blue", "blue"),
     },
     {
-        "id": "camera", "label": "Câmera Dupla", "hint": "Branco e cinza, etiqueta com bico",
-        "radius": (12, 16, 22),
+        "id": "camera", "label": "Câmera Dupla", "hint": "Tela menta, balão com bico",
+        "radius": (8, 12, 16),
         "original": {
-            "scheme": "light", "bg": "#e9ecef", "surface": "#ffffff", "surface2": "#f2f4f6", "line": "#d3d8dd",
-            "line_strong": "#b0b8c1", "fg": "#252a2f", "soft": "#41474e", "mute": "#5d646c",
-            "accent": "#1f8fb3", "select": "#3e9fd3", "ok": "#2a8a3f", "warn": "#b0620c", "danger": "#c8323a",
+            "scheme": "light", "bg": "#e7e9eb", "surface": "#ffffff", "surface2": "#f1f3f4", "line": "#d0d5d9",
+            "line_strong": "#a7afb7", "fg": "#26292d", "soft": "#41464c", "mute": "#5b6168",
+            "accent": "#2a86c9", "select": "#3a8fd8", "ok": "#2a8a3f", "warn": "#b0620c", "danger": "#c8323a",
+            "chrome": "#55595e", "chrome_fg": "#ffffff", "hero": "#9fd3c7", "hero_fg": "#173f37",
         },
-        "catppuccin": ("teal", "sapphire"),
+        "catppuccin": ("sapphire", "sapphire"),
     },
     {
-        "id": "canais", "label": "Canais", "hint": "Risca fina prateada, anel ciano",
-        "radius": (14, 18, 26),
+        "id": "canais", "label": "Canais", "hint": "Canais brancos, barra curva",
+        "radius": (14, 18, 24),
         "original": {
-            "scheme": "light", "bg": "#eef0f2", "surface": "#ffffff", "surface2": "#f5f6f8", "line": "#d5d9de",
-            "line_strong": "#b3bac2", "fg": "#33383e", "soft": "#4a5057", "mute": "#646b73",
-            "accent": "#1fb0e6", "select": "#34beed", "ok": "#2a8b45", "warn": "#b0640d", "danger": "#cc3440",
+            "scheme": "light", "bg": "#eceef0", "surface": "#ffffff", "surface2": "#f4f5f7", "line": "#d3d7dc",
+            "line_strong": "#aab1b9", "fg": "#383c41", "soft": "#4b5057", "mute": "#646a71",
+            "accent": "#1a9fd6", "select": "#34beed", "ok": "#2a8b45", "warn": "#b0640d", "danger": "#cc3440",
+            "chrome": "#e2e4e7", "chrome_fg": "#55595f", "hero": "#ffffff", "hero_fg": "#383c41",
         },
         "catppuccin": ("sapphire", "sky"),
     },
     {
-        "id": "tablet", "label": "Tablet de Sala", "hint": "Vidro claro, cartão realçado",
-        "radius": (12, 16, 22),
+        "id": "tablet", "label": "Tablet de Sala", "hint": "Vidro branco, bloco ciano",
+        "radius": (14, 18, 22),
         "original": {
-            "scheme": "light", "bg": "#e6e9ec", "surface": "#fbfcfd", "surface2": "#f0f2f4", "line": "#d4d9de",
-            "line_strong": "#afb7c0", "fg": "#272b30", "soft": "#41474e", "mute": "#5c636b",
-            "accent": "#14a9dc", "select": "#23b8e8", "ok": "#2b8a3e", "warn": "#b5650b", "danger": "#cf3443",
+            "scheme": "light", "bg": "#e8e9eb", "surface": "#fafbfb", "surface2": "#eff1f3", "line": "#d6dadd",
+            "line_strong": "#aeb5bc", "fg": "#2b2f33", "soft": "#43484e", "mute": "#5d636a",
+            "accent": "#169fd0", "select": "#2bbde6", "ok": "#2b8a3e", "warn": "#b5650b", "danger": "#cf3443",
+            "chrome": "#f6f7f8", "chrome_fg": "#4a4f55", "hero": "#ffffff", "hero_fg": "#2b2f33",
         },
         "catppuccin": ("sky", "sky"),
     },
     {
-        "id": "cubo", "label": "Cubo", "hint": "Índigo profundo, moldura dourada",
-        "radius": (6, 10, 14),
+        "id": "cubo", "label": "Cubo", "hint": "Painéis violeta, botão dourado",
+        "radius": (4, 6, 8),
         "original": {
-            "scheme": "dark", "bg": "#0f0c2e", "surface": "#1b1752", "surface2": "#251f68", "line": "#3a3292",
-            "line_strong": "#544ab8", "fg": "#ece9ff", "soft": "#c9c3f2", "mute": "#a29bdc",
-            "accent": "#9d8cff", "select": "#f2c230", "ok": "#5fd08d", "warn": "#f3a24f", "danger": "#ff7184",
+            "scheme": "dark", "bg": "#07070c", "surface": "#1d1a63", "surface2": "#28217c", "line": "#4a46b4",
+            "line_strong": "#7a76de", "fg": "#eef0ff", "soft": "#cfd2f6", "mute": "#a9ade6",
+            "accent": "#d9b52e", "select": "#e8c43a", "ok": "#5fd08d", "warn": "#f3a24f", "danger": "#ff7184",
+            "chrome": "#0c0c16", "chrome_fg": "#c9cdf2", "hero": "#2c1f86", "hero_fg": "#eef0ff",
         },
-        "catppuccin": ("mauve", "yellow"),
+        "catppuccin": ("yellow", "yellow"),
     },
     {
-        "id": "cubos3d", "label": "Estéreo 3D", "hint": "Blocos em relevo, cantos verdes",
+        "id": "cubos3d", "label": "Estéreo 3D", "hint": "Cubos lavanda, cantos menta",
         "radius": (12, 16, 22),
         "original": {
-            "scheme": "light", "bg": "#e3e4e8", "surface": "#fafafb", "surface2": "#efeff2", "line": "#d0d2d8",
-            "line_strong": "#adb0b8", "fg": "#2c2f34", "soft": "#45484e", "mute": "#5f636a",
-            "accent": "#e2681a", "select": "#2fbf71", "ok": "#24894a", "warn": "#b0610a", "danger": "#cb3038",
+            "scheme": "light", "bg": "#e8e7ef", "surface": "#ffffff", "surface2": "#e9e5de", "line": "#d4d2db",
+            "line_strong": "#aba9b4", "fg": "#2d2e33", "soft": "#46474d", "mute": "#5f6067",
+            "accent": "#e2681a", "select": "#38d39b", "ok": "#24894a", "warn": "#b0610a", "danger": "#cb3038",
+            "chrome": "#f3f2f7", "chrome_fg": "#55565c", "hero": "#dedcea", "hero_fg": "#2d2e33",
         },
         "catppuccin": ("peach", "green"),
     },
     {
-        "id": "hibrido", "label": "Híbrido", "hint": "Cinza limpo, anel duplo",
-        "radius": (10, 14, 20),
+        "id": "hibrido", "label": "Híbrido", "hint": "Doca redonda, anel ciano",
+        "radius": (6, 10, 14),
         "original": {
-            "scheme": "light", "bg": "#ebebeb", "surface": "#ffffff", "surface2": "#f4f4f4", "line": "#d9d9d9",
-            "line_strong": "#b6b6b6", "fg": "#2d2d2d", "soft": "#454545", "mute": "#5f5f5f",
-            "accent": "#d7283d", "select": "#16c3e0", "ok": "#24894a", "warn": "#ae600b", "danger": "#c4202f",
+            "scheme": "light", "bg": "#ebebeb", "surface": "#ffffff", "surface2": "#f4f4f4", "line": "#d6d6d6",
+            "line_strong": "#a8a8a8", "fg": "#2d2d2d", "soft": "#454545", "mute": "#5f5f5f",
+            "accent": "#3a5fd8", "select": "#19c6e4", "ok": "#24894a", "warn": "#ae600b", "danger": "#c4202f",
+            "chrome": "#ebebeb", "chrome_fg": "#2d2d2d", "hero": "#ffffff", "hero_fg": "#2d2d2d",
         },
-        "catppuccin": ("red", "sky"),
+        "catppuccin": ("blue", "sky"),
     },
 ]
+
+# Cores dos blocos (laranja, verde, azul, turquesa, vermelho, amarelo, roxo):
+# ícones coloridos por tarefa, como nos menus. Ajustadas a 3:1 contra o painel.
+TILE_LIGHT = ["#e46c12", "#2f9e3a", "#2a6fdb", "#12928d", "#d93a3a", "#c18600", "#8a4fd6"]
+TILE_DARK = ["#ff9a4a", "#6fd67c", "#7fb0ff", "#5fd6cf", "#ff7a7a", "#f2c84b", "#c39bff"]
+TILE_CP = ["peach", "green", "blue", "teal", "red", "yellow", "mauve"]
 
 DEFAULT_FAMILY = "dupla"
 DEFAULT_MODE = "original"
@@ -190,6 +203,11 @@ def tokens(family: dict, mode: str) -> dict[str, str]:
             "line_strong": cp["surface1"] if mode == "light" else cp["surface2"],
             "fg": cp["text"], "soft": cp["subtext1"], "mute": cp["subtext0"],
             "accent": cp[acc], "select": cp[sel], "ok": cp["green"], "warn": cp["peach"], "danger": cp["red"],
+            "chrome": cp["base"] if family["id"] not in ("camera", "cubo") else cp["crust"],
+            "chrome_fg": cp["subtext1"] if family["id"] not in ("camera", "cubo") else cp["text"],
+            "hero": mix(cp["base"], cp[sel], 0.22 if mode == "light" else 0.16)
+            if family["id"] in ("camera", "cubo", "cubos3d") else cp["base"],
+            "hero_fg": cp["text"],
         }
     dark = p["scheme"] == "dark"
     toward_text = "#ffffff" if dark else "#000000"
@@ -218,6 +236,17 @@ def tokens(family: dict, mode: str) -> dict[str, str]:
         "warn": ensure(p["warn"], grounds, 4.5, toward_text),
         "danger": ensure(p["danger"], grounds, 4.5, toward_text),
     })
+    out["chrome"] = p["chrome"]
+    out["chrome-fg"] = ensure(p["chrome_fg"], [p["chrome"]], 4.5, "#ffffff" if lum(p["chrome"]) < 0.4 else "#000000")
+    out["hero"] = p["hero"]
+    out["hero-fg"] = ensure(p["hero_fg"], [p["hero"]], 4.5, "#ffffff" if lum(p["hero"]) < 0.4 else "#000000")
+    if mode == "original":
+        tiles = TILE_DARK if dark else TILE_LIGHT
+    else:
+        cp = LATTE if mode == "light" else MOCHA
+        tiles = [cp[k] for k in TILE_CP]
+    for i, t in enumerate(tiles, 1):
+        out[f"tile-{i}"] = ensure(t, [p["surface"], p["surface2"]], 3.0, toward_text)
     # Contornos de controlo (WCAG 1.4.11): a borda forte separa-se do painel a 3:1.
     out["line-strong"] = ensure(out["line-strong"], [p["surface"]], 3.0, toward_text) if contrast(out["line-strong"], p["surface"]) < 3.0 else out["line-strong"]
     return out

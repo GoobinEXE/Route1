@@ -1,0 +1,857 @@
+/* ==========================================================================
+   Route Pico — shell de console
+   Barra de status em cima, menu de blocos no Início, cabeçalho com Voltar nas
+   telas, barra de ícones e barra de dicas embaixo. A parte comum vem primeiro;
+   depois, um bloco por tema com o arranjo do Início e o desenho das barras.
+   Cores só por tokens (themes.css).
+   ========================================================================== */
+
+:root {
+  --status-h: 52px;
+  --dock-h: 64px;
+  --hints-h: 30px;
+  --content-max: 1080px;
+}
+
+html, body { height: 100%; }
+body { margin: 0; overflow: hidden; min-height: 0; }
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+  position: relative;
+}
+
+/* ---------- barra de status ---------- */
+
+.app-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: var(--status-h);
+  padding: 0 18px;
+  background: rgb(var(--c-chrome));
+  color: rgb(var(--c-chrome-fg));
+  position: relative;
+  z-index: 20;
+}
+.status-brand { display: flex; align-items: center; gap: 10px; min-width: 0; flex-shrink: 0; }
+.brand-mark { border-radius: 8px; flex-shrink: 0; }
+.brand-name { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; color: rgb(var(--c-chrome-fg)); white-space: nowrap; }
+.status-where {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgb(var(--c-chrome-fg));
+  padding-left: 10px;
+  border-left: 1px solid rgb(var(--c-chrome-fg) / 0.35);
+  white-space: nowrap;
+}
+.status-drive { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1 1 auto; }
+.topbar-select { min-width: 180px; max-width: 340px; height: 34px; padding-top: 0; padding-bottom: 0; }
+.status-refresh { width: 34px; height: 34px; }
+.status-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: auto; }
+.status-clock { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.status-time { font-size: 16px; font-weight: 800; color: rgb(var(--c-chrome-fg)); }
+.status-date { font-size: 13px; font-weight: 700; color: rgb(var(--c-chrome-fg)); }
+/* Medidor de espaço com cara de bateria. */
+.status-meter {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 18px;
+  border: 2px solid rgb(var(--c-chrome-fg));
+  border-radius: 4px;
+  padding: 2px;
+  box-sizing: border-box;
+}
+.status-meter::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 4px;
+  width: 3px;
+  height: 6px;
+  border-radius: 0 2px 2px 0;
+  background: rgb(var(--c-chrome-fg));
+}
+.status-meter-fill { display: block; height: 100%; width: 0; border-radius: 1px; background: rgb(var(--c-select)); transition: width 400ms var(--ease); }
+.status-meter--full .status-meter-fill { background: rgb(var(--c-danger)); }
+.status-meter--empty { opacity: 0.55; }
+.app-status .chip { white-space: nowrap; color: rgb(var(--c-chrome-fg)); background: rgb(var(--c-chrome-fg) / 0.10); border-color: rgb(var(--c-chrome-fg) / 0.35); }
+.app-status .r1k-op-progress { flex: 1 1 240px; max-width: 380px; margin: 0; }
+.app-status .r1k-op-progress-title,
+.app-status .r1k-op-progress-metrics,
+.app-status .r1k-op-progress-label { color: rgb(var(--c-chrome-fg)); }
+#info-fs, #info-size, #info-free { display: none; }
+
+/* ---------- área principal ---------- */
+
+.app-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.app-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 24px 28px;
+  scroll-padding: 24px;
+}
+.view-pane { max-width: var(--content-max); margin: 0 auto; animation: pane-in 220ms var(--ease) both; }
+@keyframes pane-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Cabeçalho das telas: Voltar, ícone colorido, título. */
+.screen-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: calc(var(--content-max) + 48px);
+  margin: 0 auto;
+  padding: 18px 24px 4px;
+  box-sizing: border-box;
+}
+.screen-head.hidden { display: none; }
+.screen-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--c-line-strong));
+  background: rgb(var(--c-surface));
+  color: rgb(var(--c-fg));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.screen-back .ico { width: 18px; height: 18px; }
+.screen-back:hover { background: rgb(var(--c-surface-2)); }
+.screen-back:active { transform: translateY(1px); }
+.screen-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius);
+  background: rgb(var(--hue, var(--c-fg-soft)) / 0.14);
+  color: rgb(var(--hue, var(--c-fg-soft)));
+  flex-shrink: 0;
+}
+.screen-icon .ico { width: 26px; height: 26px; }
+.screen-text { min-width: 0; }
+.screen-title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.015em; color: rgb(var(--c-fg)); line-height: 1.15; }
+.screen-sub { margin: 2px 0 0; font-size: 14px; color: rgb(var(--c-fg-soft)); }
+
+/* ---------- barra de ícones e dicas ---------- */
+
+.app-dock { position: relative; z-index: 20; }
+.dock-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--dock-h);
+  padding: 8px 18px;
+  background: rgb(var(--c-chrome));
+  position: relative;
+}
+.dock-btn {
+  appearance: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgb(var(--c-chrome-fg));
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background var(--dur) var(--ease), box-shadow var(--dur) var(--ease), transform var(--dur) var(--ease);
+}
+.dock-btn:hover { background: rgb(var(--c-chrome-fg) / 0.10); }
+.dock-btn:focus-visible { outline: 2px solid rgb(var(--c-chrome-fg)); outline-offset: 3px; }
+.dock-ico { display: grid; place-items: center; }
+.dock-ico .ico { width: 22px; height: 22px; }
+.dock-btn--active { box-shadow: inset 0 0 0 2px rgb(var(--c-select)); }
+.dock-badge { position: absolute; top: 4px; right: 6px; width: 9px; height: 9px; border-radius: 999px; background: rgb(var(--c-select)); box-shadow: 0 0 0 2px rgb(var(--c-chrome)); }
+.dock-badge.hidden { display: none; }
+.dock-clock { display: none; }
+.dock-theme { position: relative; }
+.dock-theme .theme-menu { top: auto; bottom: calc(100% + 12px); right: 50%; transform-origin: bottom center; translate: 50% 0; }
+
+.app-hints {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  min-height: var(--hints-h);
+  padding: 5px 20px;
+  box-sizing: border-box;
+  background: rgb(var(--c-chrome));
+  color: rgb(var(--c-chrome-fg));
+  font-size: 12px;
+  font-weight: 700;
+}
+.hint-context { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.key {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1.5px solid currentColor;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+html[data-screen="home"] .hint--back { opacity: 0.45; }
+
+/* ---------- atividade (painel sobre a barra de ícones) ---------- */
+
+.activity-drawer {
+  position: fixed;
+  right: 18px;
+  bottom: calc(var(--dock-h) + var(--hints-h) + 14px);
+  width: min(560px, calc(100vw - 36px));
+  max-height: 0;
+  overflow: hidden;
+  z-index: 40;
+  background: rgb(var(--c-surface));
+  border: 1px solid rgb(var(--c-line-strong));
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-menu);
+  opacity: 0;
+  transform: translateY(10px);
+  visibility: hidden;
+  transition: opacity 200ms var(--ease), transform 240ms var(--ease), max-height 0ms linear 240ms, visibility 0ms linear 240ms;
+}
+.activity-drawer--open {
+  max-height: 320px;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition: opacity 200ms var(--ease), transform 240ms var(--ease);
+}
+.activity-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid rgb(var(--c-line)); }
+.activity-title { margin: 0; font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); }
+.activity-body { height: 240px; overflow: auto; padding: 10px 16px; }
+
+/* ==========================================================================
+   Início — peças comuns
+   ========================================================================== */
+
+#view-home { max-width: none; }
+.home:not(.hidden) { display: grid; }
+.home { gap: 20px; align-content: start; }
+.home-top { position: relative; }
+.home-clock { display: none; }
+.home-card { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.home-card-badge {
+  display: grid; place-items: center; flex-shrink: 0;
+  width: 48px; height: 48px; border-radius: 999px;
+  background: rgb(var(--c-select) / 0.14); color: rgb(var(--c-select));
+}
+.home-card-badge .ico { width: 26px; height: 26px; }
+.home-card-body { display: grid; gap: 8px; min-width: 0; flex: 1; }
+.home-card-name { margin: 0; font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); overflow-wrap: anywhere; }
+.home-usage { display: grid; gap: 6px; max-width: 520px; }
+.home-usage.hidden { display: none; }
+.home-usage-bar { height: 12px; border-radius: 999px; background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); overflow: hidden; }
+.home-usage-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: rgb(var(--c-select)); transition: width 400ms var(--ease); }
+.home-usage-text { margin: 0; font-size: 13px; color: rgb(var(--c-fg-soft)); font-variant-numeric: tabular-nums; }
+.home-steps { display: none; list-style: none; margin: 0; padding: 0; counter-reset: passo; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.home--nodrive .home-steps { display: grid; }
+.home-steps li { counter-increment: passo; display: grid; grid-template-columns: auto 1fr; column-gap: 10px; row-gap: 2px; align-content: start; }
+.home-steps li::before { content: counter(passo); grid-row: span 2; width: 26px; height: 26px; border-radius: 999px; display: grid; place-items: center; font-weight: 800; font-size: 13px; color: rgb(var(--c-on-select)); background: rgb(var(--c-select-fill)); }
+.home-step-title { font-size: 14px; font-weight: 800; color: rgb(var(--c-fg)); }
+.home-step-text { font-size: 13px; line-height: 1.45; color: rgb(var(--c-fg-soft)); }
+
+.home-caption { display: none; }
+.home-dots { display: none; }
+.home-menu { position: relative; display: grid; gap: 22px; }
+.home-group-title { margin: 0 0 10px; font-size: 14px; font-weight: 800; color: rgb(var(--c-fg-soft)); }
+.home-tiles { position: relative; }
+
+.tile {
+  appearance: none;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 10px;
+  border: 0;
+  background: rgb(var(--c-surface));
+  color: rgb(var(--c-fg));
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+  transition: transform var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.tile:focus-visible { outline: 2px solid rgb(var(--c-fg)); outline-offset: 10px; }
+/* Com foco, o bloco já mostra a seleção do tema (que segue o foco): sem anel duplo. */
+.tile.tile--current:focus-visible { outline: none; }
+.tile-slot { display: none; }
+.home-scrub { display: none; }
+.hint-okword { display: none; }
+.tile-art { display: grid; place-items: center; color: rgb(var(--hue)); }
+.tile-art .ico { width: 36px; height: 36px; }
+.tile-label { font-size: 14px; font-weight: 800; line-height: 1.2; color: rgb(var(--c-fg)); }
+.tile-desc { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.tile-start { display: none; }
+.tile:active { transform: scale(0.98); }
+
+/* ==========================================================================
+   Dupla Tela — duas telas empilhadas, papel quadriculado, cantos azuis
+   ========================================================================== */
+
+html[data-family="dupla"] body {
+  background-image:
+    linear-gradient(rgb(var(--c-line) / 0.75) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--c-line) / 0.75) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+html[data-family="dupla"] .app-status { border-bottom: 2px solid rgb(var(--c-line)); }
+html[data-family="dupla"] .app-hints { border-top: 1px solid rgb(var(--c-line)); }
+html[data-family="dupla"] .dock-bar { border-top: 2px solid rgb(var(--c-line)); justify-content: space-between; }
+html[data-family="dupla"] .dock-btn { border-radius: 6px; border: 2px solid rgb(var(--c-line)); background: linear-gradient(180deg, rgb(var(--c-surface)) 55%, rgb(var(--c-surface-2))); color: rgb(var(--c-fg-soft)); }
+html[data-family="dupla"] .dock-btn--active { border-color: rgb(var(--c-select)); box-shadow: none; color: rgb(var(--c-fg)); }
+html[data-family="dupla"] .dock-btn--home { margin-right: auto; }
+html[data-family="dupla"] .dock-theme { margin-left: auto; }
+
+html[data-family="dupla"] #view-home { max-width: 900px; }
+/* Tela de cima: relógio e cartão em caixas brancas. */
+html[data-family="dupla"] .home-top { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; }
+html[data-family="dupla"] .home-clock {
+  display: grid; place-content: center; gap: 4px; text-align: center;
+  background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line-strong)); border-radius: 6px;
+  min-height: 140px; font-variant-numeric: tabular-nums;
+}
+html[data-family="dupla"] .home-clock-time { font-size: 40px; font-weight: 800; color: rgb(var(--c-fg-soft)); letter-spacing: 0.02em; }
+html[data-family="dupla"] .home-clock-date { font-size: 13px; font-weight: 800; color: rgb(var(--c-fg-mute)); }
+html[data-family="dupla"] .home-card {
+  background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line-strong)); border-radius: 6px;
+  padding: 18px 20px; align-items: flex-start;
+}
+html[data-family="dupla"] .home-card-badge { border-radius: 6px; background: rgb(var(--c-select) / 0.12); }
+/* O espaço usado vira uma fileira de casas, como um calendário. */
+html[data-family="dupla"] .home-usage-bar {
+  height: 22px; border-radius: 3px; border: 0; background: rgb(var(--c-surface-2));
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 calc(10% - 3px), transparent calc(10% - 3px) 10%);
+  mask-image: repeating-linear-gradient(90deg, #000 0 calc(10% - 3px), transparent calc(10% - 3px) 10%);
+}
+html[data-family="dupla"] .home-usage-bar span { border-radius: 0; }
+html[data-family="dupla"] .home-steps { grid-column: 1 / -1; background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line)); border-radius: 6px; padding: 14px 16px; }
+/* Dobradiça entre as telas. */
+html[data-family="dupla"] .home-menu { padding-top: 20px; border-top: 6px double rgb(var(--c-line-strong)); }
+html[data-family="dupla"] .home-group-title { font-size: 13px; color: rgb(var(--c-fg-mute)); }
+html[data-family="dupla"] .home-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 18px; }
+html[data-family="dupla"] .tile {
+  flex-direction: row; justify-content: flex-start; text-align: left; gap: 12px;
+  min-height: 72px; padding: 10px 14px;
+  border: 2px solid rgb(var(--c-line-strong) / 0.8); border-radius: 6px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)) 55%, rgb(var(--c-surface-2)));
+}
+html[data-family="dupla"] .tile-art { width: 44px; height: 44px; border-radius: 6px; border: 2px solid rgb(var(--c-line)); background: rgb(var(--c-surface)); }
+html[data-family="dupla"] .tile-art .ico { width: 26px; height: 26px; }
+html[data-family="dupla"] .tile-label { font-size: 15px; }
+html[data-family="dupla"] .tile--current { border-color: rgb(var(--c-select) / 0.6); }
+
+/* ==========================================================================
+   Câmera Dupla — tela de cima menta, balão e fileira de ícones
+   ========================================================================== */
+
+html[data-family="camera"] body {
+  background-image: repeating-linear-gradient(180deg, rgb(var(--c-surface) / 0.7) 0 3px, transparent 3px 6px);
+}
+html[data-family="camera"] .app-status {
+  background: repeating-linear-gradient(180deg, rgb(var(--c-chrome)) 0 3px, rgb(var(--c-chrome-fg) / 0.06) 3px 4px), rgb(var(--c-chrome));
+}
+html[data-family="camera"] .status-where { border-left-color: rgb(var(--c-chrome-fg) / 0.4); }
+html[data-family="camera"] .dock-bar { background: rgb(var(--c-surface-2)); border-top: 1px solid rgb(var(--c-line)); }
+html[data-family="camera"] .dock-btn { color: rgb(var(--c-fg-soft)); }
+html[data-family="camera"] .dock-btn .ico { color: rgb(var(--c-select)); }
+html[data-family="camera"] .dock-btn:hover { background: rgb(var(--c-surface)); }
+html[data-family="camera"] .dock-btn--active { box-shadow: inset 0 0 0 2px rgb(var(--c-select)); background: rgb(var(--c-surface)); color: rgb(var(--c-fg)); }
+html[data-family="camera"] .app-hints { background: rgb(var(--c-chrome)); }
+
+html[data-family="camera"] .home-top {
+  display: grid; gap: 16px; justify-items: center; text-align: center;
+  background: rgb(var(--c-hero)); color: rgb(var(--c-hero-fg));
+  border-radius: var(--radius-lg); padding: 30px 24px; min-height: 190px; align-content: center;
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.06);
+}
+html[data-family="camera"] .home-card { flex-direction: column; text-align: center; gap: 10px; }
+html[data-family="camera"] .home-card-badge { width: 56px; height: 56px; background: rgb(var(--c-surface)); color: rgb(var(--c-hero-fg)); }
+html[data-family="camera"] .home-card-name, html[data-family="camera"] .home-usage-text { color: rgb(var(--c-hero-fg)); }
+html[data-family="camera"] .home-usage { justify-items: center; width: min(420px, 100%); }
+html[data-family="camera"] .home-usage-bar { width: 100%; background: rgb(var(--c-surface) / 0.7); border-color: rgb(var(--c-hero-fg) / 0.25); }
+html[data-family="camera"] .home-usage-bar span { background: rgb(var(--c-hero-fg)); }
+html[data-family="camera"] .home-steps { text-align: left; }
+html[data-family="camera"] .home-step-title, html[data-family="camera"] .home-step-text { color: rgb(var(--c-hero-fg)); }
+/* Balão com bico apontando para o ícone escolhido. */
+html[data-family="camera"] .home-caption {
+  display: grid; justify-items: center; gap: 4px; text-align: center;
+  position: relative; justify-self: center; width: min(560px, 90%);
+  padding: 14px 22px; border-radius: 14px;
+  background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line-strong));
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.08);
+}
+html[data-family="camera"] .home-caption::after {
+  content: ""; position: absolute; left: 50%; bottom: -11px; width: 18px; height: 18px;
+  background: rgb(var(--c-surface)); border-right: 2px solid rgb(var(--c-line-strong)); border-bottom: 2px solid rgb(var(--c-line-strong));
+  transform: translateX(-50%) rotate(45deg);
+}
+html[data-family="camera"] .home-caption-title { font-size: 20px; font-weight: 800; color: rgb(var(--c-fg)); }
+html[data-family="camera"] .home-caption-text { font-size: 14px; color: rgb(var(--c-fg-soft)); }
+/* Uma só fileira com rolagem lateral. */
+html[data-family="camera"] .home-menu {
+  display: flex; gap: 16px; overflow-x: auto; overflow-y: visible;
+  padding: 22px 48px 46px; scroll-padding: 0 120px;
+  border-top: 1px solid rgb(var(--c-line)); border-bottom: 1px solid rgb(var(--c-line));
+  background: rgb(var(--c-surface-2) / 0.6);
+}
+html[data-family="camera"] :is(.home-group, .home-tiles) { display: contents; }
+html[data-family="camera"] .home-group-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-family="camera"] .tile {
+  flex: 0 0 auto; width: 112px; height: 112px; padding: 0;
+  border: 3px solid rgb(var(--c-chrome)); border-radius: 12px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface-2)));
+}
+html[data-family="camera"] .tile-art .ico { width: 54px; height: 54px; }
+html[data-family="camera"] .tile-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html[data-family="camera"] .tile--current {
+  border-color: rgb(var(--c-select)); transform: scale(1.12);
+  box-shadow: 0 0 0 3px rgb(var(--c-select) / 0.35), 0 6px 14px rgb(0 0 0 / 0.14);
+}
+html[data-family="camera"] .tile--current .tile-start {
+  display: block; position: absolute; left: 50%; bottom: -28px; transform: translateX(-50%) scale(0.9);
+  padding: 2px 12px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: 0.04em;
+  background: rgb(var(--c-select-fill)); color: rgb(var(--c-on-select));
+}
+
+html[data-family="camera"] .home-scrub {
+  display: flex; align-items: center; gap: 10px; margin-top: -8px;
+}
+html[data-family="camera"] .scrub-arrow {
+  display: grid; place-items: center; width: 34px; height: 26px; border-radius: 8px; padding: 0;
+  border: 0; background: rgb(var(--c-select-fill)); color: rgb(var(--c-on-select)); cursor: pointer;
+}
+html[data-family="camera"] .scrub-arrow .ico { width: 18px; height: 18px; stroke-width: 2.6; }
+html[data-family="camera"] .scrub-track {
+  position: relative; flex: 1; height: 14px; border-radius: 999px; cursor: pointer;
+  background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line-strong));
+}
+html[data-family="camera"] .scrub-thumb {
+  position: absolute; top: 1px; bottom: 1px; left: 0; width: 20%; border-radius: 999px;
+  background: rgb(var(--c-select));
+}
+
+/* ==========================================================================
+   Canais — canais brancos em grade, risca fina, barra curva com relógio
+   ========================================================================== */
+
+html[data-family="canais"] { --dock-h: 104px; }
+html[data-family="canais"] body {
+  background-image: repeating-linear-gradient(180deg, transparent 0 3px, rgb(var(--c-line) / 0.45) 3px 4px);
+}
+html[data-family="canais"] .app-status { background: transparent; }
+html[data-family="canais"] #view-home { max-width: 980px; }
+html[data-family="canais"] .home {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+html[data-family="canais"] :is(.home-menu, .home-group, .home-tiles) { display: contents; }
+html[data-family="canais"] .home-group-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-family="canais"] :is(.home-top, .tile) {
+  border: 3px solid rgb(var(--c-line));
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)) 40%, rgb(var(--c-surface-2)));
+  box-shadow: inset 0 -3px 0 rgb(var(--c-line) / 0.5), 0 2px 6px rgb(0 0 0 / 0.07);
+}
+html[data-family="canais"] .home-top { grid-column: span 2; display: grid; align-content: center; gap: 12px; padding: 14px 22px; }
+html[data-family="canais"] .home-steps { grid-template-columns: 1fr; gap: 8px; }
+html[data-family="canais"] .tile { aspect-ratio: 16 / 9; gap: 8px; }
+html[data-family="canais"] .tile-slot {
+  display: block; border-radius: 22px; border: 3px solid rgb(var(--c-line) / 0.6);
+  background: linear-gradient(180deg, rgb(var(--c-surface) / 0.55), rgb(var(--c-surface-2) / 0.55));
+}
+html[data-family="canais"] .tile-art .ico { width: 42px; height: 42px; }
+html[data-family="canais"] .tile-label { font-size: 16px; color: rgb(var(--c-fg-soft)); }
+html[data-family="canais"] .tile--current {
+  border-color: rgb(var(--c-select));
+  box-shadow: 0 0 0 2px rgb(var(--c-select)), 0 0 18px rgb(var(--c-select) / 0.5);
+  transform: scale(1.03);
+}
+/* Barra curva: o desenho é uma máscara; o fio ciano segue a mesma curva. */
+html[data-family="canais"] .dock-bar {
+  background: transparent;
+  justify-content: space-between;
+  padding: 26px 34px 10px;
+  gap: 14px;
+}
+html[data-family="canais"] .dock-bar::before {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgb(var(--c-chrome)), rgb(var(--c-surface-2)));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0 20H330C385 20 390 58 445 58H555C610 58 615 20 670 20H1000V100H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0 20H330C385 20 390 58 445 58H555C610 58 615 20 670 20H1000V100H0Z'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+html[data-family="canais"] .app-dock::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: var(--dock-h); z-index: 1; pointer-events: none;
+  background: rgb(var(--c-select));
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0 20H330C385 20 390 58 445 58H555C610 58 615 20 670 20H1000' fill='none' stroke='%23000' stroke-width='3'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 100' preserveAspectRatio='none'%3E%3Cpath d='M0 20H330C385 20 390 58 445 58H555C610 58 615 20 670 20H1000' fill='none' stroke='%23000' stroke-width='3'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+}
+html[data-family="canais"] .dock-clock {
+  display: grid; justify-items: center; position: absolute; left: 50%; top: 22px; transform: translateX(-50%);
+  font-variant-numeric: tabular-nums; z-index: 2; pointer-events: none;
+}
+html[data-family="canais"] .dock-bar > * { position: relative; z-index: 1; }
+html[data-family="canais"] .dock-bar > .dock-clock { position: absolute; z-index: 2; }
+html[data-family="canais"] .dock-clock-time { font-size: 34px; font-weight: 300; letter-spacing: 0.06em; color: rgb(var(--c-chrome-fg)); line-height: 1; }
+html[data-family="canais"] .dock-clock-date { margin-top: 12px; font-size: 16px; font-weight: 800; color: rgb(var(--c-chrome-fg)); }
+html[data-family="canais"] .dock-btn {
+  flex-direction: column; gap: 2px; padding: 0; border-radius: 999px;
+  width: 58px; height: 58px; justify-content: center;
+  background: radial-gradient(circle at 50% 35%, rgb(var(--c-surface)), rgb(var(--c-surface-2)));
+  border: 3px solid rgb(var(--c-select) / 0.75);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.12);
+  color: rgb(var(--c-chrome-fg));
+  z-index: 2;
+}
+html[data-family="canais"] :is(.dock-btn--home, .dock-btn--activity) { width: 70px; height: 70px; }
+html[data-family="canais"] .dock-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html[data-family="canais"] .dock-btn--active { box-shadow: 0 0 0 3px rgb(var(--c-select)), 0 0 14px rgb(var(--c-select) / 0.5); }
+html[data-family="canais"] .dock-btn--home { order: 0; }
+html[data-family="canais"] .dock-theme { order: 1; margin-right: auto; }
+html[data-family="canais"] .dock-btn--settings { order: 2; margin-left: auto; }
+html[data-family="canais"] .dock-btn--activity { order: 3; }
+html[data-family="canais"] .app-hints { background: rgb(var(--c-surface-2)); }
+
+/* ==========================================================================
+   Tablet de Sala — grade de quadrados de vidro, bloco ciano com "Abrir"
+   ========================================================================== */
+
+html[data-family="tablet"] { --dock-h: 78px; }
+html[data-family="tablet"] body {
+  background-image:
+    radial-gradient(900px 420px at 80% 0%, rgb(var(--c-surface) / 0.9), transparent 70%),
+    linear-gradient(135deg, transparent 0 46%, rgb(var(--c-line) / 0.35) 46% 54%, transparent 54%);
+  background-size: auto, 320px 320px;
+}
+html[data-family="tablet"] .app-status { background: transparent; }
+html[data-family="tablet"] #view-home { max-width: 1120px; }
+html[data-family="tablet"] .home { grid-template-columns: 150px minmax(0, 1fr); gap: 22px; align-items: start; }
+html[data-family="tablet"] .home-top {
+  display: grid; justify-items: center; gap: 12px; text-align: center;
+  padding: 16px 12px; border-radius: 20px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface-2)));
+  border: 1px solid rgb(var(--c-line));
+  box-shadow: inset 0 0 0 6px rgb(var(--c-surface)), 0 6px 16px rgb(0 0 0 / 0.08);
+}
+html[data-family="tablet"] .home-card { flex-direction: column; gap: 8px; }
+html[data-family="tablet"] .home-card-badge { width: 64px; height: 64px; }
+html[data-family="tablet"] .home-card-badge .ico { width: 34px; height: 34px; }
+html[data-family="tablet"] .home-card-name { font-size: 13px; }
+html[data-family="tablet"] .home-usage-text { font-size: 12px; }
+html[data-family="tablet"] .home-steps { grid-template-columns: 1fr; text-align: left; }
+html[data-family="tablet"] .home-menu { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; }
+html[data-family="tablet"] :is(.home-group, .home-tiles) { display: contents; }
+html[data-family="tablet"] .home-group-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-family="tablet"] .tile {
+  aspect-ratio: 1; padding: 8px; gap: 6px; border-radius: 20px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface-2)));
+  border: 1px solid rgb(var(--c-line));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.6), 0 5px 12px rgb(0 0 0 / 0.08);
+  overflow: hidden;
+}
+html[data-family="tablet"] .tile-art { width: 100%; flex: 1; border-radius: 14px; background: rgb(var(--hue) / 0.12); }
+html[data-family="tablet"] .tile-art .ico { width: 44px; height: 44px; }
+html[data-family="tablet"] .tile-label { font-size: 13px; padding-bottom: 2px; }
+html[data-family="tablet"] .tile--current { box-shadow: 0 0 0 6px rgb(var(--c-select)), 0 10px 22px rgb(var(--c-select) / 0.3); transform: scale(1.04); }
+html[data-family="tablet"] .tile--current .tile-start {
+  display: block; position: absolute; left: 8px; right: 8px; bottom: 30px; padding: 5px 0 6px;
+  border-radius: 0 0 14px 14px;
+  background: rgb(var(--c-select-fill)); color: rgb(var(--c-on-select));
+  font-size: 14px; font-weight: 800;
+}
+/* Fileira de ícones coloridos, sem moldura. */
+html[data-family="tablet"] .dock-bar { background: transparent; justify-content: space-evenly; padding: 6px 60px 10px; }
+html[data-family="tablet"] .dock-btn { flex-direction: column; gap: 3px; padding: 6px 12px; border-radius: 14px; font-size: 12px; color: rgb(var(--c-fg-soft)); }
+html[data-family="tablet"] .dock-ico .ico { width: 32px; height: 32px; stroke-width: 2.4; }
+html[data-family="tablet"] .dock-btn--home .dock-ico { color: rgb(var(--c-tile-4)); }
+html[data-family="tablet"] .dock-btn--activity .dock-ico { color: rgb(var(--c-tile-1)); }
+html[data-family="tablet"] .dock-btn--theme .dock-ico { color: rgb(var(--c-tile-2)); }
+html[data-family="tablet"] .dock-btn--settings .dock-ico { color: rgb(var(--c-tile-3)); }
+html[data-family="tablet"] .dock-btn:hover { background: rgb(var(--c-surface)); }
+html[data-family="tablet"] .dock-btn--active { box-shadow: 0 0 0 3px rgb(var(--c-select)); background: rgb(var(--c-surface)); }
+html[data-family="tablet"] .app-hints { background: transparent; border-top: 1px solid rgb(var(--c-line)); }
+
+/* ==========================================================================
+   Cubo — preto quadriculado, painéis violeta, barra dourada, dicas coloridas
+   ========================================================================== */
+
+html[data-family="cubo"] body {
+  background-image:
+    linear-gradient(rgb(var(--c-line) / 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--c-line) / 0.18) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+html[data-family="cubo"] .brand-name, html[data-family="cubo"] .status-where { letter-spacing: 0.06em; }
+html[data-family="cubo"] .app-status { border-bottom: 1px solid rgb(var(--c-line) / 0.6); }
+html[data-family="cubo"] .screen-title { letter-spacing: 0.04em; color: rgb(var(--c-tile-3)); }
+html[data-family="cubo"] .screen-back { border-radius: 6px; background: linear-gradient(180deg, rgb(var(--c-line) / 0.9), rgb(var(--c-surface-2))); }
+html[data-family="cubo"] #view-home { max-width: 1040px; }
+html[data-family="cubo"] .home { grid-template-columns: minmax(0, 1fr); }
+html[data-family="cubo"] :is(.home-top, .home-group, .home-caption) {
+  border: 2px solid rgb(var(--c-line-strong) / 0.85);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface-2)) 55%, rgb(var(--c-hero)));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.10), 0 6px 22px rgb(0 0 0 / 0.55);
+}
+html[data-family="cubo"] .home-top { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding: 18px 22px; }
+html[data-family="cubo"] .home-card-badge {
+  width: 64px; height: 76px; border-radius: 6px;
+  background: linear-gradient(180deg, rgb(var(--c-select) / 0.35), rgb(var(--c-select) / 0.15));
+  border: 3px solid rgb(var(--c-select)); color: rgb(var(--c-fg));
+  box-shadow: inset 0 0 0 4px rgb(0 0 0 / 0.25);
+}
+html[data-family="cubo"] .home-usage-bar { background: rgb(0 0 0 / 0.35); border-color: rgb(var(--c-line-strong)); border-radius: 3px; }
+html[data-family="cubo"] .home-usage-bar span { background: linear-gradient(180deg, rgb(255 246 196), rgb(var(--c-select)) 50%, rgb(150 112 10)); border-radius: 0; }
+html[data-family="cubo"] .home-menu { order: 2; }
+html[data-family="cubo"] .home-caption { order: 3; }
+html[data-family="cubo"] .home-menu { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+html[data-family="cubo"] .home-group { padding: 16px 16px 18px; }
+html[data-family="cubo"] .home-group-title {
+  font-size: 15px; letter-spacing: 0.1em; color: rgb(var(--c-tile-3));
+  padding-bottom: 6px; margin-bottom: 10px; border-bottom: 2px solid rgb(var(--c-tile-3) / 0.55);
+}
+html[data-family="cubo"] .home-tiles { display: grid; gap: 4px; }
+html[data-family="cubo"] .tile {
+  flex-direction: row; justify-content: flex-start; gap: 12px; text-align: left;
+  padding: 9px 14px; border-radius: 4px; background: transparent; border: 1px solid transparent;
+}
+html[data-family="cubo"] .tile:hover { background: rgb(255 255 255 / 0.05); }
+html[data-family="cubo"] .tile-art .ico { width: 22px; height: 22px; }
+html[data-family="cubo"] .tile-label { font-size: 15px; letter-spacing: 0.06em; font-weight: 700; }
+html[data-family="cubo"] .tile--current {
+  background: linear-gradient(180deg, rgb(255 246 196), rgb(var(--c-select)) 48%, rgb(var(--c-select) / 0.85) 52%, rgb(150 112 10));
+  border-color: rgb(255 240 170);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 0 0 1px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.5);
+}
+html[data-family="cubo"] .tile--current :is(.tile-label, .tile-art) { color: rgb(var(--c-on-select)); }
+/* Caixa de descrição embaixo, como a ajuda dos menus de rede. */
+html[data-family="cubo"] .home-caption { display: grid; gap: 4px; padding: 14px 20px; background: linear-gradient(180deg, rgb(var(--c-hero)), rgb(var(--c-surface-2))); }
+html[data-family="cubo"] .home-caption-title { font-size: 14px; font-weight: 800; letter-spacing: 0.08em; color: rgb(var(--c-tile-3)); }
+html[data-family="cubo"] .home-caption-text { font-size: 15px; letter-spacing: 0.04em; color: rgb(var(--c-fg)); }
+html[data-family="cubo"] .dock-bar { border-top: 1px solid rgb(var(--c-line) / 0.6); }
+html[data-family="cubo"] .dock-btn {
+  border-radius: 6px; border: 1px solid rgb(var(--c-line-strong));
+  background: linear-gradient(180deg, rgb(var(--c-line) / 0.9), rgb(var(--c-surface-2)));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18); color: rgb(var(--c-fg)); letter-spacing: 0.05em;
+}
+html[data-family="cubo"] .dock-btn--active { border-color: rgb(var(--c-select)); box-shadow: inset 0 0 0 1px rgb(var(--c-select)); }
+/* Dicas com teclas coloridas. */
+html[data-family="cubo"] .app-hints { justify-content: center; gap: 32px; letter-spacing: 0.06em; }
+html[data-family="cubo"] .hint-context { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-family="cubo"] .key { border: 0; border-radius: 999px; min-width: 22px; color: #0b0b16; }
+html[data-family="cubo"] .key--move { background: rgb(var(--c-tile-3)); }
+html[data-family="cubo"] .key--ok { background: rgb(var(--c-tile-2)); }
+html[data-family="cubo"] .key--back { background: rgb(var(--c-tile-5)); }
+html[data-scheme="light"][data-family="cubo"] .key { color: #ffffff; }
+
+/* ==========================================================================
+   Estéreo 3D — cubos lavanda em cima, bandeja com blocos e cantos menta
+   ========================================================================== */
+
+html[data-family="cubos3d"] .app-shell { z-index: 1; }
+html[data-family="cubos3d"] body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: rgb(var(--c-surface) / 0.6);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='14' width='92' height='92' rx='24'/%3E%3C/svg%3E") 0 0 / 120px 120px repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Crect x='14' y='14' width='92' height='92' rx='24'/%3E%3C/svg%3E") 0 0 / 120px 120px repeat;
+}
+html[data-family="cubos3d"] body { background-color: rgb(var(--c-hero)); }
+html[data-scheme="dark"][data-family="cubos3d"] body::before { background: rgb(var(--c-surface) / 0.3); }
+html[data-family="cubos3d"] .app-status { background: rgb(var(--c-chrome) / 0.85); }
+html[data-family="cubos3d"] { --status-h: 72px; }
+html[data-family="cubos3d"] .brand-name { font-size: 20px; }
+html[data-family="cubos3d"] .status-where { font-size: 17px; }
+html[data-family="cubos3d"] .status-time { font-size: 30px; letter-spacing: 0.02em; }
+html[data-family="cubos3d"] .status-date { font-size: 22px; }
+html[data-family="cubos3d"] .status-meter { width: 58px; height: 28px; border-width: 3px; border-radius: 6px; }
+html[data-family="cubos3d"] .status-meter::after { top: 7px; right: -7px; width: 4px; height: 8px; }
+html[data-family="cubos3d"] .status-meter-fill { background: rgb(var(--c-accent)); }
+html[data-family="cubos3d"] #view-home { max-width: 980px; }
+html[data-family="cubos3d"] .home { gap: 16px; }
+/* Tela de cima: estado grande e o nome do bloco escolhido. */
+html[data-family="cubos3d"] .home-top { display: grid; gap: 14px; padding: 14px 6px 4px; }
+html[data-family="cubos3d"] .home-card-badge { width: 60px; height: 60px; border-radius: 18px; background: rgb(var(--c-surface)); color: rgb(var(--c-accent-fg)); box-shadow: 0 4px 0 rgb(var(--c-line-strong) / 0.5); }
+html[data-family="cubos3d"] .home-card-name { font-size: 20px; color: rgb(var(--c-hero-fg)); }
+html[data-family="cubos3d"] .home-usage-text { color: rgb(var(--c-hero-fg)); font-size: 14px; }
+html[data-family="cubos3d"] .home-usage-bar { height: 14px; background: rgb(var(--c-surface)); }
+html[data-family="cubos3d"] .home-usage-bar span { background: rgb(var(--c-accent)); }
+html[data-family="cubos3d"] .home-steps { background: rgb(var(--c-surface)); border-radius: 18px; padding: 14px 16px; box-shadow: 0 4px 0 rgb(var(--c-line-strong) / 0.5); }
+html[data-family="cubos3d"] .home-caption { display: flex; align-items: baseline; gap: 12px; padding: 0 6px; }
+html[data-family="cubos3d"] .home-caption-title { font-size: 26px; font-weight: 800; color: rgb(var(--c-hero-fg)); }
+html[data-family="cubos3d"] .home-caption-text { font-size: 15px; font-weight: 700; color: rgb(var(--c-hero-fg)); }
+/* Bandeja bege com os blocos. */
+html[data-family="cubos3d"] .home-menu {
+  grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px;
+  padding: 24px 26px 26px; border-radius: 28px;
+  background: rgb(var(--c-surface-2));
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.08);
+}
+html[data-family="cubos3d"] :is(.home-group, .home-tiles) { display: contents; }
+html[data-family="cubos3d"] .home-group-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+html[data-family="cubos3d"] .tile {
+  aspect-ratio: 1; border-radius: 22px; gap: 6px; padding: 10px 6px;
+  background: linear-gradient(180deg, rgb(var(--c-surface)), rgb(var(--c-surface)) 70%, rgb(var(--c-bg)));
+  box-shadow: 0 5px 0 rgb(var(--c-line-strong) / 0.55), 0 10px 18px rgb(0 0 0 / 0.08);
+  --corner-r: 26px;
+}
+html[data-family="cubos3d"] .tile-art .ico { width: 46px; height: 46px; stroke-width: 2.4; }
+html[data-family="cubos3d"] .tile-label { font-size: 12px; color: rgb(var(--c-fg-soft)); }
+html[data-family="cubos3d"] .tile:active { transform: translateY(3px); box-shadow: 0 2px 0 rgb(var(--c-line-strong) / 0.55); }
+html[data-family="cubos3d"] .dock-bar {
+  width: min(980px, calc(100% - 48px)); margin: 0 auto; box-sizing: border-box;
+  border-radius: 22px 22px 0 0; background: rgb(var(--c-surface)); justify-content: space-between;
+  box-shadow: 0 -2px 10px rgb(0 0 0 / 0.06);
+}
+html[data-family="cubos3d"] .dock-btn { color: rgb(var(--c-fg-soft)); border-radius: 16px; }
+html[data-family="cubos3d"] .dock-btn--home .dock-ico { color: rgb(var(--c-tile-3)); }
+html[data-family="cubos3d"] .dock-btn--activity .dock-ico { color: rgb(var(--c-tile-2)); }
+html[data-family="cubos3d"] .dock-btn--theme .dock-ico { color: rgb(var(--c-tile-1)); }
+html[data-family="cubos3d"] .dock-btn--settings .dock-ico { color: rgb(var(--c-tile-4)); }
+html[data-family="cubos3d"] .dock-btn:hover { background: rgb(var(--c-surface-2)); }
+html[data-family="cubos3d"] .dock-btn--active { box-shadow: inset 0 0 0 3px rgb(var(--c-select)); }
+html[data-family="cubos3d"] .app-hints { background: rgb(var(--c-surface)); width: min(980px, calc(100% - 48px)); margin: 0 auto; box-sizing: border-box; color: rgb(var(--c-fg-soft)); border-top: 1px solid rgb(var(--c-line)); }
+html[data-family="cubos3d"] .key { border-radius: 4px; border-width: 2px; }
+
+/* ==========================================================================
+   Híbrido — fileira de blocos grandes, doca redonda numa pílula
+   ========================================================================== */
+
+html[data-family="hibrido"] .app-status { background: transparent; }
+html[data-family="hibrido"] #view-home { max-width: 1120px; }
+html[data-family="hibrido"] .home { gap: 18px; }
+html[data-family="hibrido"] .home-top { display: flex; flex-wrap: wrap; align-items: center; gap: 18px 28px; }
+html[data-family="hibrido"] .home-card-badge {
+  width: 58px; height: 58px; background: rgb(var(--c-surface)); color: rgb(var(--c-accent-fg));
+  box-shadow: 0 0 0 3px rgb(var(--c-surface)), 0 0 0 4px rgb(var(--c-line)), 0 2px 6px rgb(0 0 0 / 0.1);
+}
+html[data-family="hibrido"] .home-card { flex: 1 1 360px; }
+html[data-family="hibrido"] .home-steps { flex: 1 1 100%; }
+html[data-family="hibrido"] .home-caption { display: block; min-height: 24px; padding: 0 2px; }
+html[data-family="hibrido"] .home-caption-title { font-size: 18px; font-weight: 700; color: rgb(var(--c-accent-fg)); }
+html[data-family="hibrido"] .home-caption-text { display: none; }
+html[data-family="hibrido"] .home-menu { gap: 26px; }
+html[data-family="hibrido"] .home-group-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+/* Fileira de blocos quadrados. */
+html[data-family="hibrido"] .home-group--dspico .home-tiles {
+  display: flex; gap: 14px; overflow-x: auto; padding: 10px 10px 14px; margin: -10px -10px 0;
+}
+html[data-family="hibrido"] .home-group--dspico .tile {
+  flex: 0 0 auto; width: 176px; height: 176px; border-radius: 6px; padding: 12px;
+  background: rgb(var(--c-surface)); box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+  justify-content: space-between;
+}
+html[data-family="hibrido"] .home-group--dspico .tile-art { flex: 1; }
+html[data-family="hibrido"] .home-group--dspico .tile-art .ico { width: 58px; height: 58px; stroke-width: 1.8; }
+html[data-family="hibrido"] .home-group--dspico .tile-label { font-size: 13px; color: rgb(var(--c-fg-soft)); }
+/* Doca: pílula com botões redondos. */
+html[data-family="hibrido"] .home-group--tools .home-tiles {
+  display: flex; justify-content: center; gap: 16px; width: max-content; max-width: 100%; margin: 0 auto;
+  padding: 12px 24px; border-radius: 999px; background: rgb(var(--c-surface) / 0.75);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+}
+html[data-family="hibrido"] .home-group--tools .tile {
+  width: 66px; height: 66px; padding: 0; border-radius: 999px;
+  background: rgb(var(--c-surface)); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+html[data-family="hibrido"] .home-group--tools .tile-art .ico { width: 30px; height: 30px; }
+html[data-family="hibrido"] .home-group--tools .tile-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+html[data-family="hibrido"] .home-group .tile.tile--current {
+  box-shadow: 0 0 0 3px rgb(var(--c-surface)), 0 0 0 6px rgb(var(--c-select)), 0 0 16px rgb(var(--c-select) / 0.45);
+}
+html[data-family="hibrido"] .dock-bar { background: transparent; justify-content: flex-start; padding: 4px 22px; border-top: 1px solid rgb(var(--c-line-strong) / 0.6); min-height: 52px; }
+html[data-family="hibrido"] .dock-btn { color: rgb(var(--c-fg-soft)); padding: 6px 12px; }
+html[data-family="hibrido"] .dock-btn--active { box-shadow: 0 0 0 2px rgb(var(--c-select)); }
+html[data-family="hibrido"] .app-hints { background: transparent; }
+html[data-family="hibrido"] .key { border-radius: 999px; min-width: 20px; }
+
+/* ==========================================================================
+   Janelas estreitas (mínimo do app: 960 × 640)
+   ========================================================================== */
+
+@media (max-width: 1120px) {
+  .status-date { display: none; }
+  .topbar-select { max-width: 260px; }
+}
+@media (max-width: 1040px) {
+  .status-where, #drive-role-badge { display: none; }
+  html[data-family="cubos3d"] .home-menu { gap: 14px; padding: 18px; }
+  html[data-family="tablet"] .home-menu { gap: 14px; }
+  .home-steps { grid-template-columns: 1fr; }
+}
+@media (max-height: 720px) {
+  :root { --hints-h: 26px; }
+  .app-content { padding-top: 16px; }
+  html[data-family="canais"] { --dock-h: 92px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-pane { animation: none; }
+  .tile, .tile--current { transition: none; transform: none !important; }
+}
+
+/* Arranjos que ocupam a altura toda, como as telas dos consoles. */
+html:is([data-family="camera"], [data-family="cubos3d"], [data-family="hibrido"]) #view-home:not(.hidden) { min-height: 100%; }
+html[data-family="camera"] #view-home:not(.hidden) { grid-template-rows: minmax(190px, 1fr) auto auto auto; }
+html[data-family="cubos3d"] #view-home:not(.hidden) { grid-template-rows: 1fr auto auto; }
+html[data-family="cubos3d"] .home-top { align-content: end; }
+html[data-family="hibrido"] #view-home:not(.hidden) { grid-template-rows: auto auto auto 1fr; padding-top: 4vh; }
+html[data-family="hibrido"] .hint-open { display: none; }
+html[data-family="hibrido"] .hint-okword { display: inline; }
+html[data-family="hibrido"] .home-group--tools .home-tiles { padding-bottom: 34px; }
+html[data-family="hibrido"] .home-group--tools .tile.tile--current .tile-label {
+  position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%);
+  width: auto; height: auto; clip: auto; overflow: visible; white-space: nowrap;
+  font-size: 13px; font-weight: 700; color: rgb(var(--c-accent-fg));
+}
+html[data-family="hibrido"] .home-caption { align-self: end; }
+
+/* Janelas baixas (até 720px): a fileira e a barra de rolagem ficam à vista. */
+@media (max-height: 720px) {
+  html[data-family="camera"] #view-home:not(.hidden) { grid-template-rows: minmax(96px, auto) auto auto auto; gap: 12px; }
+  html[data-family="camera"] .home-top { min-height: 0; padding: 14px 20px; gap: 8px; }
+  html[data-family="camera"] .home-card { flex-direction: row; text-align: left; }
+  html[data-family="camera"] .home-card-badge { width: 44px; height: 44px; }
+  html[data-family="camera"] .home-usage { justify-items: start; }
+  html[data-family="camera"] .home-caption { padding: 8px 18px; }
+  html[data-family="camera"] .home-caption-title { font-size: 17px; }
+  html[data-family="camera"] .home-menu { padding: 16px 40px 38px; }
+  html[data-family="camera"] .tile { width: 96px; height: 96px; }
+  html[data-family="camera"] .tile-art .ico { width: 46px; height: 46px; }
+  html[data-family="camera"] .home-scrub { margin-top: -4px; }
+  html[data-family="cubos3d"] { --status-h: 60px; }
+  html[data-family="cubos3d"] .status-time { font-size: 24px; }
+  html[data-family="cubos3d"] .status-date { font-size: 18px; }
+  html[data-family="cubos3d"] .home { gap: 10px; }
+  html[data-family="cubos3d"] .home-top { padding-top: 6px; }
+  html[data-family="cubos3d"] .home-card-name { font-size: 17px; }
+  html[data-family="cubos3d"] .home-caption-title { font-size: 21px; }
+  html[data-family="cubos3d"] .home-menu { gap: 10px; padding: 14px 16px; }
+  html[data-family="cubos3d"] .tile { aspect-ratio: auto; height: 104px; }
+  html[data-family="cubos3d"] .tile-art .ico { width: 38px; height: 38px; }
+}

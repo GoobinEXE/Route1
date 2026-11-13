@@ -12,17 +12,17 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ### Alterado
 
-- **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas** na barra lateral
+- **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas**
 
-- **Navegação simplificada**: barra lateral com Início, DSPico, Mais ferramentas e Configurações. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima, a gaveta Atividade passa a mostrar os registros e abre sozinha durante operações, e há atalhos de teclado (setas nas abas, Alt+1…4 nas vistas)
+- **Navegação de console**: o app abre num Início com blocos para cada tarefa, como o menu de um console; cada bloco abre uma tela com Voltar, e embaixo ficam a barra de ícones (Início, Atividade, Tema, Configurações) e as dicas de tecla. Setas movem a seleção, Enter abre, Esc volta. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima e a gaveta Atividade abre sozinha durante operações
 
 - **Regras da PicoDex primeiro**: capas escolhidas no catálogo libretro-thumbnails como na PicoDex (antes de SteamGridDB e GameTDB), cada capa/ícone gravado em um só destino, pastas `Games/` por sistema iguais às da PicoDex (GB e GBC em `gb/`, Mega Drive em `gen/`, `.dsi` em `nds/`) e versão do Pico Loader identificada pelo manifesto da PicoDex
 - **Pico Loader 1.7.1** no pacote oficial; a atualização do loader passa a copiar também `patchlist.bin`
 
 ### Adicionado
 
-- **Temas novos**: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D e Híbrido, inspirados em menus de consoles, cada um com paleta original e modos Claro (Catppuccin Latte), Noturno (Catppuccin Mocha) ou Sistema; fonte arredondada Nunito; cada tema tem o seu fundo e a sua forma de marcar a seleção, e o foco do teclado tem contorno próprio
-- **Início** centrado no DSPico: estado e espaço usado do microSD, atalhos para Jogos e RouteDex, primeiros passos e entrada para Mais ferramentas
+- **Temas novos**: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D e Híbrido, inspirados em menus de consoles, cada um com paleta original e modos Claro (Catppuccin Latte), Noturno (Catppuccin Mocha) ou Sistema. Cada tema arruma o Início do seu jeito: duas telas com cantos azuis, fileira de ícones com balão, grade de canais com barra curva e relógio, grade de vidro com bloco ciano, painéis violeta com barra dourada, bandeja de blocos com cantos menta, ou fileira de blocos com doca redonda
+- **Início** com o estado do microSD, doze blocos com ícones coloridos, hora e medidor de espaço na barra de cima
 - Interface mais limpa: títulos de seção em frase normal, ícones desenhados em vez de emojis no estado do microSD e no RouteDex, objetivos do assistente em lista, grafia atual (atualizar, selecionar, ativo)
 - Textos em português do Brasil em todo o app e no app do console: arquivo, console, tela, Configurações, Baixar, Salvar
 - **Fontes oficiais**: PicoDex, Pico Launcher, Pico Loader e as duas variantes Enhanced em um registro único, com versões fixadas, verificação semanal e PR automático; os dados da PicoDex podem ser atualizados em Verificar atualizações

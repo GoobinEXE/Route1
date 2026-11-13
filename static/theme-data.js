@@ -6,15 +6,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "dupla",
       "label": "Dupla Tela",
-      "hint": "Papel quadriculado, moldura azul",
+      "hint": "Papel quadriculado, cantos azuis",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
-            "#e2e6ea",
+            "#f3f4f5",
             "#ffffff",
-            "#2f7de1",
-            "#2f7de1"
+            "#3384e1",
+            "#2e8cf0"
           ]
         },
         "light": {
@@ -40,15 +40,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "camera",
       "label": "Câmera Dupla",
-      "hint": "Branco e cinza, etiqueta com bico",
+      "hint": "Tela menta, balão com bico",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
-            "#e9ecef",
+            "#e7e9eb",
             "#ffffff",
-            "#1f8fb3",
-            "#3e9fd3"
+            "#2c87ca",
+            "#3a8fd8"
           ]
         },
         "light": {
@@ -56,7 +56,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#e6e9ef",
             "#eff1f5",
-            "#15838a",
+            "#2da5b9",
             "#209fb5"
           ]
         },
@@ -65,7 +65,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#181825",
             "#1e1e2e",
-            "#94e2d5",
+            "#74c7ec",
             "#74c7ec"
           ]
         }
@@ -74,14 +74,14 @@ window.R1K_THEME_DATA = {
     {
       "id": "canais",
       "label": "Canais",
-      "hint": "Risca fina prateada, anel ciano",
+      "hint": "Canais brancos, barra curva",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
-            "#eef0f2",
+            "#eceef0",
             "#ffffff",
-            "#1fb0e6",
+            "#1a9fd6",
             "#34beed"
           ]
         },
@@ -108,15 +108,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "tablet",
       "label": "Tablet de Sala",
-      "hint": "Vidro claro, cartão realçado",
+      "hint": "Vidro branco, bloco ciano",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
-            "#e6e9ec",
-            "#fbfcfd",
-            "#14a9dc",
-            "#23b8e8"
+            "#e8e9eb",
+            "#fafbfb",
+            "#169fd0",
+            "#2bbde6"
           ]
         },
         "light": {
@@ -142,15 +142,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "cubo",
       "label": "Cubo",
-      "hint": "Índigo profundo, moldura dourada",
+      "hint": "Painéis violeta, botão dourado",
       "modes": {
         "original": {
           "scheme": "dark",
           "swatch": [
-            "#0f0c2e",
-            "#1b1752",
-            "#9d8cff",
-            "#f2c230"
+            "#07070c",
+            "#1d1a63",
+            "#d9b52e",
+            "#e8c43a"
           ]
         },
         "light": {
@@ -158,7 +158,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#e6e9ef",
             "#eff1f5",
-            "#8839ef",
+            "#df8e1d",
             "#df8e1d"
           ]
         },
@@ -167,7 +167,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#181825",
             "#1e1e2e",
-            "#cba6f7",
+            "#f9e2af",
             "#f9e2af"
           ]
         }
@@ -176,15 +176,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "cubos3d",
       "label": "Estéreo 3D",
-      "hint": "Blocos em relevo, cantos verdes",
+      "hint": "Cubos lavanda, cantos menta",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
-            "#e3e4e8",
-            "#fafafb",
+            "#e8e7ef",
+            "#ffffff",
             "#e2681a",
-            "#2fbf71"
+            "#38d39b"
           ]
         },
         "light": {
@@ -210,15 +210,15 @@ window.R1K_THEME_DATA = {
     {
       "id": "hibrido",
       "label": "Híbrido",
-      "hint": "Cinza limpo, anel duplo",
+      "hint": "Doca redonda, anel ciano",
       "modes": {
         "original": {
           "scheme": "light",
           "swatch": [
             "#ebebeb",
             "#ffffff",
-            "#d7283d",
-            "#16c3e0"
+            "#3a5fd8",
+            "#19c6e4"
           ]
         },
         "light": {
@@ -226,7 +226,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#e6e9ef",
             "#eff1f5",
-            "#d20f39",
+            "#1e66f5",
             "#04a5e5"
           ]
         },
@@ -235,7 +235,7 @@ window.R1K_THEME_DATA = {
           "swatch": [
             "#181825",
             "#1e1e2e",
-            "#f38ba8",
+            "#89b4fa",
             "#89dceb"
           ]
         }

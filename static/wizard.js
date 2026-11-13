@@ -503,7 +503,7 @@ const Wizard = (() => {
     return `
       <div class="space-y-6">
         <div>
-          <h2 class="text-[17px] font-semibold text-fg">O que você quer fazer?</h2>
+          <h2 class="wizard-title">O que você quer fazer?</h2>
           <p class="text-[12px] text-fg-mute mt-1.5 leading-relaxed max-w-2xl">
             Escolha o <strong>tipo de cartão</strong> primeiro. O assistente guia cada etapa no PC e no DSi.
           </p>
@@ -511,7 +511,6 @@ const Wizard = (() => {
 
         <section class="goal-section">
           <div class="goal-section-head">
-            ${pathBadge("flash")}
             <h3 class="goal-section-title">MicroSD do cartucho (flashcard)</h3>
             <p class="goal-section-sub">
               Cartucho Slot-1 (GEi, R4 ou DSPico). O microSD fica <em>dentro</em> do cartucho — não é o SD lateral do DSi.
@@ -535,7 +534,6 @@ const Wizard = (() => {
 
         <section class="goal-section">
           <div class="goal-section-head">
-            ${pathBadge("dsi")}
             <h3 class="goal-section-title">SD do DSi (slot lateral)</h3>
             <p class="goal-section-sub">
               Softmod no cartão do slot lateral: exploit da Câmera, backup, menu TWiLight e Unlaunch.

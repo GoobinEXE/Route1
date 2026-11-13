@@ -82,6 +82,11 @@ const Theme = (() => {
       }
     }
     renderAll();
+    try {
+      document.dispatchEvent(new Event("r1k-theme"));
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   function current() {

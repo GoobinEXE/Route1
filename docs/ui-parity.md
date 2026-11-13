@@ -16,11 +16,11 @@ Gate de cada iteração da Fase 2+. Nenhuma funcionalidade de usuário pode desa
 
 ## Navegação alvo
 
-Barra lateral com quatro entradas; o cartão é escolhido só no seletor da barra de cima. Teclado: setas mudam de aba, Alt+1…4 mudam de vista, Esc fecha a gaveta Atividade.
+Menu de console: barra de status (seletor do microSD, progresso, hora, medidor), Início com doze blocos, telas com Voltar e abas irmãs, barra de ícones (Início, Atividade, Tema, Configurações) e barra de dicas. Teclado: setas movem no Início e mudam de aba, Enter abre, Esc/Backspace voltam (ou fecham a Atividade), Alt+1…4 vão a Início / DSPico / Mais ferramentas / Configurações. Histórico por hash (`#dspico/games`).
 
 | Vista | Abas |
 |-------|------|
-| Início | Cartão DSPico (Abrir, Jogos, RouteDex) e cartão Mais ferramentas (Softmod DSi, Flashcards R4/GEi); resumo do cartão escolhido |
+| Início | Estado do microSD (nome, espaço usado, primeiros passos sem cartão); blocos Cartão, Jogos, RouteDex, Launcher, Emuladores e apps, Avançado, Softmod DSi, Flashcards R4/GEi, Biblioteca TWiLight, Apps homebrew, Manutenção, Configurações |
 | DSPico | Cartão (estado, atualizações + Enhanced, preparar SD) · Jogos · RouteDex · Launcher (`settings.json`, temas do launcher, fundos noturnos) · Emuladores e apps (emuladores, apps USB LNH) · Avançado (emunand, firmware) |
 | Mais ferramentas | Softmod DSi (identificar, assistente, passos manuais) · Flashcards R4/GEi · Biblioteca TWiLight (`/roms/`, organizar, cheats, capas) · Apps homebrew · Manutenção do cartão |
 | Configurações | SteamGridDB, Aparência (mesma lista do botão de tema), Sobre |
@@ -83,4 +83,4 @@ A vista avançada escondida (`view-advanced`) e a realocação de painéis em te
 - [x] Confirmação tipada `FORMATAR` preservada (prompt); `APAGAR` nas mensagens de limpeza
 - [x] Temas do app funcionam (Configurações e botão de tema usam a mesma lista)
 - [x] `pytest -q` verde (201)
-- [x] Orçamento: virtual grid >200; push `web_events`; CSS tailwind+app ≈ 21 KB; shell sidebar
+- [x] Orçamento: virtual grid >200; push `web_events`; CSS tailwind+app ≈ 21 KB; shell de console

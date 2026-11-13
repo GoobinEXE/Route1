@@ -29,6 +29,15 @@
         ],
         "createdAt": "2026-11-13T17:06:15.139Z",
         "reason": "Indeterminate progress bar while a disk operation runs: conveys loading state, not decoration"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "static/console.css"
+        ],
+        "createdAt": "2026-11-13T21:50:59.961Z",
+        "reason": "agent triage: L454 is a uniform 3px grey border on all four sides of the Canais channel tiles plus an inset bottom bevel, copied from the Wii channel frame in the user's reference image; no one-sided accent border exists in this file"
       }
     ]
   }

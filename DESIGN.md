@@ -1,41 +1,62 @@
 ---
 name: Route Pico
-description: App de secretária para preparar e manter o microSD do DSPico, com sete temas inspirados em menus de consoles.
+description: App de desktop que prepara e mantém o microSD do DSPico com um menu inicial de console em sete temas.
 colors:
-  ground: "#e2e6ea"
+  bg: "#f3f4f5"
   surface: "#ffffff"
-  surface-2: "#f1f3f5"
-  line: "#cdd3da"
-  line-strong: "#8d959e"
-  ink: "#1d2126"
-  ink-soft: "#3b424a"
-  ink-mute: "#59616b"
-  accent: "#2f7de1"
-  accent-strong: "#286cc2"
-  accent-fg: "#2766b8"
-  on-accent: "#111417"
-  select: "#2f7de1"
-  select-fill: "#2f7de1"
+  surface-2: "#f2f3f4"
+  line: "#d6d9dc"
+  line-strong: "#90959b"
+  fg: "#2a2d31"
+  fg-soft: "#45494f"
+  fg-mute: "#5d6269"
+  accent: "#3384e1"
+  accent-strong: "#2c72c2"
+  accent-fg: "#256ec3"
+  on-accent: "#191b1d"
+  select: "#2e8cf0"
+  select-fill: "#2e8cf0"
   on-select: "#141414"
-  ok: "#197633"
-  warn: "#995508"
-  danger: "#c12c39"
+  ok: "#1b8038"
+  warn: "#a65c09"
+  danger: "#cf2f3d"
+  chrome: "#ffffff"
+  chrome-fg: "#5d6269"
+  hero: "#ffffff"
+  hero-fg: "#2a2d31"
+  tile-1: "#df6a12"
+  tile-2: "#2f9e3a"
+  tile-3: "#2a6fdb"
+  tile-4: "#12928d"
+  tile-5: "#d93a3a"
+  tile-6: "#b98100"
+  tile-7: "#8a4fd6"
 typography:
   display:
     fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "34px"
+    fontSize: "40px"
     fontWeight: 800
-    letterSpacing: "-0.02em"
+    letterSpacing: "0.02em"
   headline:
     fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
-    fontSize: "26px"
+    fontSize: "24px"
     fontWeight: 800
+    lineHeight: 1.15
     letterSpacing: "-0.015em"
   title:
     fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "21px"
+    fontWeight: 800
+    letterSpacing: "-0.015em"
+  title-sm:
+    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "17.5px"
+    fontWeight: 800
+    letterSpacing: "-0.01em"
+  item:
+    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "15px"
     fontWeight: 800
-    letterSpacing: "0"
   body:
     fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "14px"
@@ -44,22 +65,36 @@ typography:
   label:
     fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "13px"
+    fontWeight: 800
+  hint:
+    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "12px"
     fontWeight: 700
+  key:
+    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "11px"
+    fontWeight: 800
+    lineHeight: 1
   mono:
     fontFamily: "IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace"
     fontSize: "12px"
     fontWeight: 400
 rounded:
-  sm: "10px"
-  md: "14px"
-  lg: "18px"
+  sm: "6px"
+  md: "10px"
+  lg: "14px"
+  key: "6px"
   pill: "999px"
 spacing:
   xs: "4px"
   sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
+  md: "14px"
+  lg: "18px"
+  gutter: "24px"
+  status-h: "52px"
+  dock-h: "64px"
+  hints-h: "30px"
+  content-max: "1080px"
 components:
   button-primary:
     backgroundColor: "{colors.accent}"
@@ -72,223 +107,235 @@ components:
     textColor: "{colors.on-accent}"
   button-ghost:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    typography: "{typography.label}"
+    textColor: "{colors.fg}"
     rounded: "{rounded.pill}"
     padding: "0.5rem 1rem"
   button-ghost-hover:
     backgroundColor: "{colors.surface-2}"
-  tab-pill:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.ink-soft}"
+  screen-back:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.fg}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
-    padding: "0.5rem 1rem"
-  tab-pill-active:
+    padding: "8px 14px 8px 8px"
+  tab-shelf:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-  tab-quiet-active:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.pill}"
-  nav-item:
-    textColor: "{colors.ink-soft}"
+    textColor: "{colors.fg-soft}"
+    typography: "{typography.label}"
     rounded: "{rounded.md}"
-    padding: "10px 14px"
-  nav-item-active:
+    padding: "0.55rem 0.95rem"
+  tab-shelf-active:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
+    textColor: "{colors.fg}"
+  tile:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.fg}"
+    typography: "{typography.item}"
+    rounded: "{rounded.sm}"
+    padding: "10px 14px"
+    height: "72px"
+  dock-button:
+    backgroundColor: "{colors.chrome}"
+    textColor: "{colors.chrome-fg}"
+    typography: "{typography.label}"
+    rounded: "{rounded.pill}"
+    padding: "8px 14px"
+  status-bar:
+    backgroundColor: "{colors.chrome}"
+    textColor: "{colors.chrome-fg}"
+    height: "{spacing.status-h}"
+  hint-bar:
+    backgroundColor: "{colors.chrome}"
+    textColor: "{colors.chrome-fg}"
+    typography: "{typography.hint}"
+    height: "{spacing.hints-h}"
+  key-cap:
+    textColor: "{colors.chrome-fg}"
+    typography: "{typography.key}"
+    rounded: "{rounded.key}"
+    height: "20px"
+    padding: "0 6px"
   panel:
     backgroundColor: "{colors.surface}"
+    textColor: "{colors.fg}"
     rounded: "{rounded.lg}"
-    padding: "24px"
-  list-row:
-    textColor: "{colors.ink}"
-    padding: "12px 6px"
-  list-row-hover:
-    backgroundColor: "{colors.surface-2}"
-  step-badge:
-    backgroundColor: "{colors.select-fill}"
-    textColor: "{colors.on-select}"
-    rounded: "{rounded.pill}"
-    size: "30px"
-  field-select:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.md}"
 ---
 
 # Design System: Route Pico
 
 ## Overview
 
-**Creative North Star: "A Sala de Estar do Console"**
+**Creative North Star: "O Menu Inicial do Seu Console"**
 
-Route Pico é uma ferramenta de trabalho com um só esqueleto: barra lateral, barra de cima, abas em cápsula e painéis claros. Por cima desse esqueleto, cada um dos sete temas troca três coisas e só três: o chão (o padrão de fundo do `body`), o acabamento dos painéis e o gesto de seleção. Layout, navegação, controlos e tipografia são iguais em todos os temas; quem muda de tema reconhece a seu console sem reaprender o app.
+O Route Pico abre como o menu inicial de um console portátil ou de mesa: uma barra de status em cima com o cartão e a hora, as tarefas organizadas em blocos no meio, uma barra de ícones embaixo e, por último, uma barra de dicas de tecla. Os sete temas tomaram como referência menus iniciais de consoles reais e reproduzem a gramática de cada um (arranjo dos blocos, moldura, gesto de seleção, desenho das barras), sem copiar logotipos, ícones, fontes, sons ou nomes de marca. A navegação, o conteúdo e os controles são idênticos em todos os temas; muda o mundo material em volta deles.
 
-O sistema tem dois eixos independentes. O tema (`data-family`: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D, Híbrido) e o modo (`data-mode`: Original, Claro = Catppuccin Latte, Noturno = Catppuccin Mocha; Sistema resolve para Claro ou Noturno). O `theme.js` deriva um terceiro atributo, `data-scheme` (light/dark), que escolhe as sombras. As 21 combinações saem de um gerador que falha a construção se alguma não passar em WCAG AA. A densidade é média: painéis com 22 a 28px de respiro, linhas de lista planas, nada de cartão dentro de cartão.
+A densidade é a de um menu de console: poucos itens grandes, um item selecionado por vez, legenda do item escolhido e dicas de teclado sempre à vista. As telas internas trocam o Início por um cabeçalho com Voltar, o ícone colorido da tarefa e o título, e as abas irmãs aparecem como uma prateleira de ícones. Todo o trabalho real (formatar, instalar, organizar jogos) acontece em painéis sóbrios dentro dessas telas, porque a ferramenta escreve num cartão do usuário e o tom lúdico para no limite da operação destrutiva.
 
-As rejeições confirmadas pelo usuário são duas. Nada de logotipos, ícones, fontes, sons ou nomes de marca da Nintendo; os temas têm nomes genéricos. E nada de traje de console: sem moldura de hardware, botões falsos ou cópia literal de menus. A inspiração vive no chão, no vidro dos painéis e no gesto de seleção.
+O sistema recusa a barra lateral de dashboard do mundo anterior e recusa também o tema que só troca a cor de um mesmo layout. Cada tema tem paleta original e variantes clara (Catppuccin Latte) e noturna (Catppuccin Mocha), todas verificadas contra WCAG AA pelo gerador.
 
 **Key Characteristics:**
-- Um só seletor compartilhado de seleção-assinatura, redefinido por tema em `static/skins.css`.
-- Cores só por tokens em triplas RGB, geradas e verificadas contra WCAG AA.
-- Nunito variável embutida em toda a UI, títulos em 800, rótulos de seção em minúsculas de frase.
-- Cápsulas para ações e abas; raios generosos nos painéis, variáveis por tema.
-- Foco (contorno da cor do texto) separado da seleção (cor `select`).
+- Quatro faixas fixas: barra de status, área do Início ou da tela, barra de ícones, barra de dicas.
+- Doze blocos no Início (seis DSPico, cinco Mais ferramentas, Configurações), cada um com ícone SVG próprio colorido por tarefa.
+- Uma seleção-assinatura por tema, aplicada ao bloco atual, à aba ativa, ao item de tema escolhido e ao botão ativo da barra de ícones.
+- Tipografia única em Nunito arredondada, pesos 700 e 800 para tudo o que é rótulo.
+- Teclado completo: setas movem a seleção espacialmente no Início, Enter abre, Esc ou Backspace voltam, com histórico por hash.
 
 ## Colors
 
-Neutros frios e claros com um acento de ação e uma cor de seleção por tema; os valores do frontmatter são os do tema padrão (Dupla Tela, modo Original), e cada combinação tema × modo redefine os mesmos 18 papéis.
+As cores vêm de um único gerador (`tools/build_themes.py`), que escreve 21 combinações (sete temas × original, claro, noturno) como triplas RGB em `--c-*`; os valores do frontmatter são os do tema padrão, Dupla Tela original, e os demais temas reatribuem os mesmos papéis.
 
 ### Primary
-- **Azul Moldura** (accent, acento das ações): preenchimento do botão primário. Em Dupla Tela coincide com a cor de seleção; noutros temas é diferente (Câmera Dupla usa azul-petróleo nas ações e azul-céu na seleção; Estéreo 3D, laranja nas ações e verde na seleção; Híbrido, vermelho nas ações e ciano na seleção).
-- **Azul Moldura Fundo** (accent-strong): estado hover do botão primário, o acento misturado 14% em direção ao texto.
-- **Azul Moldura Texto** (accent-fg): acento usado como texto, ícones de ação e cursor de inserção; garantido a 4.5:1 sobre painel e chão.
-- **Tinta sobre Acento** (on-accent): texto dentro do botão primário. O gerador escolhe branco ou tinta escura conforme o contraste; em Dupla Tela Original é tinta escura, porque o branco sobre aquele azul fica abaixo de 4.5:1.
+- **Azul de Ação** (accent): preenche o botão primário e o progresso de operações. O gerador escurece o preenchimento até o texto sobre ele (on-accent) passar de 4,5:1, por isso o azul de ação fica um pouco abaixo do azul de seleção.
+- **Azul de Ação Firme** (accent-strong): estado hover do botão primário, misturado 14% em direção ao texto.
+- **Azul de Texto** (accent-fg): links, cursor de digitação e textos de destaque; garantido a 4,5:1 sobre painel e fundo.
 
 ### Secondary
-- **Cor de Seleção** (select): a cor-assinatura de cada tema, usada só em anéis, molduras, cantos, barra de uso do cartão e realce de texto selecionado. Mantém o valor da marca do tema mesmo quando não serve como fundo de texto.
-- **Seleção Preenchida** (select-fill) e **Tinta sobre Seleção** (on-select): o par para quando a seleção é um preenchimento com texto (etiqueta da Câmera Dupla, números dos Primeiros passos). O preenchimento só escurece o necessário para o texto passar 4.5:1.
+- **Azul de Seleção** (select): a cor da seleção-assinatura (cantos, anéis, molduras, barra dourada no Cubo). Mantém a cor de marca do tema mesmo quando não serviria para texto; só o preenchimento com texto usa a versão ajustada (select-fill, com on-select por cima). Por tema, a seleção original é azul na Dupla Tela e na Câmera Dupla, ciano em Canais, Tablet de Sala e Híbrido, dourada no Cubo e menta no Estéreo 3D.
 
 ### Tertiary
-- **Verde Estado** (ok), **Âmbar Estado** (warn), **Vermelho Estado** (danger): estados de presença, aviso e erro, cada um garantido a 4.5:1 sobre os três fundos. Aparecem como cor de texto e de ícone de estado, nunca como fundo de seção.
+- **Sete Cores de Tarefa** (tile-1 a tile-7: laranja, verde, azul, turquesa, vermelho, amarelo, roxo): pintam o ícone de cada bloco, o ícone do cabeçalho de tela e alguns ícones da barra de ícones. Cada bloco declara a cor pelo atributo `data-hue` (0 usa fg-soft, para Configurações). O gerador as ajusta a 3:1 contra o painel; nos modos claro e noturno elas vêm da paleta Catppuccin.
 
 ### Neutral
-- **Chão Cinza-Névoa** (ground, `--c-bg`): fundo da janela, por baixo do padrão do tema.
-- **Painel Branco** (surface): painéis, barra lateral, barra de cima, botões fantasma e aba ativa.
-- **Painel Recolhido** (surface-2): calha das abas, hover de linhas e de botões fantasma, trilho da barra de uso.
-- **Fio** (line) e **Fio Forte** (line-strong): divisórias e bordas de painel; o fio forte contorna controlos e é garantido a 3:1 contra o painel (WCAG 1.4.11).
-- **Tinta** (ink, `--c-fg`, 7:1), **Tinta Suave** (ink-soft, `--c-fg-soft`) e **Tinta Discreta** (ink-mute, `--c-fg-mute`), estas duas a 4.5:1: hierarquia de texto.
+- **Chão** (bg): fundo da janela, sob a textura do tema (quadriculado, riscas, cubos).
+- **Painel** (surface) e **Painel Recuado** (surface-2): painéis, blocos e o fim dos degradês de blocos e botões.
+- **Linha** (line) e **Linha Firme** (line-strong): bordas; a linha firme é forçada a 3:1 contra o painel porque contorna controles.
+- **Tinta** (fg, 7:1), **Tinta Suave** (fg-soft, 4,5:1) e **Tinta Discreta** (fg-mute, 4,5:1): os três níveis de texto, todos com contraste garantido sobre painel, painel recuado e chão.
+- **Moldura** (chrome) e **Texto da Moldura** (chrome-fg): fundo e texto das barras de status, ícones e dicas.
+- **Tela de Destaque** (hero) e **Texto da Tela de Destaque** (hero-fg): a tela de cima menta da Câmera Dupla, o fim do degradê violeta do Cubo e o fundo lavanda do Estéreo 3D.
+- **Estados** (ok, warn, danger): verde, âmbar e vermelho, a 4,5:1 sobre o painel.
 
 ### Named Rules
-**The Triplet Rule.** Toda a cor é uma tripla RGB (`--c-accent: 47 125 225`) lida como `rgb(var(--c-accent))` ou `rgb(var(--c-accent) / 0.1)`, e o Tailwind expõe-na como `rgb(var(--c-x) / <alpha-value>)`. Hex literal em um componente é um defeito: não muda com o tema.
+**The Gerador Rule.** Nenhuma cor de tema é escrita à mão: toda mudança de paleta passa por `tools/build_themes.py`, que falha se alguma das 21 combinações não passar em WCAG AA. `themes.css` e `theme-data.js` são arquivos gerados.
 
-**The Generated Palette Rule.** `static/themes.css` e `static/theme-data.js` são gerados por `tools/build_themes.py` e nunca se editam à mão. Uma cor nova entra na paleta do gerador; `python tools/build_themes.py --check` falha se os arquivos estiverem desatualizados, e a geração aborta se uma combinação não passar em AA.
+**The Seleção Separada da Ação Rule.** A cor de seleção marca onde o usuário está; a cor de ação marca o que executa. Botões primários usam accent, a seleção-assinatura usa select, e as duas podem ter matizes diferentes no mesmo tema (Estéreo 3D: ação laranja, seleção menta).
 
-**The Two Colors Rule.** Acento é para agir, seleção é para estar. O botão primário usa `accent`; o item ativo, os anéis e a barra de uso usam `select`. Não trocar um pelo outro, mesmo nos temas onde coincidem.
+**The Uma Cor Por Tarefa Rule.** A cor de uma tarefa é a mesma no bloco do Início, no cabeçalho da tela e no ícone da aba. Cor de tarefa pinta ícone, nunca texto corrido.
 
 ## Typography
 
-**Display Font:** Nunito variável 400–800, embutida em `static/assets/fonts/nunito-latin-var.woff2` (com ui-rounded, system-ui, -apple-system, Segoe UI)
-**Body Font:** Nunito (a mesma família)
-**Label/Mono Font:** IBM Plex Mono 400/500, embutida, para caminhos, versões e `<code>`
+**Display Font:** Nunito (com ui-rounded, system-ui, -apple-system, Segoe UI)
+**Body Font:** Nunito (mesma família, arquivo variável 400–800 embutido)
+**Label/Mono Font:** IBM Plex Mono para caminhos, hashes e logs
 
-**Character:** Uma sans arredondada única dá o tom amigável dos consoles; o peso 800 nos títulos e rótulos faz a hierarquia sem precisar de segunda família.
+**Character:** Uma só família arredondada carrega o sistema inteiro, com o peso fazendo o papel que outra fonte faria. Os rótulos ficam em 800, o que dá a leitura gorda e amigável dos menus de console sem recorrer a uma fonte de exibição.
 
 ### Hierarchy
-- **Display** (800, 34px, -0.02em): título do painel principal do Início. O `.hero-title` fora do Início fica em 28px.
-- **Headline** (800, 26px, -0.015em): título de cada vista (`.page-title`); no tema Híbrido desce para 700.
-- **Title** (800, 15px): rótulos de seção (`.section-label`), nome do cartão, títulos de passo e de objetivo. Títulos de painel do Início em 18px/800.
-- **Body** (400, 14px, 1.5): subtítulos de vista e texto de painel, até 52ch no Início.
-- **Label** (700, 13px): navegação (14px/700), abas, botões fantasma; botão primário em 13px/800 com 0.01em.
-- **Small** (12px): dicas do seletor de tema, pílulas de estado, texto secundário de linhas.
+- **Display** (800, 40px, espaçamento 0,02em): relógio grande da tela de cima na Dupla Tela. Outros temas têm seu próprio relógio ou status grande (Canais 34px peso 300 na barra curva; Estéreo 3D 30px na barra de status).
+- **Headline** (800, 24px, altura de linha 1,15, −0,015em): título de tela no cabeçalho com Voltar.
+- **Title** (800, 21px, −0,015em): título do assistente. Abaixo dele vêm o título de seção do assistente (800, 17,5px, −0,01em) e o título de cada objetivo (800, 15px), que formam a escala de cabeçalhos do assistente 21 / 17,5 / 15.
+- **Item** (800, 14–15px): rótulo de bloco do Início, nome do cartão, títulos de painel (section-label, 15px).
+- **Body** (400, 14px, altura de linha 1,5): subtítulo de tela e texto de painel; descrições secundárias em 13px.
+- **Label** (800, 13px): botões, abas da prateleira, botões da barra de ícones, Voltar.
+- **Hint** (700, 12px): barra de dicas e contexto do item selecionado.
+- **Key** (800, 11px, altura de linha 1): teclas desenhadas na barra de dicas.
 
 ### Named Rules
-**The Sentence-Case Label Rule.** O rótulo de seção é Nunito 15px/800 na cor do texto, em minúsculas de frase, sem tracking e sem maiúsculas. O estilo antigo (11px, maiúsculas, 0.06em, cor discreta) continua em `style.css` e é anulado por `skins.css`; não o reativar.
+**The Piso de 11px Rule.** Nada funcional fica abaixo de 11px. A Nunito tem altura-x menor que a fonte anterior, por isso os tamanhos pequenos herdados do Tailwind sobem 1px no `skins.css`.
 
-**The +1px Rule.** A Nunito tem altura-x menor que a fonte anterior, por isso a escala pequena sobe 1px: os utilitários `text-[10px]`, `text-[11px]`, `text-[12px]` e `text-[13px]` renderizam a 11, 12, 13 e 14px. Nenhum texto funcional fica abaixo de 11px.
+**The Peso Faz a Hierarquia Rule.** Dentro de um mesmo tamanho, a hierarquia vem do peso (400 para texto, 700 para dica, 800 para rótulo) e da tinta (fg, fg-soft, fg-mute). Espaçamento largo entre letras é exclusivo do Cubo, onde os títulos azuis espaçados fazem parte do mundo.
 
 ## Layout
 
-Shell de produto fixo: grelha de duas colunas com a barra lateral (220px) e o conteúdo; a barra de cima (56px) leva o seletor de cartão, o progresso e o seletor de tema. A barra lateral tem a marca e as quatro vistas (Início, DSPico, Mais ferramentas, Configurações); DSPico e Mais ferramentas abrem abas em cápsula. Há um só seletor de cartão (barra de cima) e um só registro (gaveta Atividade).
+O shell é uma grade de três linhas que ocupa a janela inteira sem rolagem do corpo: barra de status (52px), área principal com rolagem própria e o conjunto barra de ícones (64px) mais barra de dicas (30px). A área principal tem respiro de 22px em cima, 24px nas laterais e 28px embaixo, e o conteúdo das telas internas fica limitado a 1080px. A janela mínima do app é 960 × 640; abaixo de 1120px de largura a data some da barra de status, abaixo de 1040px some o rótulo de onde o usuário está, e abaixo de 720px de altura a barra de dicas cai para 26px e os arranjos altos se compactam.
 
-O Início é uma grelha de duas colunas (1.65fr e 1fr, 16px de intervalo): o painel DSPico domina e contém o estado do cartão (nome, barra de uso, ações); Mais ferramentas fica ao lado como lista de ligações; os Primeiros passos ocupam a largura toda por baixo, em três colunas numeradas.
+O Início muda de arranjo por tema, sempre com os mesmos doze blocos na mesma ordem de DOM:
 
-O ritmo de espaçamento assenta em 4, 8, 12, 16 e 24px; os painéis do Início usam 22 a 28px de padding. A lista de navegação tem 6px de folga negativa para os anéis da seleção-assinatura não serem cortados pelo contentor com scroll.
+- **Dupla Tela:** duas telas empilhadas. Em cima, relógio (170px) e cartão em caixas brancas; uma dobradiça de borda dupla de 6px separa a tela de baixo, com os blocos em três colunas, cada bloco de 72px de altura com ícone à esquerda.
+- **Câmera Dupla:** tela de cima menta com o cartão centralizado, balão de legenda com bico apontando para a fileira, uma só fileira de ícones quadrados (112px) com rolagem lateral e uma barra de rolagem própria com setas embaixo.
+- **Canais:** grade de quatro colunas com o cartão ocupando dois canais; blocos 16:9 e dois canais vazios no fim para completar a grade.
+- **Tablet de Sala:** coluna de 150px com o cartão e grade de cinco quadrados de vidro ao lado.
+- **Cubo:** painel do cartão em cima, dois painéis em colunas com as listas DSPico e Mais ferramentas, e uma caixa de descrição embaixo.
+- **Estéreo 3D:** estado grande na metade de cima, nome do bloco escolhido em 26px e uma bandeja de seis colunas com os blocos.
+- **Híbrido:** cartão num círculo, fileira de blocos quadrados de 176px para DSPico e doca redonda numa pílula para Mais ferramentas, com o rótulo do item selecionado embaixo do anel.
 
-Pontos de quebra observados: a 1060px a barra lateral passa a 176px, o conteúdo fica com 18px/16px de padding, o distintivo de papel do cartão esconde-se e o Início empilha em uma coluna (os passos também). A 860px a barra lateral passa a 156px, a navegação desce para 13px com 9px/10px de padding e o subtítulo da marca esconde-se; os rótulos ficam inteiros.
+O ritmo de espaçamento observado gira em torno de 8, 14, 18 e 24px; gaps entre blocos ficam entre 14 e 18px.
+
+### Named Rules
+**The Mesma Ordem Rule.** Todos os arranjos usam o mesmo HTML; o tema muda grade, tamanhos e visibilidade, nunca a ordem de leitura nem o conjunto de blocos. A navegação por setas é espacial e calcula o vizinho pela posição real na tela.
+
+**The Quatro Faixas Rule.** Status, conteúdo, ícones e dicas existem em todo tema e em toda tela. Um tema pode tornar uma faixa transparente ou curvá-la, mas não pode removê-la.
 
 ## Elevation & Depth
 
-Sistema híbrido: painéis com sombra ambiente muito baixa sobre um chão com padrão, e profundidade adicional só no hover e nos menus. As sombras são tokens trocados pelo `data-scheme`; no esquema escuro somam um fio de luz interior de 1px. Os temas Tablet de Sala e Cubo dão aos painéis um gradiente vertical suave (surface para surface-2) como acabamento; os outros ficam lisos.
+O sistema é híbrido. A base usa três sombras suaves por esquema (painel, hover, menu) e uma de pressão, mais fortes no modo noturno. Por cima delas, cada tema define a própria profundidade como parte do mundo: biseis e sombra preta pesada no Cubo, relevo inferior sólido sem desfoque nos blocos do Estéreo 3D (o bloco desce 3px ao ser pressionado), moldura interna branca de 6px no vidro do Tablet de Sala, sombra interna inferior nos canais. O Híbrido é quase plano, com uma sombra de 1–3px.
 
 ### Shadow Vocabulary
-- **Painel** (`--shadow-panel`, claro: `0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06)`): painéis e cartões em repouso.
-- **Hover** (`--shadow-hover`, claro: `0 2px 4px rgb(20 22 26 / 0.06), 0 12px 28px rgb(20 22 26 / 0.10)`): painel de ação sob o cursor, com a borda a passar a fio forte.
-- **Menu** (`--shadow-menu`, claro: `0 2px 6px rgb(20 22 26 / 0.08), 0 18px 48px rgb(20 22 26 / 0.16)`): menus flutuantes como o seletor de tema.
-- **Pressão** (`--shadow-press`, claro: `0 1px 1px rgb(20 22 26 / 0.10)`): botão primário pressionado.
+- **Painel, claro** (`box-shadow: 0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06)`): painéis das telas de trabalho.
+- **Menu, claro** (`box-shadow: 0 2px 6px rgb(20 22 26 / 0.08), 0 18px 48px rgb(20 22 26 / 0.16)`): gaveta Atividade e menu de tema.
+- **Pressão** (`box-shadow: 0 1px 1px rgb(20 22 26 / 0.10)`): botão primário pressionado.
+- **Relevo do Estéreo 3D** (`box-shadow: 0 5px 0 rgb(var(--c-line-strong) / 0.55), 0 10px 18px rgb(0 0 0 / 0.08)`): blocos e painéis com espessura de peça de brinquedo; é o material do próprio tema.
+- **Bisel do Cubo** (`box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.10), 0 6px 22px rgb(0 0 0 / 0.55)`): painéis índigo-violeta sobre o preto.
 
 ### Named Rules
-**The Rings Not Offsets Rule.** A profundidade da seleção faz-se com anéis de espalhamento (`0 0 0 Npx`) e sombras difusas da cor de seleção; não há sombras sólidas deslocadas em nenhum tema.
+**The Profundidade Pertence ao Tema Rule.** Sombras de assinatura (relevo sólido, bisel, brilho de anel) ficam no bloco do tema em `console.css` ou `skins.css`. As sombras base do gerador valem para todos e não carregam identidade.
 
 ## Shapes
 
-Raios generosos e variáveis por tema, em três degraus (`--radius-sm`, `--radius`, `--radius-lg`): Dupla Tela 10/14/18px, Câmera Dupla, Tablet de Sala e Estéreo 3D 12/16/22px, Canais 14/18/26px, Cubo 6/10/14px (o mais anguloso), Híbrido 10/14/20px. Painéis usam o raio grande; itens de navegação, notas e campos o médio. Botões, abas, chips, calhas de abas, barra de uso e números de passo são cápsulas (999px). Bordas de 1px no fio; Canais engrossa a borda dos painéis para 2px. A barra de uso tem 12px de altura em cápsula.
+Cada tema tem sua escala de raio (pequeno / médio / grande) emitida pelo gerador: Dupla Tela e Híbrido 6/10/14, Câmera Dupla 8/12/16, Canais 14/18/24, Tablet de Sala 14/18/22, Cubo 4/6/8, Estéreo 3D 12/16/22. Botões, chips e o Voltar são pílulas (999px) em todos os temas, exceto na Dupla Tela e no Cubo, onde os botões ficam retangulares com o raio do tema. As formas de assinatura são do tema: a borda dupla da dobradiça na Dupla Tela, o balão com bico da Câmera Dupla, a barra curva desenhada por máscara SVG com o fio ciano em Canais, os quadrados de moldura grossa do Tablet de Sala, a doca circular do Híbrido e o círculo do cartão no Híbrido. O medidor de espaço da barra de status tem forma de bateria (38 × 18px, borda de 2px, polo de 3px).
 
 ## Components
 
 ### Buttons
-Cápsulas firmes, como os botões dos menus de console.
-- **Shape:** cápsula completa (999px) em todas as variantes, primária, fantasma e ícone.
-- **Primary:** preenchimento `accent`, texto `on-accent`, 13px/800, padding 0.62rem 1.25rem, com brilho interior de 1px no topo e sombra curta (`0 1px 0 rgb(255 255 255 / 0.18) inset, 0 2px 5px rgb(0 0 0 / 0.16)`).
-- **Hover / Active:** hover passa a `accent-strong` com sombra mais funda; active desce 1px e usa `--shadow-press`. Transições de 180ms com `cubic-bezier(0.22, 1, 0.36, 1)`.
-- **Ghost:** painel com borda de fio forte, texto `ink`, 13px/700, padding 0.5rem 1rem; hover em `surface-2` com a borda na cor de seleção.
-- **Icon:** cápsula de 2.1rem com borda de fio forte.
-- **Disabled:** opacidade 0.5, cursor bloqueado, sem deslocamento.
+Botões firmes e arredondados, com o primário reservado para a ação que executa.
+- **Shape:** pílula (999px); retangular com raio do tema na Dupla Tela (10px) e no Cubo (6px).
+- **Primary:** fundo accent, texto on-accent, 800 a 13px, padding 0,62rem × 1,25rem, brilho interno de 1px e sombra curta. No Cubo vira a barra dourada biselada com texto escuro e espaçamento 0,06em.
+- **Hover / Focus:** hover troca para accent-strong; pressão desce 1px com a sombra de pressão; foco por teclado é um contorno de 2px na cor fg com afastamento de 4px.
+- **Ghost:** painel com borda line-strong de 1px (2px e degradê claro na Dupla Tela); hover recua para surface-2 e acende a borda em select.
+- **Disabled:** opacidade 0,5 e cursor bloqueado.
 
 ### Chips
-- **Style:** cápsulas de 12px para estados e etiquetas (pílulas de estado na barra de cima, tags Recomendado / Não oficial). O estilo herdado em maiúsculas e tracking ainda existe em `style.css`; ver Do's and Don'ts.
+- **Style:** pílula de 12px na barra de status e nos painéis; dentro da barra de status usa o texto da moldura com fundo a 10% e borda a 35%.
 
 ### Cards / Containers
-- **Corner Style:** raio grande do tema (`--radius-lg`).
-- **Background:** `surface`, com o acabamento do tema (gradiente em Tablet de Sala e Cubo).
-- **Shadow Strategy:** Painel em repouso, Hover no painel de ação (ver Elevation & Depth).
-- **Border:** 1px `line` (2px em Canais; fio forte em Cubo); o painel DSPico do Início leva a borda no acento a 45%.
-- **Internal Padding:** 24px (28px no painel principal do Início, 22px nos secundários).
+- **Corner Style:** raio grande do tema (14px no padrão).
+- **Background:** surface, com degradê para surface-2 em Canais e no Tablet de Sala, e degradê surface → surface-2 → hero no Cubo.
+- **Shadow Strategy:** sombra de painel base, substituída pela profundidade do tema (ver Elevation & Depth).
+- **Border:** 1px line no padrão; 2px na Dupla Tela e no Cubo; 3px em Canais; nenhuma no Híbrido claro.
+- **Internal Padding:** entre 14 e 22px, conforme o tema e a densidade do painel.
 
 ### Inputs / Fields
-- **Style:** borda de fio forte, fundo `surface`, raio médio, peso 600; o cursor de inserção usa `accent-fg`; placeholders em `ink-mute` com opacidade total.
-- **Focus:** borda passa à cor de seleção com halo de 3px a 25%.
+- **Style:** seletor com raio médio do tema, borda line-strong, fundo surface, peso 600. O seletor do microSD na barra de status tem 34px de altura e entre 180 e 340px de largura.
+- **Focus:** borda em select e halo de 3px em select a 25%.
 
 ### Navigation
-- **Barra lateral:** itens de 14px/700 em `ink-soft`, raio médio, padding 10px 14px; hover em `surface-2`. Em Canais os itens são cápsulas.
-- **Abas principais:** calha em cápsula (`surface-2`, borda de fio, 4px de padding e intervalo) com abas de 13px/700.
-- **Abas internas do RouteDex:** a mesma cápsula, mas a aba ativa é discreta, painel com contorno de 1px em fio forte. A seleção-assinatura fica reservada à navegação principal, às abas de vista e ao seletor de tema.
-- **Teclado:** setas nas abas, Alt+1 a Alt+4 nas vistas.
+- **Barra de status:** marca, onde o usuário está, papel do volume, seletor do microSD com botão de atualizar, progresso da operação, data, hora em 800 com números tabulares e o medidor de espaço em forma de bateria (vermelho quando cheio). No Estéreo 3D a barra cresce para 72px, com hora em 30px e bateria de 58 × 28px.
+- **Barra de ícones:** Início, Atividade, Tema e Configurações. O botão ativo recebe a seleção do tema; Atividade mostra um ponto quando há registro novo. Em Canais os botões são círculos de 58–70px sobre a barra curva com o relógio no centro; no Tablet de Sala e no Estéreo 3D os ícones ganham cores de tarefa.
+- **Barra de dicas:** contexto do item à esquerda e, à direita, «Setas Mover», «Enter Abrir» e «Esc Voltar» com teclas desenhadas (11px, borda de 1,5px, raio 6px). No Início o «Voltar» fica a 45% de opacidade. O Cubo usa teclas coloridas por função; o Híbrido troca «Abrir» por «OK».
+- **Cabeçalho de tela:** Voltar em pílula com seta, ícone da tarefa num quadrado de 46px com a cor da tarefa a 14% e o título de 24px.
+- **Prateleira de abas:** abas irmãs como botões com ícone de 18px, raio médio, borda line; a ativa ganha a seleção-assinatura e o ícone em select. Setas esquerda e direita percorrem as abas.
 
-### Seleção-Assinatura (Signature Component)
-Um só seletor compartilhado vale para `.nav-item--active`, `.adv-tab--active`, `.theme-item[aria-checked="true"]` e `.theme-mode[aria-checked="true"]`. A base é painel, texto `ink` e anel de 2px na cor de seleção; cada tema substitui só a decoração:
-- **Dupla Tela:** moldura azul dupla (anel interior de 2px, espaço de 2px na cor do painel, anel exterior de 2px) sobre fundo da seleção a 10%. Chão: papel quadriculado de 16px.
-- **Câmera Dupla:** etiqueta preenchida (`select-fill` com `on-select`) e um bico de 12×7px que aponta para baixo nas abas e para a direita na navegação. Chão: faixas horizontais suaves de 22px.
-- **Canais:** anel ciano interior de 2px com halo difuso. Chão: risca fina horizontal a cada 4px.
-- **Tablet de Sala:** cartão realçado com anel exterior de 4px, sombra da seleção e subida de 1px. Chão: losangos finos de 44px.
-- **Cubo:** moldura dourada interior de 2px sobre gradiente dourado vertical. Chão: grelha de 24px sobre índigo.
-- **Estéreo 3D:** quatro cantos verdes de 14×4px desenhados com gradientes, raio de 4px e fundo da seleção a 10%. Chão: xadrez de blocos de 96px na cor de seleção a 7%.
-- **Híbrido:** anel duplo (1px interior, 3px de espaço, 3px exterior) sobre fundo da seleção a 14%. Chão: cinza liso.
+### Bloco do Início (signature)
+O bloco é um botão com ícone colorido e rótulo; a descrição fica oculta visualmente e alimenta a legenda do item selecionado. O bloco atual segue o foco do teclado e o ponteiro e recebe a seleção-assinatura do tema; com foco, o contorno genérico some para não dobrar a seleção. Pressionar reduz o bloco a 98%. Em Câmera Dupla e Tablet de Sala o bloco atual mostra a etiqueta «Abrir» no preenchimento de seleção.
 
-Com `prefers-reduced-motion`, a seleção não anima nem se desloca.
+### Seleção-assinatura (signature)
+Um gesto de seleção por tema, compartilhado por bloco, aba, item de tema e botão ativo da barra de ícones:
+- **Dupla Tela:** quatro cantos azuis retos de 4px, afastados 6px, recortados por máscara.
+- **Câmera Dupla:** moldura azul de 3px com o bloco ampliado a 112% e a etiqueta «Abrir» embaixo.
+- **Canais:** aro ciano de 2px com brilho de 18px e ampliação a 103%.
+- **Tablet de Sala:** moldura ciano larga de 6px com ampliação a 104% e faixa «Abrir» na base.
+- **Cubo:** barra dourada biselada (degradê de creme a ouro escuro) com texto escuro.
+- **Estéreo 3D:** cantos menta arredondados de 5px com brilho, afastados 8px.
+- **Híbrido:** anel ciano duplo, com 3px de painel entre o bloco e o anel.
 
-### Foco
-O foco de teclado é um contorno de 2px na cor do texto (`ink`), com 3px de afastamento (4px nos controlos com seleção-assinatura). Nunca usa a cor de seleção, para o item focado continuar distinguível do item ativo em todos os temas.
-
-### Linhas de lista
-Listas planas sem cartão: ligações de Mais ferramentas e objetivos do assistente são linhas de largura total com fio de 1px em cima e em baixo, texto 14–15px/800, chevron SVG de 16px em `ink-mute` à direita que passa a `ink` no hover, e hover em `surface-2`. Os objetivos do assistente juntam uma linha de "o que faz" (13px, `ink-soft`) e "quando" (12px, `ink-mute`).
-
-### Ícones de estado
-SVG inline de 16px, traço de 2px, pontas e junções redondas, `currentColor`, sempre acompanhados de texto `sr-only` ("Presente:" / "Faltando:"). A cor vem da linha (`ok` ou `ink-mute`). As marcas do RouteDex (favorito, concluído) usam o mesmo traço dentro de botões redondos; o favorito ativo preenche o coração.
-
-### Primeiros passos
-Lista ordenada em três colunas com o número em um círculo de 30px em `select-fill` / `on-select`, título de 15px/800 e texto de 13px.
+### Gaveta Atividade
+Painel flutuante de até 560px ancorado acima da barra de ícones, com cabeçalho e 240px de registro rolável. Abre com fade e subida de 10px em 200–240ms.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** usar cores só como `rgb(var(--c-x))` ou `rgb(var(--c-x) / alfa)`, ou pelas classes Tailwind que as envolvem (`bg-accent/10`, `text-fg-mute`).
-- **Do** acrescentar ou ajustar cores em `tools/build_themes.py` e regenerar com `python tools/build_themes.py`; confirmar com `--check` e `tests/test_themes.py`.
-- **Do** colocar a assinatura de um tema (chão, acabamento, seleção) em `static/skins.css`, sob `html[data-family="…"]`, e mais nada.
-- **Do** aplicar a seleção-assinatura através do seletor compartilhado; um controlo novo de "item escolhido" entra nessa lista em vez de inventar o seu próprio estado ativo.
-- **Do** manter o foco como contorno de 2px na cor do texto, separado da seleção.
-- **Do** usar cápsulas (999px) para botões, abas e chips, e o raio do tema (`--radius`, `--radius-lg`) para itens e painéis.
-- **Do** escrever rótulos de seção em minúsculas de frase, Nunito 15px/800.
-- **Do** desenhar ícones como SVG inline com `currentColor`, traço de 2px e pontas redondas.
+- **Do** gerar toda cor de tema por `tools/build_themes.py` e rodar `--check`; o gerador bloqueia combinações abaixo de WCAG AA.
+- **Do** usar as variáveis `--c-*` em `rgb(var(--c-x) / alfa)` para qualquer cor nova, em `console.css` ou `skins.css`.
+- **Do** colocar cada nova assinatura de tema dentro do bloco `html[data-family="…"]` correspondente e manter layout, navegação e controles iguais entre temas.
+- **Do** dar a toda tarefa nova um ícone SVG próprio no sprite de `index.html` (traço de 2px, pontas arredondadas, viewBox 24) e uma cor de tarefa por `data-hue`.
+- **Do** aplicar a seleção do tema ao elemento atual em vez de inventar um estado novo; bloco, aba, item de tema e botão da barra compartilham o mesmo gesto.
+- **Do** manter a escala de cabeçalhos do assistente em 21 / 17,5 / 15px.
+- **Do** respeitar `prefers-reduced-motion`: sem animação de entrada de tela e sem ampliação do bloco selecionado.
 
 ### Don't:
-- **Don't** editar `static/themes.css` ou `static/theme-data.js` à mão.
-- **Don't** usar logotipos, ícones, fontes, sons ou nomes de marca da Nintendo, nem dar nomes de console aos temas.
-- **Don't** imitar hardware: sem bezel, botões falsos ou cópia literal de menus de console.
-- **Don't** mudar layout, navegação, tamanhos ou controlos por tema; um tema só troca chão, acabamento e gesto de seleção.
-- **Don't** usar a assinatura nas abas internas do RouteDex nem em sub-abas; a seleção discreta mantém a hierarquia.
-- **Don't** pôr texto sobre `select` cru; texto sobre a seleção usa `select-fill` com `on-select`.
-- **Don't** pôr texto funcional abaixo de 11px nem voltar aos rótulos em maiúsculas com tracking.
-- **Don't** pôr um cartão dentro de outro; subpassos e listas ficam planos dentro do painel, separados por fios.
+- **Don't** editar `themes.css` ou `theme-data.js` à mão.
+- **Don't** usar logotipos, ícones, fontes, sons ou nomes de marca de consoles; os temas usam nomes genéricos.
+- **Don't** voltar à barra lateral de dashboard nem criar um tema que só troca a cor do layout de outro.
+- **Don't** somar um contorno genérico de foco à seleção do tema em um elemento já selecionado.
+- **Don't** usar cor de tarefa em texto corrido nem cor de seleção como cor de ação.
+- **Don't** criar pontos de página no Tablet de Sala nem outros indicadores que não correspondam a páginas reais.
+- **Don't** deixar texto funcional abaixo de 11px.

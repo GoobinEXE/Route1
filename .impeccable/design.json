@@ -1,508 +1,577 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-13T17:35:01+00:00",
+  "generatedAt": "2026-11-13T22:03:52+00:00",
   "title": "Design System: Route Pico",
   "extensions": {
     "colorMeta": {
-      "ground": {
+      "bg": {
         "role": "neutral",
-        "displayName": "Chão Cinza-Névoa",
+        "displayName": "Chão",
         "canonical": "rgb(var(--c-bg))",
-        "note": "Tripla RGB em --c-bg; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#22262a",
-          "#3a424a",
-          "#515e6b",
-          "#677a8e",
-          "#8a99a8",
-          "#afb8c0",
-          "#d2d6da",
-          "#f1f2f3"
+          "#0b0b0b",
+          "#262627",
+          "#444546",
+          "#656667",
+          "#88898a",
+          "#adaeae",
+          "#d0d1d1",
+          "#eeeeef"
         ]
       },
       "surface": {
         "role": "neutral",
-        "displayName": "Painel Branco",
+        "displayName": "Painel",
         "canonical": "rgb(var(--c-surface))",
-        "note": "Tripla RGB em --c-surface; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
       },
       "surface-2": {
         "role": "neutral",
-        "displayName": "Painel Recolhido",
+        "displayName": "Painel Recuado",
         "canonical": "rgb(var(--c-surface-2))",
-        "note": "Tripla RGB em --c-surface-2; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262627",
+          "#444546",
+          "#656667",
+          "#88898a",
+          "#adaeae",
+          "#d0d1d1",
+          "#eeeeef"
+        ]
       },
       "line": {
         "role": "neutral",
-        "displayName": "Fio",
+        "displayName": "Linha",
         "canonical": "rgb(var(--c-line))",
-        "note": "Tripla RGB em --c-line; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0a0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#87898c",
+          "#acaeb0",
+          "#cfd1d3",
+          "#edeef0"
+        ]
       },
       "line-strong": {
         "role": "neutral",
-        "displayName": "Fio Forte",
+        "displayName": "Linha Firme",
         "canonical": "rgb(var(--c-line-strong))",
-        "note": "Tripla RGB em --c-line-strong; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#242628",
-          "#3e4246",
-          "#585e65",
-          "#717a84",
-          "#9299a0",
-          "#b3b7bc",
-          "#d4d6d8",
-          "#f2f2f3"
+          "#0a0b0d",
+          "#242729",
+          "#424549",
+          "#62676c",
+          "#858a8f",
+          "#abaeb3",
+          "#ced1d4",
+          "#edeff1"
         ]
       },
-      "ink": {
+      "fg": {
         "role": "neutral",
         "displayName": "Tinta",
         "canonical": "rgb(var(--c-fg))",
-        "note": "Tripla RGB em --c-fg; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#232629",
-          "#3c4249",
-          "#535d69",
-          "#6a798a",
-          "#8d98a5",
-          "#b0b7bf",
-          "#d3d6da",
-          "#f1f2f3"
+          "#0a0b0c",
+          "#252729",
+          "#434548",
+          "#63666b",
+          "#86898e",
+          "#abaeb2",
+          "#cfd1d4",
+          "#edeef1"
         ]
       },
-      "ink-soft": {
+      "fg-soft": {
         "role": "neutral",
         "displayName": "Tinta Suave",
         "canonical": "rgb(var(--c-fg-soft))",
-        "note": "Tripla RGB em --c-fg-soft; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666c",
+          "#85898f",
+          "#abaeb3",
+          "#cfd1d5",
+          "#edeff1"
+        ]
       },
-      "ink-mute": {
+      "fg-mute": {
         "role": "neutral",
         "displayName": "Tinta Discreta",
         "canonical": "rgb(var(--c-fg-mute))",
-        "note": "Tripla RGB em --c-fg-mute; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666d",
+          "#858a90",
+          "#aaaeb4",
+          "#ced1d5",
+          "#eceff2"
+        ]
       },
       "accent": {
         "role": "primary",
-        "displayName": "Azul Moldura",
+        "displayName": "Azul de Ação",
         "canonical": "rgb(var(--c-accent))",
-        "note": "Tripla RGB em --c-accent; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#152438",
-          "#1e3e67",
-          "#22579b",
-          "#216fd4",
-          "#5591dd",
-          "#8fb3e0",
-          "#c3d4e9",
-          "#edf2f7"
+          "#000a24",
+          "#002551",
+          "#054484",
+          "#1665ba",
+          "#478bdc",
+          "#7cb1f3",
+          "#acd4ff",
+          "#d3f1ff"
         ]
       },
       "accent-strong": {
         "role": "primary",
-        "displayName": "Azul Moldura Fundo",
+        "displayName": "Azul de Ação Firme",
         "canonical": "rgb(var(--c-accent-strong))",
-        "note": "Tripla RGB em --c-accent-strong; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#152438",
-          "#1e3e67",
-          "#22579b",
-          "#216fd4",
-          "#5591dd",
-          "#8fb3e0",
-          "#c3d4e9",
-          "#edf2f7"
+          "#000a21",
+          "#03264d",
+          "#13457d",
+          "#2667b0",
+          "#508bd3",
+          "#82b1eb",
+          "#b0d4ff",
+          "#d6f1ff"
         ]
       },
       "accent-fg": {
         "role": "primary",
-        "displayName": "Azul Moldura Texto",
+        "displayName": "Azul de Texto",
         "canonical": "rgb(var(--c-accent-fg))",
-        "note": "Tripla RGB em --c-accent-fg; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#152438",
-          "#1e3e67",
-          "#22579b",
-          "#216fd4",
-          "#5591dd",
-          "#8fb3e0",
-          "#c3d4e9",
-          "#edf2f7"
+          "#000a22",
+          "#02264f",
+          "#104480",
+          "#2366b4",
+          "#4e8bd7",
+          "#80b1ef",
+          "#afd4ff",
+          "#d5f1ff"
         ]
       },
       "on-accent": {
-        "role": "primary",
-        "displayName": "Tinta sobre Acento",
+        "role": "neutral",
+        "displayName": "Texto sobre Ação",
         "canonical": "rgb(var(--c-on-accent))",
-        "note": "Tripla RGB em --c-on-accent; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#87898c",
+          "#acaeb0",
+          "#d0d1d2",
+          "#edeef0"
+        ]
       },
       "select": {
         "role": "secondary",
-        "displayName": "Cor de Seleção",
+        "displayName": "Azul de Seleção",
         "canonical": "rgb(var(--c-select))",
-        "note": "Tripla RGB em --c-select; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#152438",
-          "#1e3e67",
-          "#22579b",
-          "#216fd4",
-          "#5591dd",
-          "#8fb3e0",
-          "#c3d4e9",
-          "#edf2f7"
+          "#000926",
+          "#002554",
+          "#004488",
+          "#0065bf",
+          "#3e8be2",
+          "#76b2f8",
+          "#a8d5ff",
+          "#d0f2ff"
         ]
       },
       "select-fill": {
         "role": "secondary",
-        "displayName": "Seleção Preenchida",
+        "displayName": "Preenchimento de Seleção",
         "canonical": "rgb(var(--c-select-fill))",
-        "note": "Tripla RGB em --c-select-fill; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#152438",
-          "#1e3e67",
-          "#22579b",
-          "#216fd4",
-          "#5591dd",
-          "#8fb3e0",
-          "#c3d4e9",
-          "#edf2f7"
+          "#000926",
+          "#002554",
+          "#004488",
+          "#0065bf",
+          "#3e8be2",
+          "#76b2f8",
+          "#a8d5ff",
+          "#d0f2ff"
         ]
       },
       "on-select": {
-        "role": "secondary",
-        "displayName": "Tinta sobre Seleção",
+        "role": "neutral",
+        "displayName": "Texto sobre Seleção",
         "canonical": "rgb(var(--c-on-select))",
-        "note": "Tripla RGB em --c-on-select; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py."
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
       },
       "ok": {
-        "role": "tertiary",
-        "displayName": "Verde Estado",
+        "role": "status",
+        "displayName": "Verde de Sucesso",
         "canonical": "rgb(var(--c-ok))",
-        "note": "Tripla RGB em --c-ok; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#173620",
-          "#236234",
-          "#2a9347",
-          "#2dc858",
-          "#5ed47f",
-          "#94dba8",
-          "#c6e7cf",
-          "#eef6f0"
+          "#001101",
+          "#00300d",
+          "#0b5421",
+          "#1e7a37",
+          "#4f9d5d",
+          "#83bf8b",
+          "#b1dfb6",
+          "#d7f9db"
         ]
       },
       "warn": {
-        "role": "tertiary",
-        "displayName": "Âmbar Estado",
+        "role": "status",
+        "displayName": "Âmbar de Aviso",
         "canonical": "rgb(var(--c-warn))",
-        "note": "Tripla RGB em --c-warn; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#3b2811",
-          "#6e4516",
-          "#a76316",
-          "#e6810f",
-          "#eb9e47",
-          "#e8bb87",
-          "#edd8bf",
-          "#f8f3ec"
+          "#190500",
+          "#3f1c00",
+          "#693600",
+          "#965204",
+          "#ba773e",
+          "#d8a175",
+          "#f2c7a6",
+          "#ffe8cf"
         ]
       },
       "danger": {
-        "role": "tertiary",
-        "displayName": "Vermelho Estado",
+        "role": "status",
+        "displayName": "Vermelho de Perigo",
         "canonical": "rgb(var(--c-danger))",
-        "note": "Tripla RGB em --c-danger; valor do frontmatter = Dupla Tela Original. Gerado por tools/build_themes.py.",
         "tonalRamp": [
-          "#35171a",
-          "#612429",
-          "#912c34",
-          "#c62f3c",
-          "#d2606a",
-          "#da969c",
-          "#e6c6c9",
-          "#f6eeef"
+          "#220000",
+          "#50000b",
+          "#820e1e",
+          "#b82332",
+          "#dd5558",
+          "#f88987",
+          "#ffb7b3",
+          "#ffdcd8"
+        ]
+      },
+      "chrome": {
+        "role": "neutral",
+        "displayName": "Moldura",
+        "canonical": "rgb(var(--c-chrome))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "chrome-fg": {
+        "role": "neutral",
+        "displayName": "Texto da Moldura",
+        "canonical": "rgb(var(--c-chrome-fg))",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666d",
+          "#858a90",
+          "#aaaeb4",
+          "#ced1d5",
+          "#eceff2"
+        ]
+      },
+      "hero": {
+        "role": "neutral",
+        "displayName": "Tela de Destaque",
+        "canonical": "rgb(var(--c-hero))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "hero-fg": {
+        "role": "neutral",
+        "displayName": "Texto da Tela de Destaque",
+        "canonical": "rgb(var(--c-hero-fg))",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#252729",
+          "#434548",
+          "#63666b",
+          "#86898e",
+          "#abaeb2",
+          "#cfd1d4",
+          "#edeef1"
+        ]
+      },
+      "tile-1": {
+        "role": "tertiary",
+        "displayName": "Laranja de Tarefa",
+        "canonical": "rgb(var(--c-tile-1))",
+        "tonalRamp": [
+          "#1e0100",
+          "#491100",
+          "#772800",
+          "#aa4000",
+          "#ce6928",
+          "#ea9769",
+          "#ffc09e",
+          "#ffe3c9"
+        ]
+      },
+      "tile-2": {
+        "role": "tertiary",
+        "displayName": "Verde de Tarefa",
+        "canonical": "rgb(var(--c-tile-2))",
+        "tonalRamp": [
+          "#001100",
+          "#003100",
+          "#00550c",
+          "#067c1e",
+          "#45a04b",
+          "#7dc27e",
+          "#ade1ad",
+          "#d5fbd4"
+        ]
+      },
+      "tile-3": {
+        "role": "tertiary",
+        "displayName": "Azul de Tarefa",
+        "canonical": "rgb(var(--c-tile-3))",
+        "tonalRamp": [
+          "#000827",
+          "#022357",
+          "#10418c",
+          "#2161c4",
+          "#4b87e7",
+          "#7eaffc",
+          "#add3ff",
+          "#d4f0ff"
+        ]
+      },
+      "tile-4": {
+        "role": "tertiary",
+        "displayName": "Turquesa de Tarefa",
+        "canonical": "rgb(var(--c-tile-4))",
+        "tonalRamp": [
+          "#00100f",
+          "#002f2d",
+          "#00514e",
+          "#007772",
+          "#3d9a95",
+          "#79bcb8",
+          "#aadcd9",
+          "#d3f7f4"
+        ]
+      },
+      "tile-5": {
+        "role": "tertiary",
+        "displayName": "Vermelho de Tarefa",
+        "canonical": "rgb(var(--c-tile-5))",
+        "tonalRamp": [
+          "#220000",
+          "#500005",
+          "#820f15",
+          "#b82328",
+          "#de5650",
+          "#f88a81",
+          "#ffb7af",
+          "#ffdcd5"
+        ]
+      },
+      "tile-6": {
+        "role": "tertiary",
+        "displayName": "Amarelo de Tarefa",
+        "canonical": "rgb(var(--c-tile-6))",
+        "tonalRamp": [
+          "#160700",
+          "#3a2000",
+          "#623c00",
+          "#8d5a00",
+          "#b07f26",
+          "#cea769",
+          "#ebcc9e",
+          "#ffebc9"
+        ]
+      },
+      "tile-7": {
+        "role": "tertiary",
+        "displayName": "Roxo de Tarefa",
+        "canonical": "rgb(var(--c-tile-7))",
+        "tonalRamp": [
+          "#110125",
+          "#301154",
+          "#532987",
+          "#7942be",
+          "#9b6be1",
+          "#bc99f7",
+          "#dbc2ff",
+          "#f6e4ff"
         ]
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "Título do painel principal do Início (34px); .hero-title 28px noutros sítios."
+        "purpose": "Relógio grande da tela de cima na Dupla Tela."
       },
       "headline": {
-        "displayName": "Título de vista",
-        "purpose": ".page-title de cada vista; 700 no tema Híbrido."
+        "displayName": "Headline",
+        "purpose": "Título de tela no cabeçalho com Voltar."
       },
       "title": {
-        "displayName": "Rótulo de secção",
-        "purpose": ".section-label em minúsculas de frase; nome do cartão, títulos de passo e objetivo."
+        "displayName": "Title",
+        "purpose": "Título do assistente (topo da escala 21 / 17,5 / 15)."
+      },
+      "title-sm": {
+        "displayName": "Title pequeno",
+        "purpose": "Título de seção do assistente."
+      },
+      "item": {
+        "displayName": "Item",
+        "purpose": "Rótulo de bloco, título de objetivo, nome do cartão, título de painel."
       },
       "body": {
-        "displayName": "Corpo",
-        "purpose": "Subtítulos e texto de painel; até 52ch no Início."
+        "displayName": "Body",
+        "purpose": "Subtítulo de tela e texto de painel."
       },
       "label": {
-        "displayName": "Rótulo",
-        "purpose": "Abas, botões fantasma (700) e botão primário (800); navegação a 14px/700."
+        "displayName": "Label",
+        "purpose": "Botões, abas da prateleira, barra de ícones, Voltar."
+      },
+      "hint": {
+        "displayName": "Hint",
+        "purpose": "Barra de dicas e contexto do item selecionado."
+      },
+      "key": {
+        "displayName": "Key",
+        "purpose": "Teclas desenhadas na barra de dicas."
       },
       "mono": {
         "displayName": "Mono",
-        "purpose": "Caminhos do cartão, versões e <code>."
+        "purpose": "Caminhos, hashes e registro de atividade."
       }
     },
-    "themeAxes": {
-      "data-family": [
-        "dupla",
-        "camera",
-        "canais",
-        "tablet",
-        "cubo",
-        "cubos3d",
-        "hibrido"
-      ],
-      "data-mode": {
-        "original": "paleta própria",
-        "light": "Catppuccin Latte",
-        "dark": "Catppuccin Mocha",
-        "auto": "Sistema, resolve para light/dark"
-      },
-      "data-scheme": "light|dark, escrito pelo theme.js a partir do modo; escolhe sombras e glow",
-      "default": {
-        "family": "dupla",
-        "mode": "original"
-      },
-      "source": "tools/build_themes.py gera static/themes.css e static/theme-data.js; nunca editar à mão",
-      "signatureSelector": ".nav-item--active, .adv-tab--active, .theme-item[aria-checked=\"true\"], .theme-mode[aria-checked=\"true\"] (static/skins.css)"
-    },
-    "themes": [
-      {
-        "family": "dupla",
-        "label": "Dupla Tela",
-        "radius": "10/14/18",
-        "ground": "Papel quadriculado 16px",
-        "panelFinish": "Liso",
-        "selection": "Moldura azul dupla",
-        "modes": {
-          "original": {
-            "accent": "#2f7de1",
-            "select": "#2f7de1",
-            "onAccent": "#111417"
-          },
-          "light": {
-            "accent": "#1e66f5",
-            "select": "#1e66f5",
-            "onAccent": "#ffffff"
-          },
-          "dark": {
-            "accent": "#89b4fa",
-            "select": "#89b4fa",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "camera",
-        "label": "Câmera Dupla",
-        "radius": "12/16/22",
-        "ground": "Faixas horizontais 22px",
-        "panelFinish": "Liso",
-        "selection": "Etiqueta preenchida com bico",
-        "modes": {
-          "original": {
-            "accent": "#1f8fb3",
-            "select": "#3e9fd3",
-            "onAccent": "#16191c"
-          },
-          "light": {
-            "accent": "#15838a",
-            "select": "#209fb5",
-            "onAccent": "#ffffff"
-          },
-          "dark": {
-            "accent": "#94e2d5",
-            "select": "#74c7ec",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "canais",
-        "label": "Canais",
-        "radius": "14/18/26",
-        "ground": "Risca fina a cada 4px",
-        "panelFinish": "Borda de 2px",
-        "selection": "Anel ciano interior",
-        "modes": {
-          "original": {
-            "accent": "#1fb0e6",
-            "select": "#34beed",
-            "onAccent": "#1f2225"
-          },
-          "light": {
-            "accent": "#2da5b9",
-            "select": "#04a5e5",
-            "onAccent": "#2e2f3f"
-          },
-          "dark": {
-            "accent": "#74c7ec",
-            "select": "#89dceb",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "tablet",
-        "label": "Tablet de Sala",
-        "radius": "12/16/22",
-        "ground": "Losangos finos 44px",
-        "panelFinish": "Gradiente vertical",
-        "selection": "Cartão realçado, anel de 4px, sobe 1px",
-        "modes": {
-          "original": {
-            "accent": "#14a9dc",
-            "select": "#23b8e8",
-            "onAccent": "#171a1d"
-          },
-          "light": {
-            "accent": "#04a5e5",
-            "select": "#04a5e5",
-            "onAccent": "#2e2f3f"
-          },
-          "dark": {
-            "accent": "#89dceb",
-            "select": "#89dceb",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "cubo",
-        "label": "Cubo",
-        "radius": "6/10/14",
-        "ground": "Grelha 24px sobre índigo",
-        "panelFinish": "Gradiente biselado, borda forte",
-        "selection": "Moldura dourada",
-        "modes": {
-          "original": {
-            "accent": "#9d8cff",
-            "select": "#f2c230",
-            "onAccent": "#0f0c2e"
-          },
-          "light": {
-            "accent": "#8839ef",
-            "select": "#df8e1d",
-            "onAccent": "#ffffff"
-          },
-          "dark": {
-            "accent": "#cba6f7",
-            "select": "#f9e2af",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "cubos3d",
-        "label": "Estéreo 3D",
-        "radius": "12/16/22",
-        "ground": "Xadrez de blocos 96px",
-        "panelFinish": "Liso",
-        "selection": "Cantos verdes",
-        "modes": {
-          "original": {
-            "accent": "#e2681a",
-            "select": "#2fbf71",
-            "onAccent": "#1a1c1f"
-          },
-          "light": {
-            "accent": "#fe6912",
-            "select": "#40a02b",
-            "onAccent": "#2e2f3f"
-          },
-          "dark": {
-            "accent": "#fab387",
-            "select": "#a6e3a1",
-            "onAccent": "#181825"
-          }
-        }
-      },
-      {
-        "family": "hibrido",
-        "label": "Híbrido",
-        "radius": "10/14/20",
-        "ground": "Cinza liso",
-        "panelFinish": "Liso",
-        "selection": "Anel duplo",
-        "modes": {
-          "original": {
-            "accent": "#d7283d",
-            "select": "#16c3e0",
-            "onAccent": "#ffffff"
-          },
-          "light": {
-            "accent": "#d20f39",
-            "select": "#04a5e5",
-            "onAccent": "#ffffff"
-          },
-          "dark": {
-            "accent": "#f38ba8",
-            "select": "#89dceb",
-            "onAccent": "#181825"
-          }
-        }
-      }
-    ],
     "shadows": [
       {
-        "name": "shadow-panel",
+        "name": "panel-light",
         "value": "0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06)",
-        "dark": "0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.32), 0 10px 28px rgb(0 0 0 / 0.30)",
-        "purpose": "Painéis em repouso."
+        "purpose": "Painéis das telas de trabalho, esquema claro."
       },
       {
-        "name": "shadow-hover",
-        "value": "0 2px 4px rgb(20 22 26 / 0.06), 0 12px 28px rgb(20 22 26 / 0.10)",
-        "dark": "0 1px 0 rgb(255 255 255 / 0.05) inset, 0 3px 6px rgb(0 0 0 / 0.38), 0 16px 36px rgb(0 0 0 / 0.36)",
-        "purpose": "Painel de ação sob o cursor."
+        "name": "panel-dark",
+        "value": "0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.32), 0 10px 28px rgb(0 0 0 / 0.30)",
+        "purpose": "Painéis, esquema escuro."
       },
       {
-        "name": "shadow-menu",
+        "name": "menu-light",
         "value": "0 2px 6px rgb(20 22 26 / 0.08), 0 18px 48px rgb(20 22 26 / 0.16)",
-        "dark": "0 1px 0 rgb(255 255 255 / 0.05) inset, 0 14px 44px rgb(0 0 0 / 0.55)",
-        "purpose": "Menus flutuantes (seletor de tema)."
+        "purpose": "Gaveta Atividade e menu de tema."
       },
       {
-        "name": "shadow-press",
+        "name": "menu-dark",
+        "value": "0 1px 0 rgb(255 255 255 / 0.05) inset, 0 14px 44px rgb(0 0 0 / 0.55)",
+        "purpose": "Gaveta e menu, esquema escuro."
+      },
+      {
+        "name": "press",
         "value": "0 1px 1px rgb(20 22 26 / 0.10)",
-        "dark": "0 1px 1px rgb(0 0 0 / 0.40)",
         "purpose": "Botão primário pressionado."
       },
       {
-        "name": "focus-ring",
-        "value": "outline: 2px solid rgb(var(--c-fg)); outline-offset: 3px (4px nos controlos com assinatura)",
-        "purpose": "Foco de teclado, distinto da seleção."
+        "name": "relevo-estereo",
+        "value": "0 5px 0 rgb(var(--c-line-strong) / 0.55), 0 10px 18px rgb(0 0 0 / 0.08)",
+        "purpose": "Blocos do Estéreo 3D; desce para 0 2px 0 ao pressionar."
+      },
+      {
+        "name": "bisel-cubo",
+        "value": "inset 0 0 0 1px rgb(255 255 255 / 0.10), 0 6px 22px rgb(0 0 0 / 0.55)",
+        "purpose": "Painéis índigo-violeta do Cubo."
+      },
+      {
+        "name": "anel-hibrido",
+        "value": "0 0 0 3px rgb(var(--c-surface)), 0 0 0 6px rgb(var(--c-select)), 0 0 16px rgb(var(--c-select) / 0.45)",
+        "purpose": "Seleção do Híbrido: anel ciano duplo."
+      },
+      {
+        "name": "aro-canais",
+        "value": "0 0 0 2px rgb(var(--c-select)), 0 0 18px rgb(var(--c-select) / 0.5)",
+        "purpose": "Seleção de Canais: aro ciano com brilho."
       }
     ],
     "motion": [
       {
         "name": "ease",
         "value": "cubic-bezier(0.22, 1, 0.36, 1)",
-        "purpose": "Transições de estado (botões, seleção, linhas)."
+        "purpose": "Curva única de transição de estado."
       },
       {
         "name": "dur",
         "value": "180ms",
-        "purpose": "Duração padrão; a barra de uso anima 400ms. prefers-reduced-motion anula transições."
+        "purpose": "Duração padrão de hover, seleção e pressão."
+      },
+      {
+        "name": "pane-in",
+        "value": "220ms, opacidade 0→1 e subida de 6px",
+        "purpose": "Entrada de tela; desligada com prefers-reduced-motion."
+      },
+      {
+        "name": "drawer",
+        "value": "200ms opacidade, 240ms subida de 10px",
+        "purpose": "Abertura da gaveta Atividade."
+      },
+      {
+        "name": "meter",
+        "value": "400ms",
+        "purpose": "Preenchimento do medidor de espaço e da barra de uso."
       }
     ],
     "breakpoints": [
       {
-        "name": "compacto",
-        "value": "1060px",
-        "purpose": "Barra lateral 176px, Início numa coluna, distintivo do cartão escondido."
+        "name": "min-window",
+        "value": "960px × 640px"
       },
       {
-        "name": "estreito",
-        "value": "860px",
-        "purpose": "Barra lateral 156px, navegação 13px, subtítulo da marca escondido."
+        "name": "wide",
+        "value": "1120px"
+      },
+      {
+        "name": "medium",
+        "value": "1040px"
+      },
+      {
+        "name": "short",
+        "value": "max-height 720px"
       }
     ]
   },
@@ -511,144 +580,144 @@
       "name": "Botão primário",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Ação principal de um painel; cápsula no acento do tema.",
-      "html": "<button class=\"ds-btn-primary\">Abrir DSPico</button>",
-      "css": ".ds-btn-primary { font-family: 'Nunito', ui-rounded, system-ui, sans-serif; font-size: 13px; font-weight: 800; letter-spacing: 0.01em; padding: 0.62rem 1.25rem; border: 0; border-radius: 999px; background: rgb(var(--c-accent, 47 125 225)); color: rgb(var(--c-on-accent, 17 20 23)); box-shadow: 0 1px 0 rgb(255 255 255 / 0.18) inset, 0 2px 5px rgb(0 0 0 / 0.16); cursor: pointer; transition: background var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), transform var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), box-shadow var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-btn-primary:hover { background: rgb(var(--c-accent-strong, 40 108 194)); box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 4px 10px rgb(0 0 0 / 0.20); } .ds-btn-primary:active { transform: translateY(1px); box-shadow: 0 1px 1px rgb(20 22 26 / 0.10); } .ds-btn-primary:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
+      "description": "Ação que executa algo no cartão; pílula azul de ação.",
+      "html": "<button class=\"ds-btn-primary\">Instalar pacote</button>",
+      "css": ".ds-btn-primary{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;padding:0.62rem 1.25rem;border:0;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:0.01em;background:rgb(var(--c-accent, 51 132 225));color:rgb(var(--c-on-accent, 25 27 29));box-shadow:0 1px 0 rgb(255 255 255 / 0.18) inset,0 2px 5px rgb(0 0 0 / 0.16);cursor:pointer;transition:background 180ms cubic-bezier(0.22,1,0.36,1),transform 180ms cubic-bezier(0.22,1,0.36,1);}.ds-btn-primary:hover{background:rgb(var(--c-accent-strong, 44 114 194));}.ds-btn-primary:active{transform:translateY(1px);box-shadow:0 1px 1px rgb(20 22 26 / 0.10);}.ds-btn-primary:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}"
     },
     {
-      "name": "Botão fantasma",
+      "name": "Botão secundário",
       "kind": "button",
       "refersTo": "button-ghost",
-      "description": "Ações secundárias ao lado do primário; borda de fio forte que passa à cor de seleção no hover.",
-      "html": "<button class=\"ds-btn-ghost\">Jogos</button>",
-      "css": ".ds-btn-ghost { font-family: 'Nunito', ui-rounded, system-ui, sans-serif; font-size: 13px; font-weight: 700; padding: 0.5rem 1rem; border-radius: 999px; background: rgb(var(--c-surface, 255 255 255)); color: rgb(var(--c-fg, 29 33 38)); border: 1px solid rgb(var(--c-line-strong, 141 149 158)); cursor: pointer; transition: background var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), border-color var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-btn-ghost:hover { background: rgb(var(--c-surface-2, 241 243 245)); border-color: rgb(var(--c-select, 47 125 225)); } .ds-btn-ghost:active { transform: translateY(1px); } .ds-btn-ghost:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
+      "description": "Ação secundária; painel com borda firme que acende em seleção no hover.",
+      "html": "<button class=\"ds-btn-ghost\">Escolher pasta</button>",
+      "css": ".ds-btn-ghost{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;padding:0.5rem 1rem;border-radius:999px;font-size:13px;font-weight:700;color:rgb(var(--c-fg, 42 45 49));background:rgb(var(--c-surface, 255 255 255));border:1px solid rgb(var(--c-line-strong, 144 149 155));cursor:pointer;transition:background 180ms,border-color 180ms;}.ds-btn-ghost:hover{background:rgb(var(--c-surface-2, 242 243 244));border-color:rgb(var(--c-select, 46 140 240));}.ds-btn-ghost:active{transform:translateY(1px);}.ds-btn-ghost:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}"
     },
     {
-      "name": "Abas em cápsula com seleção-assinatura",
-      "kind": "nav",
-      "refersTo": "tab-pill",
-      "description": "Abas de vista (DSPico, Mais ferramentas); a ativa mostra a moldura dupla do tema Dupla Tela.",
-      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">Cartão</button><button class=\"ds-tab ds-tab--active\" role=\"tab\" aria-selected=\"true\">Jogos</button><button class=\"ds-tab\" role=\"tab\" aria-selected=\"false\">RouteDex</button></div>",
-      "css": ".ds-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgb(var(--c-surface-2, 241 243 245)); border: 1px solid rgb(var(--c-line, 205 211 218)); font-family: 'Nunito', ui-rounded, system-ui, sans-serif; } .ds-tab { font: inherit; font-size: 13px; font-weight: 700; padding: 0.5rem 1rem; border: 0; border-radius: 999px; background: transparent; color: rgb(var(--c-fg-soft, 59 66 74)); cursor: pointer; transition: box-shadow var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), background var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-tab:hover { background: rgb(var(--c-surface, 255 255 255)); color: rgb(var(--c-fg, 29 33 38)); } .ds-tab--active { color: rgb(var(--c-fg, 29 33 38)); background: rgb(var(--c-select, 47 125 225) / 0.10); box-shadow: inset 0 0 0 2px rgb(var(--c-select, 47 125 225)), 0 0 0 2px rgb(var(--c-surface, 255 255 255)), 0 0 0 4px rgb(var(--c-select, 47 125 225)); } .ds-tab:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
+      "name": "Bloco do Início (Dupla Tela)",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "Bloco de tarefa com ícone colorido; o atual recebe os quatro cantos azuis da Dupla Tela.",
+      "html": "<div class=\"ds-tiles\"><button class=\"ds-tile ds-tile--current\" style=\"--hue:42 111 219\"><span class=\"ds-tile-art\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg></span><span class=\"ds-tile-label\">Cartão</span></button><button class=\"ds-tile\" style=\"--hue:223 106 18\"><span class=\"ds-tile-art\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M9 6h6v5H9z\"/></svg></span><span class=\"ds-tile-label\">Jogos</span></button></div>",
+      "css": ".ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}.ds-tiles{display:grid;grid-template-columns:repeat(2,220px);gap:16px 18px;padding:12px;}.ds-tile{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);position:relative;display:flex;align-items:center;gap:12px;min-height:72px;padding:10px 14px;text-align:left;border:2px solid rgb(var(--c-line-strong, 144 149 155) / 0.8);border-radius:6px;background:linear-gradient(180deg,rgb(var(--c-surface, 255 255 255)) 55%,rgb(var(--c-surface-2, 242 243 244)));color:rgb(var(--c-fg, 42 45 49));cursor:pointer;transition:transform 180ms;}.ds-tile-art{display:grid;place-items:center;width:44px;height:44px;border-radius:6px;border:2px solid rgb(var(--c-line, 214 217 220));background:rgb(var(--c-surface, 255 255 255));color:rgb(var(--hue));}.ds-tile-art .ico{width:26px;height:26px;}.ds-tile-label{font-size:15px;font-weight:800;}.ds-tile::after{content:'';position:absolute;inset:-6px;border:4px solid rgb(var(--c-select, 46 140 240));border-radius:3px;pointer-events:none;opacity:0;-webkit-mask-image:linear-gradient(90deg,#000 0 22%,transparent 22% 78%,#000 78%),linear-gradient(180deg,#000 0 22%,transparent 22% 78%,#000 78%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,#000 0 22%,transparent 22% 78%,#000 78%),linear-gradient(180deg,#000 0 22%,transparent 22% 78%,#000 78%);mask-composite:intersect;transition:opacity 180ms;}.ds-tile--current{border-color:rgb(var(--c-select, 46 140 240) / 0.6);}.ds-tile--current::after,.ds-tile:hover::after{opacity:1;}.ds-tile:active{transform:scale(0.98);}.ds-tile:focus-visible{outline:none;}"
     },
     {
-      "name": "Abas internas discretas (RouteDex)",
+      "name": "Prateleira de abas",
       "kind": "nav",
-      "refersTo": "tab-quiet-active",
-      "description": "Sub-abas dentro de um painel; a ativa é só painel com contorno de 1px, sem assinatura.",
-      "html": "<div class=\"ds-qtabs\"><button class=\"ds-qtab ds-qtab--active\">Biblioteca</button><button class=\"ds-qtab\">Saúde do cartão</button><button class=\"ds-qtab\">Capturas</button></div>",
-      "css": ".ds-qtabs { display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgb(var(--c-surface-2, 241 243 245)); border: 1px solid rgb(var(--c-line, 205 211 218)); font-family: 'Nunito', ui-rounded, system-ui, sans-serif; } .ds-qtab { font: inherit; font-size: 13px; font-weight: 700; padding: 0.4rem 0.75rem; border: 0; border-radius: 999px; background: transparent; color: rgb(var(--c-fg-soft, 59 66 74)); cursor: pointer; } .ds-qtab:hover { background: rgb(var(--c-surface, 255 255 255)); color: rgb(var(--c-fg, 29 33 38)); } .ds-qtab--active { background: rgb(var(--c-surface, 255 255 255)); color: rgb(var(--c-fg, 29 33 38)); box-shadow: 0 0 0 1px rgb(var(--c-line-strong, 141 149 158)); } .ds-qtab:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
+      "refersTo": "tab-shelf",
+      "description": "Abas irmãs de uma tela como botões com ícone; a ativa recebe a seleção do tema.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab--active\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>Cartão</button><button class=\"ds-tab\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>Jogos</button><button class=\"ds-tab\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>RouteDex</button></div>",
+      "css": ".ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}.ds-tabs{display:flex;flex-wrap:wrap;gap:10px;}.ds-tab{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;padding:0.55rem 0.95rem;border-radius:10px;color:rgb(var(--c-fg-soft, 69 73 79));background:rgb(var(--c-surface, 255 255 255));border:2px solid rgb(var(--c-line, 214 217 220));cursor:pointer;transition:background 180ms,color 180ms,box-shadow 180ms;}.ds-tab .ico{width:18px;height:18px;color:rgb(var(--c-fg-mute, 93 98 105));}.ds-tab:hover{color:rgb(var(--c-fg, 42 45 49));border-color:rgb(var(--c-line-strong, 144 149 155));}.ds-tab--active{color:rgb(var(--c-fg, 42 45 49));border-color:rgb(var(--c-select, 46 140 240) / 0.55);box-shadow:0 0 0 3px rgb(var(--c-select, 46 140 240) / 0.0);}.ds-tab--active .ico{color:rgb(var(--c-select, 46 140 240));}.ds-tab:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:6px;}"
     },
     {
-      "name": "Item da barra lateral",
+      "name": "Cabeçalho de tela",
       "kind": "nav",
-      "refersTo": "nav-item",
-      "description": "Navegação principal; o ativo usa a seleção-assinatura do tema.",
-      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item--active\" href=\"#\">Início</a><a class=\"ds-nav-item\" href=\"#\">DSPico</a><a class=\"ds-nav-item\" href=\"#\">Mais ferramentas</a><a class=\"ds-nav-item\" href=\"#\">Definições</a></nav>",
-      "css": ".ds-nav { display: flex; flex-direction: column; gap: 6px; padding: 6px; width: 200px; font-family: 'Nunito', ui-rounded, system-ui, sans-serif; } .ds-nav-item { font-size: 14px; font-weight: 700; padding: 10px 14px; border-radius: var(--radius, 14px); color: rgb(var(--c-fg-soft, 59 66 74)); text-decoration: none; } .ds-nav-item:hover { background: rgb(var(--c-surface-2, 241 243 245)); color: rgb(var(--c-fg, 29 33 38)); } .ds-nav-item--active { color: rgb(var(--c-fg, 29 33 38)); background: rgb(var(--c-select, 47 125 225) / 0.10); box-shadow: inset 0 0 0 2px rgb(var(--c-select, 47 125 225)), 0 0 0 2px rgb(var(--c-surface, 255 255 255)), 0 0 0 4px rgb(var(--c-select, 47 125 225)); } .ds-nav-item:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
+      "refersTo": "screen-back",
+      "description": "Voltar em pílula, ícone da tarefa em quadrado tingido e título de 24px.",
+      "html": "<div class=\"ds-head\"><button class=\"ds-back\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M14.5 5.5L8 12l6.5 6.5\"/></svg>Voltar</button><span class=\"ds-head-icon\" style=\"--hue:223 106 18\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg></span><div><h1 class=\"ds-head-title\">Jogos</h1><p class=\"ds-head-sub\">Organize os jogos em Games/.</p></div></div>",
+      "css": ".ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}.ds-head{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:flex;align-items:center;gap:14px;}.ds-back{display:inline-flex;align-items:center;gap:4px;padding:8px 14px 8px 8px;border-radius:999px;border:1px solid rgb(var(--c-line-strong, 144 149 155));background:rgb(var(--c-surface, 255 255 255));color:rgb(var(--c-fg, 42 45 49));font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background 180ms;}.ds-back .ico{width:18px;height:18px;}.ds-back:hover{background:rgb(var(--c-surface-2, 242 243 244));}.ds-back:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}.ds-head-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:10px;background:rgb(var(--hue) / 0.14);color:rgb(var(--hue));}.ds-head-icon .ico{width:26px;height:26px;}.ds-head-title{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.015em;line-height:1.15;color:rgb(var(--c-fg, 42 45 49));}.ds-head-sub{margin:2px 0 0;font-size:14px;color:rgb(var(--c-fg-soft, 69 73 79));}"
+    },
+    {
+      "name": "Barra de dicas",
+      "kind": "custom",
+      "refersTo": "hint-bar",
+      "description": "Contexto do item à esquerda e teclas desenhadas à direita; Voltar esmaecido no Início.",
+      "html": "<div class=\"ds-hints\"><span class=\"ds-hint-ctx\">Cartão</span><span class=\"ds-hint\"><kbd class=\"ds-key\">Setas</kbd> Mover</span><span class=\"ds-hint\"><kbd class=\"ds-key\">Enter</kbd> Abrir</span><span class=\"ds-hint ds-hint--off\"><kbd class=\"ds-key\">Esc</kbd> Voltar</span></div>",
+      "css": ".ds-hints{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:flex;align-items:center;justify-content:flex-end;gap:18px;min-height:30px;padding:5px 20px;background:rgb(var(--c-chrome, 255 255 255));color:rgb(var(--c-chrome-fg, 93 98 105));font-size:12px;font-weight:700;border-top:1px solid rgb(var(--c-line, 214 217 220));}.ds-hint-ctx{margin-right:auto;}.ds-hint{display:inline-flex;align-items:center;gap:6px;}.ds-hint--off{opacity:0.45;}.ds-key{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;border:1.5px solid currentColor;font:inherit;font-size:11px;font-weight:800;line-height:1;}"
+    },
+    {
+      "name": "Barra de ícones",
+      "kind": "nav",
+      "refersTo": "dock-button",
+      "description": "Início, Atividade, Tema e Configurações; o ativo recebe a seleção do tema.",
+      "html": "<nav class=\"ds-dock\"><button class=\"ds-dock-btn ds-dock-btn--active\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M3.5 11L12 4l8.5 7\"/><path d=\"M5.5 9.5v10h5v-5.5h3v5.5h5v-10\"/></svg>Início</button><button class=\"ds-dock-btn\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M3 12.5h4l2.5-7 5 13 2.5-6H21\"/></svg>Atividade</button></nav>",
+      "css": ".ico{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}.ds-dock{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);display:flex;align-items:center;justify-content:center;gap:10px;min-height:64px;padding:8px 18px;background:rgb(var(--c-chrome, 255 255 255));}.ds-dock-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:rgb(var(--c-chrome-fg, 93 98 105));font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background 180ms,box-shadow 180ms;}.ds-dock-btn .ico{width:22px;height:22px;}.ds-dock-btn:hover{background:rgb(var(--c-chrome-fg, 93 98 105) / 0.10);}.ds-dock-btn--active{box-shadow:inset 0 0 0 2px rgb(var(--c-select, 46 140 240));}.ds-dock-btn:focus-visible{outline:2px solid rgb(var(--c-chrome-fg, 93 98 105));outline-offset:3px;}"
+    },
+    {
+      "name": "Medidor de espaço",
+      "kind": "custom",
+      "refersTo": "status-bar",
+      "description": "Espaço livre do microSD desenhado como bateria na barra de status.",
+      "html": "<span class=\"ds-meter\"><span class=\"ds-meter-fill\" style=\"width:28%\"></span></span>",
+      "css": ".ds-meter{position:relative;display:inline-block;width:38px;height:18px;border:2px solid rgb(var(--c-chrome-fg, 93 98 105));border-radius:4px;padding:2px;box-sizing:border-box;}.ds-meter::after{content:'';position:absolute;right:-5px;top:4px;width:3px;height:6px;border-radius:0 2px 2px 0;background:rgb(var(--c-chrome-fg, 93 98 105));}.ds-meter-fill{display:block;height:100%;border-radius:1px;background:rgb(var(--c-select, 46 140 240));transition:width 400ms cubic-bezier(0.22,1,0.36,1);}"
     },
     {
       "name": "Painel",
       "kind": "card",
       "refersTo": "panel",
-      "description": "Contentor de vista; raio grande do tema e sombra de painel.",
-      "html": "<section class=\"ds-panel\"><h3 class=\"ds-section-label\">Atualizações</h3><p class=\"ds-body\">Pico Launcher e Pico Loader do LNH team, verificados por SHA-256.</p></section>",
-      "css": ".ds-panel { font-family: 'Nunito', ui-rounded, system-ui, sans-serif; padding: 24px; border-radius: var(--radius-lg, 18px); border: 1px solid rgb(var(--c-line, 205 211 218)); background: rgb(var(--c-surface, 255 255 255)); box-shadow: var(--shadow-panel, 0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06)); max-width: 420px; } .ds-panel:hover { border-color: rgb(var(--c-line-strong, 141 149 158)); box-shadow: var(--shadow-hover, 0 2px 4px rgb(20 22 26 / 0.06), 0 12px 28px rgb(20 22 26 / 0.10)); } .ds-section-label { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: rgb(var(--c-fg, 29 33 38)); } .ds-body { margin: 0; font-size: 14px; line-height: 1.5; color: rgb(var(--c-fg-soft, 59 66 74)); }"
-    },
-    {
-      "name": "Linhas de lista com chevron",
-      "kind": "custom",
-      "refersTo": "list-row",
-      "description": "Ligações planas (Mais ferramentas, objetivos do assistente), sem cartão.",
-      "html": "<div class=\"ds-rows\"><button class=\"ds-row\"><span>Softmod DSi</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3.5L10.5 8 6 12.5\"/></svg></button><button class=\"ds-row\"><span>Flashcards R4/GEi</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3.5L10.5 8 6 12.5\"/></svg></button><button class=\"ds-row\"><span>Manutenção</span><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 3.5L10.5 8 6 12.5\"/></svg></button></div>",
-      "css": ".ds-rows { display: grid; border-top: 1px solid rgb(var(--c-line, 205 211 218)); max-width: 340px; font-family: 'Nunito', ui-rounded, system-ui, sans-serif; } .ds-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 6px; border: 0; border-bottom: 1px solid rgb(var(--c-line, 205 211 218)); background: transparent; color: rgb(var(--c-fg, 29 33 38)); font: inherit; font-size: 14px; font-weight: 800; text-align: left; cursor: pointer; transition: background var(--dur, 180ms) var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-row svg { color: rgb(var(--c-fg-mute, 89 97 107)); flex-shrink: 0; } .ds-row:hover { background: rgb(var(--c-surface-2, 241 243 245)); } .ds-row:hover svg { color: rgb(var(--c-fg, 29 33 38)); } .ds-row:focus-visible { outline: 2px solid rgb(var(--c-fg, 29 33 38)); outline-offset: 4px; }"
-    },
-    {
-      "name": "Linha de estado",
-      "kind": "custom",
-      "refersTo": "ok",
-      "description": "Presença de ficheiros no cartão: ícone SVG de traço 2px e texto sr-only.",
-      "html": "<ul class=\"ds-states\"><li class=\"ds-state ds-state--ok\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3.5 8.5l3 3 6-7\"/></svg><code>_pico/biosnds7.rom</code></li><li class=\"ds-state\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"5.5\"/></svg><code>photo/</code></li></ul>",
-      "css": ".ds-states { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-family: 'Nunito', ui-rounded, system-ui, sans-serif; font-size: 14px; } .ds-state { display: flex; align-items: center; gap: 8px; color: rgb(var(--c-fg-mute, 89 97 107)); } .ds-state--ok { color: rgb(var(--c-ok, 25 118 51)); } .ds-state svg { flex-shrink: 0; } .ds-state code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 12px; }"
-    },
-    {
-      "name": "Campo de seleção",
-      "kind": "input",
-      "refersTo": "field-select",
-      "description": "Seletores e campos; foco com borda e halo na cor de seleção.",
-      "html": "<select class=\"ds-select\"><option>Todos</option><option>Favoritos</option></select>",
-      "css": ".ds-select { font-family: 'Nunito', ui-rounded, system-ui, sans-serif; font-size: 14px; font-weight: 600; padding: 0.55rem 0.9rem; border-radius: var(--radius, 14px); border: 1px solid rgb(var(--c-line-strong, 141 149 158)); background: rgb(var(--c-surface, 255 255 255)); color: rgb(var(--c-fg, 29 33 38)); outline: none; } .ds-select:focus { border-color: rgb(var(--c-select, 47 125 225)); box-shadow: 0 0 0 3px rgb(var(--c-select, 47 125 225) / 0.25); }"
-    },
-    {
-      "name": "Número de passo",
-      "kind": "chip",
-      "refersTo": "step-badge",
-      "description": "Números dos Primeiros passos; o único texto sobre preenchimento de seleção.",
-      "html": "<span class=\"ds-step\">1</span>",
-      "css": ".ds-step { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; font-family: 'Nunito', ui-rounded, system-ui, sans-serif; font-size: 14px; font-weight: 800; color: rgb(var(--c-on-select, 20 20 20)); background: rgb(var(--c-select-fill, 47 125 225)); }"
+      "description": "Contêiner das telas de trabalho; borda e profundidade mudam por tema.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-title\">Pacote DSPico</h2><p class=\"ds-panel-text\">Instala o Pico Launcher e o Pico Loader oficiais, verificados por SHA-256.</p></section>",
+      "css": ".ds-panel{font-family:var(--font-sans, Nunito, ui-rounded, system-ui, sans-serif);max-width:420px;padding:18px 20px;border-radius:14px;border:2px solid rgb(var(--c-line, 214 217 220));background:rgb(var(--c-surface, 255 255 255));box-shadow:0 1px 0 rgb(var(--c-line, 214 217 220) / 0.6);}.ds-panel-title{margin:0 0 6px;font-size:15px;font-weight:800;color:rgb(var(--c-fg, 42 45 49));}.ds-panel-text{margin:0;font-size:14px;line-height:1.5;color:rgb(var(--c-fg-soft, 69 73 79));}"
     }
   ],
   "narrative": {
-    "northStar": "A Sala de Estar da Consola",
-    "overview": "Route Pico é uma ferramenta de trabalho com um só esqueleto: barra lateral, barra de cima, abas em cápsula e painéis claros. Por cima desse esqueleto, cada um dos sete temas troca três coisas e só três: o chão (o padrão de fundo do `body`), o acabamento dos painéis e o gesto de seleção. Layout, navegação, controlos e tipografia são iguais em todos os temas; quem muda de tema reconhece a sua consola sem reaprender o app.\n\nO sistema tem dois eixos independentes. O tema (`data-family`: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D, Híbrido) e o modo (`data-mode`: Original, Claro = Catppuccin Latte, Noturno = Catppuccin Mocha; Sistema resolve para Claro ou Noturno). O `theme.js` deriva um terceiro atributo, `data-scheme` (light/dark), que escolhe as sombras. As 21 combinações saem de um gerador que falha a construção se alguma não passar em WCAG AA. A densidade é média: painéis com 22 a 28px de respiro, linhas de lista planas, nada de cartão dentro de cartão.\n\nAs rejeições confirmadas pelo utilizador são duas. Nada de logotipos, ícones, fontes, sons ou nomes de marca da Nintendo; os temas têm nomes genéricos. E nada de traje de consola: sem moldura de hardware, botões falsos ou cópia literal de menus. A inspiração vive no chão, no vidro dos painéis e no gesto de seleção.",
+    "northStar": "O Menu Inicial do Seu Console",
+    "overview": "O Route Pico abre como o menu inicial de um console portátil ou de mesa: uma barra de status em cima com o cartão e a hora, as tarefas organizadas em blocos no meio, uma barra de ícones embaixo e, por último, uma barra de dicas de tecla. Os sete temas tomaram como referência menus iniciais de consoles reais e reproduzem a gramática de cada um (arranjo dos blocos, moldura, gesto de seleção, desenho das barras), sem copiar logotipos, ícones, fontes, sons ou nomes de marca. A navegação, o conteúdo e os controles são idênticos em todos os temas; muda o mundo material em volta deles.\n\nA densidade é a de um menu de console: poucos itens grandes, um item selecionado por vez, legenda do item escolhido e dicas de teclado sempre à vista. As telas internas trocam o Início por um cabeçalho com Voltar, o ícone colorido da tarefa e o título, e as abas irmãs aparecem como uma prateleira de ícones. Todo o trabalho real (formatar, instalar, organizar jogos) acontece em painéis sóbrios dentro dessas telas, porque a ferramenta escreve num cartão do usuário e o tom lúdico para no limite da operação destrutiva.\n\nO sistema recusa a barra lateral de dashboard do mundo anterior e recusa também o tema que só troca a cor de um mesmo layout. Cada tema tem paleta original e variantes clara (Catppuccin Latte) e noturna (Catppuccin Mocha), todas verificadas contra WCAG AA pelo gerador.",
     "keyCharacteristics": [
-      "Um só seletor partilhado de seleção-assinatura, redefinido por tema em `static/skins.css`.",
-      "Cores só por tokens em triplas RGB, geradas e verificadas contra WCAG AA.",
-      "Nunito variável embutida em toda a UI, títulos em 800, rótulos de secção em minúsculas de frase.",
-      "Cápsulas para ações e abas; raios generosos nos painéis, variáveis por tema.",
-      "Foco (contorno da cor do texto) separado da seleção (cor `select`)."
+      "Quatro faixas fixas: barra de status, área do Início ou da tela, barra de ícones, barra de dicas.",
+      "Doze blocos no Início (seis DSPico, cinco Mais ferramentas, Configurações), cada um com ícone SVG próprio colorido por tarefa.",
+      "Uma seleção-assinatura por tema, aplicada ao bloco atual, à aba ativa, ao item de tema escolhido e ao botão ativo da barra de ícones.",
+      "Tipografia única em Nunito arredondada, pesos 700 e 800 para tudo o que é rótulo.",
+      "Teclado completo: setas movem a seleção espacialmente no Início, Enter abre, Esc ou Backspace voltam, com histórico por hash."
     ],
     "rules": [
       {
-        "name": "The Triplet Rule",
-        "body": "Toda a cor é uma tripla RGB (`--c-accent: 47 125 225`) lida como `rgb(var(--c-accent))` ou `rgb(var(--c-accent) / 0.1)`, e o Tailwind expõe-na como `rgb(var(--c-x) / <alpha-value>)`. Hex literal num componente é um defeito: não muda com o tema.",
+        "name": "The Gerador Rule",
+        "body": "Nenhuma cor de tema é escrita à mão: toda mudança de paleta passa por `tools/build_themes.py`, que falha se alguma das 21 combinações não passar em WCAG AA. `themes.css` e `theme-data.js` são arquivos gerados.",
         "section": "colors"
       },
       {
-        "name": "The Generated Palette Rule",
-        "body": "`static/themes.css` e `static/theme-data.js` são gerados por `tools/build_themes.py` e nunca se editam à mão. Uma cor nova entra na paleta do gerador; `python tools/build_themes.py --check` falha se os ficheiros estiverem desatualizados, e a geração aborta se uma combinação não passar em AA.",
+        "name": "The Seleção Separada da Ação Rule",
+        "body": "A cor de seleção marca onde o usuário está; a cor de ação marca o que executa. Botões primários usam accent, a seleção-assinatura usa select, e as duas podem ter matizes diferentes no mesmo tema (Estéreo 3D: ação laranja, seleção menta).",
         "section": "colors"
       },
       {
-        "name": "The Two Colors Rule",
-        "body": "Acento é para agir, seleção é para estar. O botão primário usa `accent`; o item ativo, os anéis e a barra de uso usam `select`. Não trocar um pelo outro, mesmo nos temas onde coincidem.",
+        "name": "The Uma Cor Por Tarefa Rule",
+        "body": "A cor de uma tarefa é a mesma no bloco do Início, no cabeçalho da tela e no ícone da aba. Cor de tarefa pinta ícone, nunca texto corrido.",
         "section": "colors"
       },
       {
-        "name": "The Sentence-Case Label Rule",
-        "body": "O rótulo de secção é Nunito 15px/800 na cor do texto, em minúsculas de frase, sem tracking e sem maiúsculas. O estilo antigo (11px, maiúsculas, 0.06em, cor discreta) continua em `style.css` e é anulado por `skins.css`; não o reativar.",
+        "name": "The Piso de 11px Rule",
+        "body": "Nada funcional fica abaixo de 11px. A Nunito tem altura-x menor que a fonte anterior, por isso os tamanhos pequenos herdados do Tailwind sobem 1px no `skins.css`.",
         "section": "typography"
       },
       {
-        "name": "The +1px Rule",
-        "body": "A Nunito tem altura-x menor que a fonte anterior, por isso a escala pequena sobe 1px: os utilitários `text-[10px]`, `text-[11px]`, `text-[12px]` e `text-[13px]` renderizam a 11, 12, 13 e 14px. Nenhum texto funcional fica abaixo de 11px.",
+        "name": "The Peso Faz a Hierarquia Rule",
+        "body": "Dentro de um mesmo tamanho, a hierarquia vem do peso (400 para texto, 700 para dica, 800 para rótulo) e da tinta (fg, fg-soft, fg-mute). Espaçamento largo entre letras é exclusivo do Cubo, onde os títulos azuis espaçados fazem parte do mundo.",
         "section": "typography"
       },
       {
-        "name": "The Rings Not Offsets Rule",
-        "body": "A profundidade da seleção faz-se com anéis de espalhamento (`0 0 0 Npx`) e sombras difusas da cor de seleção; não há sombras sólidas deslocadas em nenhum tema.",
+        "name": "The Mesma Ordem Rule",
+        "body": "Todos os arranjos usam o mesmo HTML; o tema muda grade, tamanhos e visibilidade, nunca a ordem de leitura nem o conjunto de blocos. A navegação por setas é espacial e calcula o vizinho pela posição real na tela.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quatro Faixas Rule",
+        "body": "Status, conteúdo, ícones e dicas existem em todo tema e em toda tela. Um tema pode tornar uma faixa transparente ou curvá-la, mas não pode removê-la.",
+        "section": "layout"
+      },
+      {
+        "name": "The Profundidade Pertence ao Tema Rule",
+        "body": "Sombras de assinatura (relevo sólido, bisel, brilho de anel) ficam no bloco do tema em `console.css` ou `skins.css`. As sombras base do gerador valem para todos e não carregam identidade.",
         "section": "elevation"
       }
     ],
     "dos": [
-      "Do usar cores só como `rgb(var(--c-x))` ou `rgb(var(--c-x) / alfa)`, ou pelas classes Tailwind que as envolvem (`bg-accent/10`, `text-fg-mute`).",
-      "Do acrescentar ou ajustar cores em `tools/build_themes.py` e regenerar com `python tools/build_themes.py`; confirmar com `--check` e `tests/test_themes.py`.",
-      "Do colocar a assinatura de um tema (chão, acabamento, seleção) em `static/skins.css`, sob `html[data-family=\"…\"]`, e mais nada.",
-      "Do aplicar a seleção-assinatura através do seletor partilhado; um controlo novo de \"item escolhido\" entra nessa lista em vez de inventar o seu próprio estado ativo.",
-      "Do manter o foco como contorno de 2px na cor do texto, separado da seleção.",
-      "Do usar cápsulas (999px) para botões, abas e chips, e o raio do tema (`--radius`, `--radius-lg`) para itens e painéis.",
-      "Do escrever rótulos de secção em minúsculas de frase, Nunito 15px/800.",
-      "Do desenhar ícones como SVG inline com `currentColor`, traço de 2px e pontas redondas."
+      "**Do** gerar toda cor de tema por `tools/build_themes.py` e rodar `--check`; o gerador bloqueia combinações abaixo de WCAG AA.",
+      "**Do** usar as variáveis `--c-*` em `rgb(var(--c-x) / alfa)` para qualquer cor nova, em `console.css` ou `skins.css`.",
+      "**Do** colocar cada nova assinatura de tema dentro do bloco `html[data-family=\"…\"]` correspondente e manter layout, navegação e controles iguais entre temas.",
+      "**Do** dar a toda tarefa nova um ícone SVG próprio no sprite de `index.html` (traço de 2px, pontas arredondadas, viewBox 24) e uma cor de tarefa por `data-hue`.",
+      "**Do** aplicar a seleção do tema ao elemento atual em vez de inventar um estado novo; bloco, aba, item de tema e botão da barra compartilham o mesmo gesto.",
+      "**Do** manter a escala de cabeçalhos do assistente em 21 / 17,5 / 15px.",
+      "**Do** respeitar `prefers-reduced-motion`: sem animação de entrada de tela e sem ampliação do bloco selecionado."
     ],
     "donts": [
-      "Don't editar `static/themes.css` ou `static/theme-data.js` à mão.",
-      "Don't usar logotipos, ícones, fontes, sons ou nomes de marca da Nintendo, nem dar nomes de consola aos temas.",
-      "Don't imitar hardware: sem bezel, botões falsos ou cópia literal de menus de consola.",
-      "Don't mudar layout, navegação, tamanhos ou controlos por tema; um tema só troca chão, acabamento e gesto de seleção.",
-      "Don't usar a assinatura nas abas internas do RouteDex nem em sub-abas; a seleção discreta mantém a hierarquia.",
-      "Don't pôr texto sobre `select` cru; texto sobre a seleção usa `select-fill` com `on-select`.",
-      "Don't pôr texto funcional abaixo de 11px nem voltar aos rótulos em maiúsculas com tracking.",
-      "Don't pôr um cartão dentro de outro; subpassos e listas ficam planos dentro do painel, separados por fios."
+      "**Don't** editar `themes.css` ou `theme-data.js` à mão.",
+      "**Don't** usar logotipos, ícones, fontes, sons ou nomes de marca de consoles; os temas usam nomes genéricos.",
+      "**Don't** voltar à barra lateral de dashboard nem criar um tema que só troca a cor do layout de outro.",
+      "**Don't** somar um contorno genérico de foco à seleção do tema em um elemento já selecionado.",
+      "**Don't** usar cor de tarefa em texto corrido nem cor de seleção como cor de ação.",
+      "**Don't** criar pontos de página no Tablet de Sala nem outros indicadores que não correspondam a páginas reais.",
+      "**Don't** deixar texto funcional abaixo de 11px."
     ]
   }
 }

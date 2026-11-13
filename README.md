@@ -178,7 +178,7 @@ Separador de topo para o flashcart [DSPico](https://github.com/LNH-team/dspico-h
 
 ## Navegação
 
-A barra lateral tem quatro entradas: **Início**, **DSPico**, **Mais ferramentas** e **Configurações**. O cartão é escolhido uma vez, no seletor da barra de cima. Pelo teclado, as setas mudam de aba, Alt+1 a Alt+4 mudam de vista e Esc fecha a gaveta Atividade, que abre sozinha durante operações.
+O app abre como o menu inicial de um console: barra de status em cima (marca, seletor do microSD, progresso, hora e medidor de espaço), o Início com doze blocos (seis do DSPico, cinco de Mais ferramentas e Configurações), uma barra de ícones embaixo (Início, Atividade, Tema, Configurações) e uma barra de dicas. Cada bloco abre uma tela com o botão Voltar; dentro dela, as telas irmãs aparecem como abas com ícone. Pelo teclado, as setas movem a seleção no Início, Enter abre, Esc ou Backspace voltam, setas mudam de aba e Alt+1 a Alt+4 levam a Início, DSPico, Mais ferramentas e Configurações. A gaveta Atividade abre sozinha durante operações. Cada um dos sete temas arruma o Início à sua maneira (duas telas, fileira com balão, grade de canais, grade de vidro, painéis em lista, bandeja ou fileira com doca).
 
 | Vista | Abas |
 |------|-----------|
@@ -272,7 +272,7 @@ Secção destinada a desenvolvedores, mantenedores e usuários avançados. Lingu
 | Camada | Papel |
 |--------|--------|
 | **Shell** | Python 3.10+ + pywebview (janela nativa; sem servidor HTTP) |
-| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); sidebar Início / DSPico / Mais ferramentas / Configurações |
+| **UI** | `static/` — HTML/CSS/JS offline (Tailwind local); menu de console (barra de status, Início em blocos, barra de ícones e dicas) |
 | **Bridge** | `Api` em `app.py` (`js_api`) + `services/FilePickerPort` / `web_events` |
 | **Core** | Módulos em `core/` (discos, exploits, TWiLight, ROMs, cache, sdio, validate, …) |
 
