@@ -8,7 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://art.gametdb.com https://thumbnails.libretro.com https://cdn.jsdelivr.net https://cdn2.steamgriddb.com https://cdn.steamgriddb.com https://s3.amazonaws.com; font-src 'self'; connect-src 'self'">
   <meta name="color-scheme" content="dark light">
   <meta name="theme-color" content="#0F1116">
-  <title>Route 1 Kit</title>
+  <title>Route Pico</title>
   <link rel="icon" type="image/svg+xml" href="assets/logo-small.svg">
   <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">
@@ -25,18 +25,19 @@
       <div class="sidebar-brand">
         <img src="assets/logo.svg" alt="" width="32" height="32" class="rounded-[8px] brand-mark">
         <div class="min-w-0">
-          <div class="brand-name text-[14px] font-semibold leading-none">Route 1 Kit</div>
-          <div class="text-[10px] text-fg-mute mt-1 truncate">DSi · DSPico</div>
+          <div class="brand-name text-[14px] font-semibold leading-none">Route Pico</div>
+          <div class="text-[10px] text-fg-mute mt-1 truncate">DSPico · Pico Launcher</div>
         </div>
       </div>
       <nav class="sidebar-nav" role="navigation">
         <button type="button" class="nav-item" data-view="home" onclick="R1K.shell.navigate('home')">Início</button>
         <button type="button" class="nav-item nav-item--priority" data-view="dspico" onclick="R1K.shell.navigate('dspico')">DSPico</button>
-        <button type="button" class="nav-item nav-item--priority" data-view="softmod" onclick="R1K.shell.navigate('softmod')">Softmod DSi</button>
-        <button type="button" class="nav-item" data-view="utilidades" onclick="R1K.shell.navigate('utilidades')">Utilidades</button>
         <button type="button" class="nav-item" data-view="card" onclick="R1K.shell.navigate('card')">Cartão SD</button>
-        <button type="button" class="nav-item nav-item--muted" data-view="others" onclick="R1K.shell.navigate('others')">Outros flashcards</button>
+        <button type="button" class="nav-item" data-view="utilidades" onclick="R1K.shell.navigate('utilidades')">Utilidades</button>
         <button type="button" class="nav-item" data-view="settings" onclick="R1K.shell.navigate('settings')">Definições</button>
+        <div class="nav-section" role="presentation">Mais ferramentas</div>
+        <button type="button" class="nav-item nav-item--muted" data-view="softmod" onclick="R1K.shell.navigate('softmod')">Softmod DSi</button>
+        <button type="button" class="nav-item nav-item--muted" data-view="others" onclick="R1K.shell.navigate('others')">Outros flashcards</button>
       </nav>
       <div class="sidebar-foot">
         <button type="button" class="btn-ghost w-full justify-center" id="btn-activity-toggle" onclick="R1K.shell.toggleActivity()">Atividade</button>
@@ -88,14 +89,15 @@
       <article class="hero-card hero-card--dspico">
         <div class="hero-kicker">Prioridade</div>
         <h2 class="hero-title">DSPico</h2>
-        <p class="hero-copy">Prepare o microSD do cartucho, jogos, emuladores e firmware oficial LNH.</p>
+        <p class="hero-copy">Prepare o microSD do cartucho, jogos, emuladores e firmware oficial LNH, e acompanhe favoritos e tempo de jogo no RouteDex.</p>
         <div class="hero-actions">
           <button type="button" class="btn-primary" onclick="R1K.shell.navigate('dspico')">Abrir DSPico</button>
+          <button type="button" class="btn-ghost" onclick="R1K.shell.navigate('dspico'); Dspico.setSection('routedex');">RouteDex</button>
           <button type="button" class="btn-ghost" onclick="R1K.shell.navigate('dspico'); R1K.updates.check();">Verificar Atualizações</button>
         </div>
       </article>
       <article class="hero-card hero-card--softmod">
-        <div class="hero-kicker">Softmod</div>
+        <div class="hero-kicker">Mais ferramentas</div>
         <h2 class="hero-title">Softmod DSi</h2>
         <p class="hero-copy">Assistente passo a passo: exploit da câmara, Unlaunch, TWiLight e hiyaCFW.</p>
         <div class="hero-actions">
@@ -127,8 +129,8 @@
             <h2 class="section-label">MicroSD do cartucho</h2>
           </div>
           <p class="text-[12px] text-fg-mute leading-relaxed max-w-2xl">
-            Fontes só oficiais <strong>LNH-team</strong> (Pico Launcher, Pico Loader, firmware).
-            Não use builds de terceiros.
+            Por padrão, só fontes oficiais do <strong>LNH team</strong> (Pico Launcher, Pico Loader, firmware).
+            As variantes Enhanced são opcionais e ficam em Verificar Atualizações.
           </p>
           <select id="dspico-drive-select" onchange="onDriveSelected('dspico')" class="field-select w-full md:max-w-lg">
             <option value="">Procurando unidades externas…</option>
@@ -163,6 +165,7 @@
       <button type="button" id="dspico-tab-status" class="adv-tab adv-tab--active" role="tab" aria-selected="true" data-dspico="status" onclick="Dspico.setSection('status')">Estado</button>
       <button type="button" id="dspico-tab-setup" class="adv-tab" role="tab" aria-selected="false" data-dspico="setup" onclick="Dspico.setSection('setup')">Preparar SD</button>
       <button type="button" id="dspico-tab-games" class="adv-tab" role="tab" aria-selected="false" data-dspico="games" onclick="Dspico.setSection('games')">Jogos</button>
+      <button type="button" id="dspico-tab-routedex" class="adv-tab" role="tab" aria-selected="false" data-dspico="routedex" onclick="Dspico.setSection('routedex')">RouteDex</button>
       <button type="button" id="dspico-tab-emulators" class="adv-tab" role="tab" aria-selected="false" data-dspico="emulators" onclick="Dspico.setSection('emulators')">Emuladores</button>
       <button type="button" id="dspico-tab-emunand" class="adv-tab" role="tab" aria-selected="false" data-dspico="emunand" onclick="Dspico.setSection('emunand')">Emunand</button>
       <button type="button" id="dspico-tab-settings" class="adv-tab" role="tab" aria-selected="false" data-dspico="settings" onclick="Dspico.setSection('settings')">Definições</button>
@@ -172,6 +175,7 @@
     <div id="dspico-section-status" class="space-y-4"></div>
     <div id="dspico-section-setup" class="hidden space-y-4"></div>
     <div id="dspico-section-games" class="hidden space-y-4"></div>
+    <div id="dspico-section-routedex" class="hidden space-y-4"></div>
     <div id="dspico-section-emulators" class="hidden space-y-4"></div>
     <div id="dspico-section-emunand" class="hidden space-y-4"></div>
     <div id="dspico-section-settings" class="hidden space-y-4"></div>
@@ -948,6 +952,7 @@
   <script src="js/virtual-grid.js?v=sgdb3"></script>
   <script src="app.js?v=sgdb3"></script>
   <script src="rom_explorer.js?v=sgdb3"></script>
+  <script src="js/routedex.js?v=rp1"></script>
   <script src="dspico.js?v=sgdb3"></script>
   <script src="wizard.js?v=sgdb3"></script>
 </body>

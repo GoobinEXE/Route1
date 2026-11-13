@@ -26,6 +26,7 @@ const Dspico = (() => {
     "status",
     "setup",
     "games",
+    "routedex",
     "emulators",
     "emunand",
     "settings",
@@ -120,6 +121,7 @@ const Dspico = (() => {
     if (section === "status") await renderStatus(gen, m);
     else if (section === "setup") await renderSetup(gen, m);
     else if (section === "games") await renderGames(gen, m);
+    else if (section === "routedex") await renderRoutedex(gen, m);
     else if (section === "emulators") await renderEmulators(gen, m);
     else if (section === "emunand") await renderEmunand(gen, m);
     else if (section === "settings") await renderSettings(gen, m);
@@ -251,6 +253,21 @@ const Dspico = (() => {
     }
   }
 
+  async function renderRoutedex(gen, m) {
+    const el = document.getElementById("dspico-section-routedex");
+    if (!el) return;
+    if (!m) {
+      el.innerHTML = needDriveHtml();
+      return;
+    }
+    if (typeof RouteDex === "undefined") {
+      el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">RouteDex não carregou.</p></section>`;
+      return;
+    }
+    if (gen !== renderGen) return;
+    await RouteDex.render(gen, m, el);
+  }
+
   async function renderSetup(gen, m) {
     const el = document.getElementById("dspico-section-setup");
     if (!el) return;
@@ -279,13 +296,23 @@ const Dspico = (() => {
             <code>_picoboot.nds</code> + <code>_pico/</code> + <code>Games/</code>.
           </p>
         </div>
-        <div class="note note--warn">
-          Só assets de <code>github.com/LNH-team/</code>. Não há opção de pasta/kernel de terceiros.
+        <div class="note">
+          O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado na app.
         </div>
         <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / actualizar pacote oficial</button>
+        <div class="enhanced-card">
+          <h4>Depois: Pico Launcher Enhanced <span class="enhanced-tag">Recomendado</span><span class="enhanced-tag enhanced-tag--warn">Não oficial</span></h4>
+          <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de ecrã e,
+          com o Loader Enhanced, a volta ao launcher de dentro do jogo. É opcional, troca só o <code>_picoboot.nds</code>
+          (e os <code>picoLoader*.bin</code>, se escolher o loader) e pode voltar ao oficial quando quiser. O RouteDex usa estes dados.</p>
+          <p class="enhanced-disclaimer">Não é suportado pelo LNH team: problemas com a variante Enhanced vão para github.com/rasalopa/pico-launcher-enhanced.</p>
+          <div><button type="button" class="btn-ghost !text-[11px]" id="dspico-btn-enhanced">Ver variantes Enhanced</button></div>
+        </div>
         ${linksHtml(links)}
       </section>`;
     bindLinkButtons(el);
+    const enh = document.getElementById("dspico-btn-enhanced");
+    if (enh) enh.onclick = () => window.R1K && R1K.updates && R1K.updates.check();
     const btn = document.getElementById("dspico-btn-setup");
     if (btn) {
       btn.onclick = async () => {

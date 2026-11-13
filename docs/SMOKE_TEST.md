@@ -1,4 +1,4 @@
-# Smoke test — Route 1 Kit
+# Smoke test — Route Pico
 
 Checklist manual **antes** de uma release futura. Use um **cartão MicroSD dedicado a testes** (dados descartáveis).
 

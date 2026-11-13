@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import tempfile
 import time
@@ -16,6 +17,7 @@ from typing import Any, Callable, Optional
 from core.cache import (
     CACHE_DIR,
     DSPICO_EMU_CACHE_KEYS,
+    DSPICO_ENHANCED_CACHE_KEYS,
     PINNED_SHA256,
     PIN_META,
     ensure_cache_dir,
@@ -37,21 +39,54 @@ from core.twilight import _is_safe_archive_member, _stage_dir_copy, _stage_file_
 LogFn = Callable[[str], None]
 
 _ALLOWLIST_HOSTS = {"api.github.com", "github.com"}
-_USER_AGENT = "Route1Kit"
+_USER_AGENT = "RoutePico"
 _TIMEOUT = 15
 _CACHE_TTL_SECONDS = 600
 _MEM_CACHE: dict[str, tuple[float, bytes]] = {}
+
+# Repositório do fork Enhanced (rasalopa): único repo fora do LNH-team que o
+# fluxo DSPico aceita, e só quando o utilizador escolhe a variante "enhanced".
+ENHANCED_REPO = "rasalopa/pico-launcher-enhanced"
+ENHANCED_DISCLAIMER = (
+    "Fork não oficial do Pico Launcher/Loader, mantido por rasalopa (licença Zlib). "
+    "Não é suportado pelo LNH team: problemas com esta variante devem ser reportados em "
+    "github.com/rasalopa/pico-launcher-enhanced/issues. O Loader Enhanced é só para o DSPico."
+)
 
 _COMPONENTS: dict[str, dict[str, Any]] = {
     "pico-launcher": {
         "repo": "LNH-team/pico-launcher",
         "cache_key": "pico_launcher",
         "asset_suffixes": ("Pico_Launcher.zip",),
+        "variants": {
+            "enhanced": {
+                "repo": ENHANCED_REPO,
+                "cache_key": "pico_launcher_enhanced",
+                "asset_prefix": "Pico_Launcher_Enhanced",
+                "label": "Pico Launcher Enhanced",
+                "summary": (
+                    "Favoritos, jogos concluídos, estatísticas e tempo de jogo, recentes, "
+                    "jogo aleatório, capturas de ecrã (START), slots de save, fundos noturnos."
+                ),
+            }
+        },
     },
     "pico-loader": {
         "repo": "LNH-team/pico-loader",
         "cache_key": "pico_loader_dspico",
         "asset_suffixes": ("Pico_Loader_DSPICO.zip",),
+        "variants": {
+            "enhanced": {
+                "repo": ENHANCED_REPO,
+                "cache_key": "pico_loader_enhanced_dspico",
+                "asset_prefix": "Pico_Loader_Enhanced_v",
+                "label": "Pico Loader Enhanced",
+                "summary": (
+                    "Volta ao launcher de dentro do jogo (L + R + Direita + Select) e conta o "
+                    "tempo de jogo. Só DSPico; jogos DSi-enhanced/modo DSi ainda sem saída."
+                ),
+            }
+        },
     },
     "dspico-firmware": {
         "repo": "LNH-team/dspico-firmware",
@@ -101,9 +136,9 @@ def _is_allowed_url(url: str) -> bool:
         return False
     host = parsed.hostname or ""
     if host == "api.github.com":
-        return parsed.path.startswith("/repos/LNH-team/")
+        return parsed.path.startswith(("/repos/LNH-team/", f"/repos/{ENHANCED_REPO}/"))
     if host == "github.com":
-        return parsed.path.startswith("/LNH-team/")
+        return parsed.path.startswith(("/LNH-team/", f"/{ENHANCED_REPO}/"))
     return False
 
 
@@ -153,6 +188,31 @@ def _component_meta(component: str) -> dict[str, Any]:
     if not meta:
         raise ValueError("Componente desconhecido.")
     return meta
+
+
+def _variant_meta(component: str, variant: str) -> dict[str, Any]:
+    """Meta da variante: 'official' devolve o próprio componente."""
+    meta = _component_meta(component)
+    v = (variant or "official").strip().lower()
+    if v == "official":
+        return meta
+    vm = (meta.get("variants") or {}).get(v)
+    if not vm:
+        raise ValueError("Variante desconhecida para este componente.")
+    if vm["cache_key"] not in DSPICO_ENHANCED_CACHE_KEYS:
+        raise ValueError("Variante sem pin aprovado.")
+    return vm
+
+
+def _variant_asset_from_release(vm: dict[str, Any], release: dict[str, Any]) -> Optional[dict[str, Any]]:
+    prefix = str(vm.get("asset_prefix") or "").lower()
+    for item in release.get("assets") or []:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name") or "").lower()
+        if prefix and name.startswith(prefix) and name.endswith(".zip"):
+            return item
+    return None
 
 
 def _pinned_version(component: str) -> str:
@@ -296,37 +356,47 @@ def _install_launcher_from_zip(mount_path: str, zip_path: str, log: LogFn) -> di
                     os.remove(b)
                 except OSError:
                     pass
-        return {"success": True, "message": "Pico Launcher atualizado no cartão."}
+        return {"success": True, "message": "Launcher instalado no cartão (/_picoboot.nds)."}
     except Exception:
         undo.rollback(log, mount_path=mount_path)
         raise
 
 
-def _install_loader_from_zip(mount_path: str, zip_path: str, log: LogFn) -> dict[str, Any]:
+def _install_loader_from_zip(
+    mount_path: str, zip_path: str, log: LogFn, *, binaries_only: bool = False
+) -> dict[str, Any]:
+    """Instala o loader. ``binaries_only`` (Loader Enhanced): só picoLoader7/9.bin,
+    mantendo aplist/savelist/patchlist do loader oficial já no cartão."""
     _validate_mount_for_sd_writes(mount_path)
     extracted = _extract_zip_safe(
         zip_path,
-        os.path.join(CACHE_DIR, "Update_Pico_Loader"),
+        os.path.join(CACHE_DIR, "Update_Pico_Loader_Enhanced" if binaries_only else "Update_Pico_Loader"),
         log,
     )
     loader7 = _find_file(extracted, ("picoLoader7.bin",))
     loader9 = _find_file(extracted, ("picoLoader9.bin", "picoLoader9_DSPICO.bin"))
     aplist = _find_file(extracted, ("aplist.bin",))
     savelist = _find_file(extracted, ("savelist.bin",))
-    if not loader7 or not loader9 or not aplist or not savelist:
+    if not loader7 or not loader9 or (not binaries_only and (not aplist or not savelist)):
         raise RuntimeError("Pacote do Pico Loader incompleto.")
 
     dst_pico = os.path.join(mount_path, "_pico")
+    if binaries_only:
+        missing = [n for n in ("aplist.bin", "savelist.bin") if not os.path.isfile(os.path.join(dst_pico, n))]
+        if missing:
+            raise RuntimeError(
+                "O Loader Enhanced usa as listas do Pico Loader oficial, que faltam no cartão ("
+                + ", ".join(missing)
+                + "). Instale primeiro o Pico Loader oficial."
+            )
     os.makedirs(dst_pico, exist_ok=True)
+    plan = [(loader7, "picoLoader7.bin"), (loader9, "picoLoader9.bin")]
+    if not binaries_only:
+        plan += [(aplist, "aplist.bin"), (savelist, "savelist.bin")]
     undo = UndoStack()
     baks: list[Optional[str]] = []
     try:
-        for src, name in (
-            (loader7, "picoLoader7.bin"),
-            (loader9, "picoLoader9.bin"),
-            (aplist, "aplist.bin"),
-            (savelist, "savelist.bin"),
-        ):
+        for src, name in plan:
             bak = _stage_file_copy(undo, src, os.path.join(dst_pico, name), log)
             baks.append(bak)
         sync_volume(mount_path)
@@ -336,7 +406,8 @@ def _install_loader_from_zip(mount_path: str, zip_path: str, log: LogFn) -> dict
                     os.remove(b)
                 except OSError:
                     pass
-        return {"success": True, "message": "Pico Loader atualizado no cartão."}
+        label = "Pico Loader Enhanced" if binaries_only else "Pico Loader"
+        return {"success": True, "message": f"{label} instalado no cartão."}
     except Exception:
         undo.rollback(log, mount_path=mount_path)
         raise
@@ -454,14 +525,78 @@ def _flash_uf2_path(rp2_mount_path: str, uf2_path: str) -> tuple[bool, str]:
         return False, f"Falha ao gravar UF2: {e}"
 
 
+def _installed_variant_info(mount_path: str, name: str) -> dict[str, Any]:
+    """Variante/versão instalada no cartão, identificada pelo RouteDex (offline)."""
+    try:
+        from core.routedex import identify_launcher, identify_loader
+
+        if name == "pico-launcher":
+            info = identify_launcher(mount_path)
+            return {"variant": info.get("variant"), "version": info.get("version")}
+        if name == "pico-loader":
+            info = identify_loader(mount_path)
+            if info.get("variant") == "enhanced":
+                return {"variant": "enhanced", "version": info.get("enhanced_version")}
+            cands = info.get("candidates") or []
+            return {"variant": info.get("variant"), "version": cands[-1] if cands else None}
+    except Exception:
+        pass
+    return {"variant": None, "version": None}
+
+
+def _variant_version_label(asset_name: Any, tag: Any) -> str:
+    """Versão legível da variante: a do zip (Loader Enhanced v1.0.1) ou a da tag sem prefixo."""
+    m = re.search(r"_v(\d+(?:\.\d+)+)\.zip$", str(asset_name or ""))
+    if m:
+        return "v" + m.group(1)
+    t = str(tag or "").strip()
+    if t.startswith("enhanced-"):
+        t = t[len("enhanced-") :]
+    return t or "unknown"
+
+
+def _variants_payload(name: str, meta: dict[str, Any], log: LogFn) -> list[dict[str, Any]]:
+    out = []
+    for vid, vm in (meta.get("variants") or {}).items():
+        pin = PIN_META.get(vm["cache_key"]) or {}
+        latest = "unknown"
+        err = None
+        try:
+            release = _github_latest_release(vm["repo"])
+            asset = _variant_asset_from_release(vm, release)
+            if asset:
+                latest = _variant_version_label(asset.get("name"), release.get("tag_name"))
+        except Exception as e:
+            err = redact_text(e)
+            log(f"⚠️ {name} ({vid}): falha ao consultar latest: {err}")
+        item = {
+            "id": vid,
+            "label": vm["label"],
+            "summary": vm["summary"],
+            "pinned_version": _variant_version_label(pin.get("asset"), pin.get("tag")),
+            "latest_version": latest,
+            "can_install_pinned": bool(PINNED_SHA256.get(vm["cache_key"])),
+            "can_install_latest": latest not in {"", "unknown"} and err is None,
+            "release_url": f"https://github.com/{vm['repo']}/releases",
+            "issues_url": f"https://github.com/{vm['repo']}/issues",
+            "disclaimer": ENHANCED_DISCLAIMER,
+            "recommended": True,
+        }
+        if err:
+            item["latest_error"] = err
+        out.append(item)
+    return out
+
+
 def check_dspico_updates(mount_path: str, log_callback=None) -> dict[str, Any]:
-    """Verifica versões instaladas/pinadas/latest dos componentes DSPico."""
+    """Verifica versões instaladas/pinadas/latest dos componentes DSPico e variantes."""
     log = lambda msg: emit_log(log_callback, msg)
     components: dict[str, Any] = {}
     try:
         for name, meta in _COMPONENTS.items():
             pinned_version = _pinned_version(name)
-            installed_version = _detect_installed_version(mount_path, name)
+            installed = _installed_variant_info(mount_path, name)
+            installed_version = installed.get("version") or _detect_installed_version(mount_path, name)
             latest_version = "unknown"
             latest_error = None
             try:
@@ -481,12 +616,14 @@ def check_dspico_updates(mount_path: str, log_callback=None) -> dict[str, Any]:
             item = {
                 "id": name,
                 "label": name,
-                "installed_version": installed_version,
+                "installed_version": installed_version or "unknown",
+                "installed_variant": installed.get("variant"),
                 "pinned_version": pinned_version,
                 "latest_version": latest_version,
                 "can_install_pinned": has_pin and name != "dspico-firmware",
                 "can_install_latest": bool(can_latest),
                 "release_url": f"https://github.com/{meta['repo']}/releases",
+                "variants": _variants_payload(name, meta, log),
             }
             if latest_error:
                 item["latest_error"] = latest_error
@@ -496,7 +633,6 @@ def check_dspico_updates(mount_path: str, log_callback=None) -> dict[str, Any]:
             "total_keys": len(DSPICO_EMU_CACHE_KEYS),
             "pinned_keys": sum(1 for k in DSPICO_EMU_CACHE_KEYS if PINNED_SHA256.get(k)),
         }
-        # Lista ordenada para a UI + mapa por id.
         ordered = [components[k] for k in _COMPONENTS.keys() if k in components]
         return {
             "success": True,
@@ -513,37 +649,54 @@ def install_dspico_component(
     component: str,
     channel: str,
     log_callback=None,
+    variant: str = "official",
 ) -> dict[str, Any]:
-    """Instala/atualiza um componente DSPico via canal pinado ou latest."""
+    """Instala/atualiza um componente DSPico via canal pinado ou latest.
+
+    ``variant``: "official" (LNH-team, padrão) ou "enhanced" (rasalopa, opt-in;
+    só pico-launcher e pico-loader).
+    """
     log = lambda msg: emit_log(log_callback, msg)
     try:
         comp = (component or "").strip().lower()
         ch = (channel or "").strip().lower()
+        var = (variant or "official").strip().lower()
         if ch not in {"pinned", "latest"}:
             raise ValueError("Canal inválido (use pinned ou latest).")
         _component_meta(comp)
+        vm = _variant_meta(comp, var)
+        enhanced = var != "official"
 
         if comp == "dspico-firmware":
             return _install_firmware(mount_path, ch, log)
 
+        if enhanced:
+            log(f"⚠️ {vm['label']}: {ENHANCED_DISCLAIMER}")
         if ch == "pinned":
-            cache_key = _component_meta(comp).get("cache_key")
+            cache_key = vm.get("cache_key")
             if not isinstance(cache_key, str):
                 raise RuntimeError("Componente sem pacote pinado no cache.")
             pkg = ensure_cached(cache_key, log_callback=log_callback)
         else:
-            release = _github_latest_release(_component_meta(comp)["repo"])
-            asset = _component_asset_from_release(comp, release)
+            release = _github_latest_release(vm["repo"])
+            asset = (
+                _variant_asset_from_release(vm, release)
+                if enhanced
+                else _component_asset_from_release(comp, release)
+            )
             if not asset:
                 raise RuntimeError("Release latest sem asset compatível.")
             pkg = _download_asset_verified(asset, log)
 
         if comp == "pico-launcher":
-            return _install_launcher_from_zip(mount_path, pkg, log)
-        if comp == "pico-loader":
-            return _install_loader_from_zip(mount_path, pkg, log)
-        if comp == "dspico-usb-examples":
+            res = _install_launcher_from_zip(mount_path, pkg, log)
+        elif comp == "pico-loader":
+            res = _install_loader_from_zip(mount_path, pkg, log, binaries_only=enhanced)
+        elif comp == "dspico-usb-examples":
             return _install_usb_examples_asset(mount_path, pkg, log)
-        raise RuntimeError("Componente não suportado.")
+        else:
+            raise RuntimeError("Componente não suportado.")
+        res["variant"] = var
+        return res
     except Exception as e:
         return {"success": False, "error": redact_text(e)}

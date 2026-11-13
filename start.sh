@@ -3,7 +3,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR"
 
 echo "================================================"
-echo "  Iniciando Route 1 Kit (desktop)..."
+echo "  Iniciando Route Pico (desktop)..."
 echo "================================================"
 
 if [ ! -x "$DIR/.venv/bin/python" ]; then

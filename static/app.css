@@ -1,4 +1,4 @@
-/* Route 1 Kit — shell v2 (sidebar + topbar + activity) */
+/* Route Pico — shell v2 (sidebar + topbar + activity) */
 
 :root {
   --shell-sidebar: 220px;
@@ -495,3 +495,58 @@ body {
   background: var(--c-bg);
   content-visibility: auto;
 }
+
+/* ---------- RouteDex (biblioteca nativa; baseado no PicoDex, MIT) ---------- */
+.routedex-tabs { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; border: 1px solid rgb(var(--c-line)); border-radius: 10px; background: rgb(var(--c-surface-2)); }
+.routedex-tab { appearance: none; border: 0; background: transparent; color: rgb(var(--c-fg-mute)); font-size: 12px; font-weight: 600; padding: 0.4rem 0.75rem; border-radius: 8px; cursor: pointer; }
+.routedex-tab:hover { color: rgb(var(--c-fg)); background: rgb(var(--c-accent) / 0.08); }
+.routedex-tab--active { color: rgb(var(--c-fg)); background: rgb(var(--c-accent) / 0.16); }
+.routedex-tab:focus-visible, .routedex-flag:focus-visible, .routedex-link:focus-visible { outline: 2px solid rgb(var(--c-accent)); outline-offset: 2px; }
+#routedex-body { display: flex; flex-direction: column; gap: 0.75rem; }
+.routedex-credit { font-size: 11px; color: rgb(var(--c-fg-mute)); border-top: 1px solid rgb(var(--c-line)); padding-top: 0.6rem; }
+.routedex-link { appearance: none; border: 0; background: none; padding: 0; color: rgb(var(--c-accent-fg)); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.routedex-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 6px; }
+.routedex-stat { background: rgb(var(--c-surface-2)); border: 1px solid rgb(var(--c-line)); border-radius: 10px; padding: 0.55rem 0.7rem; font-size: 13px; }
+.routedex-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.routedex-h { font-size: 12px; font-weight: 600; color: rgb(var(--c-fg)); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.routedex-mini { font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.routedex-mini li { display: flex; justify-content: space-between; gap: 8px; min-width: 0; }
+.routedex-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.routedex-input { background-image: none; padding-right: 0.95rem; min-width: 0; flex: 1 1 200px; }
+.routedex-list { max-height: 460px; overflow: auto; border: 1px solid rgb(var(--c-line)); border-radius: 10px; }
+.routedex-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.6rem; border-bottom: 1px solid rgb(var(--c-line)); min-height: 44px; }
+.routedex-row:last-child { border-bottom: 0; }
+.routedex-row:hover { background: rgb(var(--c-surface-2)); }
+.routedex-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.routedex-sys { font-size: 11px; font-weight: 600; color: rgb(var(--c-fg-mute)); border: 1px solid rgb(var(--c-line)); border-radius: 6px; padding: 1px 5px; }
+.routedex-meta { font-size: 11px; color: rgb(var(--c-fg-mute)); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.routedex-flag { appearance: none; width: 28px; height: 28px; border-radius: 8px; border: 1px solid rgb(var(--c-line)); background: transparent; color: rgb(var(--c-fg-mute) / 0.6); cursor: pointer; font-size: 14px; line-height: 1; flex-shrink: 0; }
+.routedex-flag:hover { color: rgb(var(--c-fg)); }
+.routedex-flag--fav.routedex-flag--on { color: rgb(var(--c-danger)); border-color: rgb(var(--c-danger) / 0.4); background: rgb(var(--c-danger) / 0.1); }
+.routedex-flag--done.routedex-flag--on { color: rgb(var(--c-ok)); border-color: rgb(var(--c-ok) / 0.4); background: rgb(var(--c-ok) / 0.1); }
+.routedex-kv { display: grid; gap: 6px; font-size: 12px; }
+.routedex-kv > div { display: grid; grid-template-columns: 110px 1fr; gap: 8px; align-items: baseline; }
+.routedex-ul { list-style: disc; padding-left: 1.1rem; margin-top: 4px; }
+.routedex-group { border: 1px solid rgb(var(--c-line)); border-radius: 10px; padding: 0.6rem 0.7rem; }
+.routedex-checks { max-height: 180px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.routedex-check { display: flex; align-items: center; gap: 8px; font-size: 12px; min-width: 0; }
+.routedex-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(176px, 1fr)); gap: 10px; }
+.routedex-shot { border: 1px solid rgb(var(--c-line)); border-radius: 10px; overflow: hidden; background: rgb(var(--c-surface-2)); }
+.routedex-shot-img { aspect-ratio: 256 / 384; display: flex; align-items: center; justify-content: center; background: #000; }
+.routedex-shot-img img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.routedex-shot figcaption { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 6px 8px; font-size: 11px; }
+.routedex-folder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 16px; }
+.routedex-folder-preview { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.routedex-icon { width: 64px; height: 64px; image-rendering: pixelated; border-radius: 8px; border: 1px solid rgb(var(--c-line)); background: rgb(var(--c-surface-2)); }
+.routedex-cover { width: 128px; height: 96px; image-rendering: pixelated; border-radius: 6px; border: 1px solid rgb(var(--c-line)); background: rgb(var(--c-surface-2)); display: flex; align-items: center; justify-content: center; font-size: 11px; color: rgb(var(--c-fg-mute)); }
+.routedex-form { display: flex; flex-direction: column; gap: 6px; }
+@media (max-width: 720px) { .routedex-folder { grid-template-columns: 1fr; } .routedex-meta { display: none; } }
+.enhanced-card { border: 1px solid rgb(var(--c-accent) / 0.35); background: rgb(var(--c-accent) / 0.06); border-radius: 10px; padding: 0.8rem 0.9rem; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.enhanced-card h4 { font-size: 13px; font-weight: 600; color: rgb(var(--c-fg)); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.enhanced-tag { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; padding: 1px 6px; border-radius: 6px; background: rgb(var(--c-accent) / 0.18); color: rgb(var(--c-accent-fg)); }
+.enhanced-tag--warn { background: rgb(var(--c-warn) / 0.16); color: rgb(var(--c-warn)); }
+.enhanced-disclaimer { font-size: 11px; color: rgb(var(--c-fg-mute)); line-height: 1.5; }
+.nav-section { margin: 14px 12px 2px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(var(--c-fg-mute)); }
+.enhanced-card .btn-primary, .routedex-form .btn-primary, #routedex-body .btn-primary { width: auto; }
+.routedex-shot figcaption .btn-ghost { white-space: nowrap; }
+.routedex-form .routedex-input { flex: none; }

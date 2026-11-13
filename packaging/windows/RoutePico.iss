@@ -1,17 +1,18 @@
-; Inno Setup 6 — instalador Route 1 Kit (Windows x64)
-; Compilar: ISCC /DMyAppVersion=1.0.0 packaging/windows/Route1Kit.iss
-; Pré-requisito: dist\Route1Kit\ gerado pelo PyInstaller.
+; Inno Setup 6 — instalador Route Pico (Windows x64)
+; Compilar: ISCC /DMyAppVersion=1.0.0 packaging/windows/RoutePico.iss
+; Pré-requisito: dist\RoutePico\ gerado pelo PyInstaller.
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.1.0"
 #endif
 
-#define MyAppName "Route 1 Kit"
-#define MyAppExeName "Route1Kit.exe"
+#define MyAppName "Route Pico"
+#define MyAppExeName "RoutePico.exe"
 #define MyAppPublisher "Dark Room"
 #define MyAppURL "https://github.com/GoobinEXE/Route1"
 
 [Setup]
+; AppId mantido de Route 1 Kit: o instalador atualiza a instalação existente.
 AppId={{8F3C2A1B-9D4E-4F6A-B7C8-1E2D3A4B5C6D}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -23,7 +24,7 @@ DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=..\..\LICENSE
 OutputDir=..\..\release_artifacts
-OutputBaseFilename=Route-1-Kit-{#MyAppVersion}-windows-x64-setup
+OutputBaseFilename=Route-Pico-{#MyAppVersion}-windows-x64-setup
 SetupIconFile=..\..\static\assets\app-icon.ico
 Compression=lzma2
 SolidCompression=yes
@@ -46,8 +47,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
+[InstallDelete]
+; Executável e atalhos com o nome antigo (Route 1 Kit <= 1.1.x).
+Type: files; Name: "{app}\Route1Kit.exe"
+Type: files; Name: "{group}\Route 1 Kit.lnk"
+Type: files; Name: "{autodesktop}\Route 1 Kit.lnk"
+
 [Files]
-Source: "..\..\dist\Route1Kit\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\dist\RoutePico\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"

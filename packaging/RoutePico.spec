@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller spec — Route 1 Kit (onedir + .app no macOS)."""
+"""PyInstaller spec — Route Pico (onedir + .app no macOS)."""
 
 import os
 import sys
@@ -16,6 +16,8 @@ ICON_ICO = os.path.join(STATIC, "assets", "app-icon.ico")
 datas = [
     (STATIC, "static"),
     (os.path.join(ROOT, "CHANGELOG.md"), "."),
+    # Manifesto de hashes Pico Loader/Launcher usado pelo RouteDex (offline).
+    (os.path.join(ROOT, "core", "data"), os.path.join("core", "data")),
     (os.path.join(ROOT, "vendor", "GEiv4.2_EN"), os.path.join("vendor", "GEiv4.2_EN")),
 ]
 binaries = []
@@ -55,7 +57,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="Route1Kit",
+    name="RoutePico",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -77,7 +79,7 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="Route1Kit",
+    name="RoutePico",
 )
 
 if sys.platform == "darwin":
@@ -85,12 +87,13 @@ if sys.platform == "darwin":
 
     app = BUNDLE(
         coll,
-        name="Route 1 Kit.app",
+        name="Route Pico.app",
         icon=ICON_ICNS,
+        # Identificador mantido de Route 1 Kit: macOS trata como a mesma app (permissões, Dock).
         bundle_identifier="com.route1kit.app",
         info_plist={
-            "CFBundleName": "Route 1 Kit",
-            "CFBundleDisplayName": "Route 1 Kit",
+            "CFBundleName": "Route Pico",
+            "CFBundleDisplayName": "Route Pico",
             "CFBundleShortVersionString": "1.1.0",
             "CFBundleVersion": "1.1.0",
             "NSHighResolutionCapable": True,

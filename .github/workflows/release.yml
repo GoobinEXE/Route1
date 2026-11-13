@@ -103,7 +103,7 @@ jobs:
           signing-account-name: ${{ vars.AZURE_TRUSTED_SIGNING_ACCOUNT }}
           certificate-profile-name: ${{ vars.AZURE_TRUSTED_SIGNING_PROFILE }}
           # Só o .exe principal — evita esgotar a quota do Artifact Signing com dezenas de DLLs do PyInstaller.
-          files: ${{ github.workspace }}\dist\Route1Kit\Route1Kit.exe
+          files: ${{ github.workspace }}\dist\RoutePico\RoutePico.exe
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
@@ -138,7 +138,7 @@ jobs:
       - name: Upload artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: route1kit-${{ matrix.artifact }}
+          name: routepico-${{ matrix.artifact }}
           path: release_artifacts/*
           if-no-files-found: error
 
@@ -157,7 +157,7 @@ jobs:
         with:
           path: release_download
           merge-multiple: true
-          pattern: route1kit-*
+          pattern: routepico-*
 
       - name: Require at least one artefact
         run: |
@@ -172,7 +172,7 @@ jobs:
           draft: false
           generate_release_notes: true
           body: |
-            ## Route 1 Kit ${{ github.ref_name }}
+            ## Route Pico ${{ github.ref_name }}
 
             Builds **portátil** e **instalável** · publisher Windows: **Dark Room**.
 

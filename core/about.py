@@ -42,6 +42,17 @@ EXTERNAL_URL_ALLOWLIST = frozenset(
         "https://github.com/LNH-team/pico-launcher/blob/develop/docs/Usage.md",
         # Manual de referência ChiScart (espelha DSPICO_USER_MANUAL_URL)
         "https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf",
+        "https://github.com/LNH-team/pico-launcher/releases",
+        "https://github.com/LNH-team/pico-loader/releases",
+        "https://github.com/LNH-team/dspico-firmware/releases",
+        "https://github.com/LNH-team/dspico-usb-examples/releases",
+        # Créditos RouteDex / variante Enhanced (rasalopa)
+        "https://github.com/rasalopa/picodex",
+        "https://github.com/rasalopa/picodex/blob/main/LICENSE",
+        "https://github.com/rasalopa/pico-launcher-enhanced",
+        "https://github.com/rasalopa/pico-launcher-enhanced/releases",
+        "https://github.com/rasalopa/pico-launcher-enhanced/issues",
+        "https://github.com/rasalopa/pico-launcher-enhanced/blob/enhanced/docs/Enhanced.md",
     }
 )
 
@@ -311,7 +322,8 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
     latest, err = load_latest_changelog(base_dir)
     return {
         "success": True,
-        "app_name": "Route 1 Kit",
+        "app_name": "Route Pico",
+        "formerly": "Route 1 Kit",
         "version": __version__,
         "license": "GPL-3.0",
         "repo_url": REPO_URL,
@@ -322,7 +334,7 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             "name": "Dark Room",
             "role": "Estúdio",
             "blurb": (
-                "Estúdio por trás do Route 1 Kit — builds oficiais e identidade "
+                "Estúdio por trás do Route Pico — builds oficiais e identidade "
                 "do publisher no Windows."
             ),
         },
@@ -330,20 +342,22 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             "name": "GoobinEXE",
             "role": "Criador e maintainer",
             "blurb": (
-                "Projeto pessoal open source para tornar o softmod e a preparação "
-                "de cartões DSi mais acessíveis, com fluxos guiados e menos risco "
-                "de gravar no volume errado."
+                "Projeto pessoal open source para tornar a preparação do cartucho "
+                "DSPico e do cartão do DSi mais acessível, com fluxos guiados e "
+                "menos risco de gravar no volume errado."
             ),
             "url": REPO_URL,
         },
         "project": {
-            "tagline": "Prepare e organize o cartão do Nintendo DSi",
+            "tagline": "Prepare, organize e acompanhe o microSD do seu DSPico",
             "blurb": (
-                "App desktop (macOS, Windows e Linux) que prepara o SD para "
-                "desbloqueio SD-direct (TWiLight + Unlaunch + hiyaCFW) e flashcards "
-                "GEi / R4 / DSPico — sem montar pastas à mão."
+                "App desktop (macOS, Windows e Linux) para o cartucho DSPico: pacote "
+                "oficial LNH, jogos, capas, emuladores e a biblioteca RouteDex. "
+                "O softmod do DSi (TWiLight + Unlaunch + hiyaCFW) e os flashcards "
+                "GEi / R4 continuam em Mais ferramentas."
             ),
             "goals": [
+                "Preparar e manter o microSD do DSPico sem montar pastas à mão",
                 "Guiar iniciantes pelo Assistente, passo a passo",
                 "Oferecer atalhos no Modo avançado para quem já conhece o fluxo",
                 "Validar volumes removíveis e downloads com SHA-256 pinado",
@@ -377,6 +391,29 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             "Não afiliado à Nintendo. Marcas pertencem aos respetivos donos.",
             "Código do app: GPL-3.0. Binários descarregados mantêm licenças dos projetos originais.",
             "O app não fornece ROMs; só organiza ficheiros que você coloca no cartão.",
+        ],
+        "credits": [
+            {
+                "name": "PicoDex",
+                "author": "rasalopa",
+                "license": "MIT",
+                "url": "https://github.com/rasalopa/picodex",
+                "text": "O RouteDex é um port nativo das regras do PicoDex (gamedata.json, capas, banners de pasta, saúde do cartão, capturas, versão do loader).",
+            },
+            {
+                "name": "Pico Launcher Enhanced / Pico Loader Enhanced",
+                "author": "rasalopa",
+                "license": "Zlib",
+                "url": "https://github.com/rasalopa/pico-launcher-enhanced",
+                "text": "Variantes opcionais e não oficiais, recomendadas no painel de atualizações. Fórmula dos fundos noturnos vinda de tools/make_night_bg.py.",
+            },
+            {
+                "name": "Pico Launcher, Pico Loader e DSPico",
+                "author": "LNH team",
+                "license": "Zlib",
+                "url": "https://github.com/LNH-team/dspico",
+                "text": "Pacote oficial instalado por padrão.",
+            },
         ],
         "latest_release": latest,
         "changelog_error": err,

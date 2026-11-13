@@ -83,22 +83,95 @@
             `<button type="button" class="btn-ghost !text-[11px]" onclick="R1K.updates.openUrl('${escapeHtml(c.release_url)}')">Abrir</button>`
           );
         }
+        const variantTag =
+          c.installed_variant === "enhanced"
+            ? ' <span class="enhanced-tag">Enhanced</span>'
+            : c.installed_variant === "official"
+            ? ' <span class="text-fg-mute">(oficial)</span>'
+            : "";
         return (
-          `<div class="updates-row"><span>${name}</span><span>${installed}</span><span>${pinned}</span><span>${latest}</span>` +
+          `<div class="updates-row"><span>${name}</span><span>${installed}${variantTag}</span><span>${pinned}</span><span>${latest}</span>` +
           `<span class="flex flex-wrap gap-1 justify-end">${actions.join("")}</span></div>`
         );
       })
       .join("");
-    el.innerHTML = head + rows;
+    el.innerHTML = head + rows + enhancedHtml(comps);
   }
 
-  async function install(component, channel) {
+  /** Cartão de recomendação das variantes Enhanced (opt-in, nunca o padrão). */
+  function enhancedHtml(comps) {
+    const cards = [];
+    for (const c of comps) {
+      for (const v of c.variants || []) {
+        const id = escapeHtml(c.id);
+        const on = c.installed_variant === "enhanced";
+        const btns = [];
+        if (v.can_install_pinned) {
+          btns.push(
+            `<button type="button" class="btn-primary !text-[11px] !px-2 !py-1" onclick="R1K.updates.install('${id}','pinned','enhanced')">${
+              on ? "Reinstalar" : "Instalar"
+            } ${escapeHtml(v.pinned_version)}</button>`
+          );
+        }
+        if (v.can_install_latest && v.latest_version !== v.pinned_version) {
+          btns.push(
+            `<button type="button" class="btn-ghost !text-[11px]" onclick="R1K.updates.install('${id}','latest','enhanced')">Mais recente (${escapeHtml(
+              v.latest_version
+            )})</button>`
+          );
+        }
+        if (on && c.can_install_pinned) {
+          btns.push(
+            `<button type="button" class="btn-ghost btn-ghost--muted !text-[11px]" onclick="R1K.updates.install('${id}','pinned','official')">Voltar ao oficial</button>`
+          );
+        }
+        btns.push(
+          `<button type="button" class="btn-ghost !text-[11px]" onclick="R1K.updates.openUrl('${escapeHtml(v.release_url)}')">Notas da release</button>`
+        );
+        cards.push(`<div class="enhanced-card">
+            <h4>${escapeHtml(v.label)}
+              ${v.recommended ? '<span class="enhanced-tag">Recomendado</span>' : ""}
+              <span class="enhanced-tag enhanced-tag--warn">Não oficial</span>
+              ${on ? '<span class="text-ok text-[11px]">instalado neste cartão</span>' : ""}
+            </h4>
+            <p>${escapeHtml(v.summary)}</p>
+            <p class="enhanced-disclaimer">${escapeHtml(v.disclaimer)}</p>
+            <div class="flex flex-wrap gap-1">${btns.join("")}</div>
+          </div>`);
+      }
+    }
+    if (!cards.length) return "";
+    return `<div class="space-y-2 pt-3">
+        <p class="text-[12px] text-fg-mute">Variantes opcionais. O Route Pico instala sempre o oficial do LNH team por padrão; estas versões trazem mais funções e o RouteDex tira proveito delas.</p>
+        ${cards.join("")}
+      </div>`;
+  }
+
+  const ENHANCED_CONFIRM = {
+    "pico-launcher":
+      "Instalar o Pico Launcher Enhanced (fork de rasalopa, não oficial)?\n\n" +
+      "• Substitui só /_picoboot.nds e os temas incluídos; jogos, saves, capas e definições ficam.\n" +
+      "• Grava favoritos e estatísticas em /_pico/gamedata.json.\n" +
+      "• Problemas desta versão vão para github.com/rasalopa/pico-launcher-enhanced, não para o LNH team.\n" +
+      "• Pode voltar ao oficial a qualquer momento neste painel.",
+    "pico-loader":
+      "Instalar o Pico Loader Enhanced (fork de rasalopa, não oficial)?\n\n" +
+      "• Só para o DSPico: noutro flashcard mantenha o loader feito para ele.\n" +
+      "• Substitui picoLoader7.bin e picoLoader9.bin; aplist/savelist/patchlist do oficial ficam.\n" +
+      "• Volta ao launcher dentro do jogo com L + R + Direita + Select; jogos DSi-enhanced e modo DSi ainda não.\n" +
+      "• Problemas desta versão vão para o rasalopa, não para o LNH team.",
+  };
+
+  async function install(component, channel, variant) {
     const path = drivePath();
+    const v = variant || "official";
     if (!path) {
       alert("Seleccione o microSD do DSPico.");
       return;
     }
-    if (channel === "latest") {
+    if (v === "enhanced") {
+      if (!confirm(ENHANCED_CONFIRM[component] || "Instalar a variante Enhanced (não oficial)?")) return;
+    } else if (channel === "latest") {
       const ok = confirm(
         `Instalar a versão mais recente de ${component} a partir de github.com/LNH-team?\n\n` +
           "O ficheiro será verificado pelo digest SHA-256 do release. Continuar?"
@@ -112,7 +185,7 @@
         return;
       }
       if (typeof setBusy === "function") setBusy(true);
-      const res = await api.install_dspico_component(path, component, channel);
+      const res = await api.install_dspico_component(path, component, channel, v);
       if (res && res.success) {
         if (typeof appendLog === "function") appendLog(res.message || "Componente instalado.", "ok");
         await check();

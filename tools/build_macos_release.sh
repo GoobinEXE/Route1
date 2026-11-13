@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Empacota Route 1 Kit no macOS: ZIP portátil (.app) + DMG instalável.
+# Empacota Route Pico no macOS: ZIP portátil (.app) + DMG instalável.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -10,30 +10,30 @@ ARCH="$(uname -m)"
 OUT="${ROOT}/release_artifacts"
 DIST="${ROOT}/dist"
 BUILD="${ROOT}/build"
-APP="${DIST}/Route 1 Kit.app"
+APP="${DIST}/Route Pico.app"
 STAGE="${OUT}/dmg_stage"
 
 rm -rf "$OUT" "$DIST" "$BUILD"
 mkdir -p "$OUT"
 
-echo "==> PyInstaller (Route 1 Kit ${VERSION}, ${ARCH})"
+echo "==> PyInstaller (Route Pico ${VERSION}, ${ARCH})"
 python -m PyInstaller \
   --noconfirm \
   --clean \
   --distpath "$DIST" \
   --workpath "$BUILD" \
-  packaging/Route1Kit.spec
+  packaging/RoutePico.spec
 
 if [[ ! -d "$APP" ]]; then
   echo "Falha: ${APP} não foi gerado." >&2
   exit 1
 fi
 
-PORTABLE_ZIP="${OUT}/Route-1-Kit-${VERSION}-macOS-${ARCH}-portable.zip"
+PORTABLE_ZIP="${OUT}/Route-Pico-${VERSION}-macOS-${ARCH}-portable.zip"
 echo "==> Portátil: ${PORTABLE_ZIP}"
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$PORTABLE_ZIP"
 
-DMG="${OUT}/Route-1-Kit-${VERSION}-macOS-${ARCH}-installer.dmg"
+DMG="${OUT}/Route-Pico-${VERSION}-macOS-${ARCH}-installer.dmg"
 echo "==> Instalável (DMG): ${DMG}"
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
@@ -41,7 +41,7 @@ cp -R "$APP" "$STAGE/"
 ln -s /Applications "$STAGE/Applications"
 rm -f "$DMG"
 hdiutil create \
-  -volname "Route 1 Kit ${VERSION}" \
+  -volname "Route Pico ${VERSION}" \
   -srcfolder "$STAGE" \
   -ov \
   -format UDZO \

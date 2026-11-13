@@ -1,5 +1,5 @@
 /**
- * Temas — Route 1 Kit
+ * Temas — Route Pico
  *
  * Carregado no <head> (síncrono) para aplicar `data-theme` / `data-scheme`
  * em <html> antes do primeiro paint e evitar flash. As cores em si vivem em

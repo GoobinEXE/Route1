@@ -2,7 +2,7 @@
 
 ## `GEiv4.2_EN`
 
-Kernel / MoonShell do flashcard **Galaxy Eagle i (GEi)** usado pelo Route 1 Kit quando não há outra pasta completa em `~/Downloads/GEiv4.2_EN` ou no cache.
+Kernel / MoonShell do flashcard **Galaxy Eagle i (GEi)** usado pelo Route Pico quando não há outra pasta completa em `~/Downloads/GEiv4.2_EN` ou no cache.
 
 Conteúdo esperado na raiz:
 

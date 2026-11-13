@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Empacota Route 1 Kit no Windows (Git Bash / CI): ZIP portátil + Setup (Inno).
+# Empacota Route Pico no Windows (Git Bash / CI): ZIP portátil + Setup (Inno).
 #
 # Fases (ROUTE1KIT_WIN_PHASE):
 #   all     — PyInstaller + assinatura opcional + ZIP + Inno (predefinição)
-#   build   — só PyInstaller → dist/Route1Kit/
-#   package — ZIP + Inno a partir de dist/Route1Kit/ já existente
+#   build   — só PyInstaller → dist/RoutePico/
+#   package — ZIP + Inno a partir de dist/RoutePico/ já existente
 #
 # Assinatura local (opcional, fase all/package):
 #   WINDOWS_PFX_PATH / WINDOWS_PFX_PASSWORD — SignTool com certificado .pfx
@@ -20,7 +20,7 @@ VERSION="$(python -c "from core import __version__; print(__version__)")"
 OUT="${ROOT}/release_artifacts"
 DIST="${ROOT}/dist"
 BUILD="${ROOT}/build"
-APP_DIR="${DIST}/Route1Kit"
+APP_DIR="${DIST}/RoutePico"
 TIMESTAMP_URL="${WINDOWS_TIMESTAMP_URL:-http://timestamp.digicert.com}"
 
 find_iscc() {
@@ -111,13 +111,13 @@ want_local_sign() {
 run_build() {
   rm -rf "$DIST" "$BUILD"
   mkdir -p "$DIST"
-  echo "==> PyInstaller (Route 1 Kit ${VERSION})"
+  echo "==> PyInstaller (Route Pico ${VERSION})"
   python -m PyInstaller \
     --noconfirm \
     --clean \
     --distpath "$DIST" \
     --workpath "$BUILD" \
-    packaging/Route1Kit.spec
+    packaging/RoutePico.spec
 
   if [[ ! -d "$APP_DIR" ]]; then
     echo "Falha: ${APP_DIR} não foi gerado." >&2
@@ -137,7 +137,7 @@ run_package() {
     sign_tree "$APP_DIR"
   fi
 
-  local portable_zip="${OUT}/Route-1-Kit-${VERSION}-windows-x64-portable.zip"
+  local portable_zip="${OUT}/Route-Pico-${VERSION}-windows-x64-portable.zip"
   echo "==> Portátil: ${portable_zip}"
   rm -f "$portable_zip"
   if command -v powershell.exe >/dev/null 2>&1; then
@@ -147,7 +147,7 @@ run_package() {
     powershell.exe -NoProfile -Command \
       "Compress-Archive -Path '${dist_win}' -DestinationPath '${out_win}' -Force"
   elif command -v zip >/dev/null 2>&1; then
-    (cd "$DIST" && zip -r "$portable_zip" Route1Kit)
+    (cd "$DIST" && zip -r "$portable_zip" RoutePico)
   else
     echo "Sem powershell nem zip para criar o arquivo portátil." >&2
     exit 1
@@ -173,11 +173,11 @@ run_package() {
       fi
       iscc_args+=("//DROUTE1_SIGN=1" "//Sroute1sign=${sign_def}")
     fi
-    "$iscc" "${iscc_args[@]}" "packaging/windows/Route1Kit.iss"
+    "$iscc" "${iscc_args[@]}" "packaging/windows/RoutePico.iss"
 
     if want_local_sign; then
       local setup
-      setup="${OUT}/Route-1-Kit-${VERSION}-windows-x64-setup.exe"
+      setup="${OUT}/Route-Pico-${VERSION}-windows-x64-setup.exe"
       if [[ -f "$setup" ]]; then
         # Reforço: assinar o setup mesmo se o SignTool do Inno falhar em silêncio.
         sign_one "$setup" || true

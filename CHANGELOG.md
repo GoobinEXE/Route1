@@ -10,6 +10,24 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+### Alterado
+
+- **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas** na barra lateral
+
+### Adicionado
+
+- **RouteDex** (DSPico → RouteDex): favoritos, concluídos, partidas e tempo de jogo do Pico Launcher Enhanced, com edição à mão
+- **Saúde do cartão**: versão do Pico Loader e do launcher, ficheiros em falta ou de releases misturadas, saves sem jogo ou em duplicado, capas órfãs e lixo do macOS (com cópia no computador antes de remover)
+- **Capturas** do Enhanced com as duas telas juntas, para guardar em PNG ou apagar
+- **Banners e capas de pasta**, **fundos noturnos** dos temas e **importar cheats** (`usrcheat.dat`)
+- **Pico Launcher Enhanced / Pico Loader Enhanced** como opção recomendada em Verificar Atualizações, com aviso de versão não oficial e «Voltar ao oficial»
+
+### Desenvolvimento
+
+- RouteDex baseado no PicoDex de rasalopa (MIT); licenças em `docs/licenses/`
+- `tools/gen_pico_manifest.py` gera `core/data/pico_manifest.json`; pins `pico_launcher_enhanced` / `pico_loader_enhanced_dspico`
+- Artefactos de build renomeados para `RoutePico` (AppId Windows e bundle id macOS mantidos para atualizar instalações existentes)
+
 ## [1.1.0] — 2026-10-11
 
 ### Alterado

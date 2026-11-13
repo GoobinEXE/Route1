@@ -1,4 +1,4 @@
-# Política de segurança — Route 1 Kit
+# Política de segurança — Route Pico
 
 ## Versões suportadas
 
@@ -16,7 +16,7 @@ Correções de segurança serão aplicadas na linha suportada atual (`1.0.x`).
 
 1. Se o repositório tiver **GitHub Security Advisories** ativados, use *Report a vulnerability*.
 2. Caso contrário, contacte o maintainer em privado (canal indicado no perfil do repositório quando existir remote) e inclua:
-   - versão do app (`Route 1 Kit x.y.z` no arranque / `core.__version__`);
+   - versão do app (`Route Pico x.y.z` no arranque / `core.__version__`);
    - SO e como reproduzir;
    - impacto esperado (ex.: formatar volume não removível, ler paths fora do SD).
 
