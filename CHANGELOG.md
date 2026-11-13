@@ -26,6 +26,7 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 - RouteDex baseado no PicoDex de rasalopa (MIT); licenças em `docs/licenses/`
 - `tools/gen_pico_manifest.py` gera `core/data/pico_manifest.json`; pins `pico_launcher_enhanced` / `pico_loader_enhanced_dspico`
+- Repositório Route1-DSi integrado: app do console em `nds/`, spec R1USB unificada em `protocol/R1USB.md`, plano e manuais em `docs/console/`; testes C e de conformidade do protocolo correm no `pytest`
 - Artefactos de build renomeados para `RoutePico` (AppId Windows e bundle id macOS mantidos para atualizar instalações existentes)
 
 ## [1.1.0] — 2026-10-11

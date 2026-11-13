@@ -1,0 +1,14 @@
+---
+description: Programação defensiva no homebrew NDS
+globs: nds/src/**,nds/include/**
+alwaysApply: false
+---
+
+# Defensiva no `.nds`
+
+- Verificar retornos de I/O FAT/USB; não ignorar erros
+- Sem buffers sem tamanho; respeitar `max_payload` / `max_path_bytes` da spec
+- Falhas → mensagem UI + código `E_*`; não hang infinito sem timeout
+- Limpar staging em todos os caminhos de erro (`goto cleanup` / equivalente)
+- UI: textos fixos em PT; não concatenar paths crus em overlays sem truncar
+- Sem alocações ilimitadas em listagens (cap de entradas por ecrã / paginação)

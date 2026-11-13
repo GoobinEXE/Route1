@@ -1,0 +1,13 @@
+---
+description: Validação de paths no SD — anti traversal
+globs: nds/src/fs/**,nds/src/usb/**,nds/src/util/**
+alwaysApply: false
+---
+
+# Path safety
+
+- Só paths relativos à raiz do volume do flashcart
+- Rejeitar `..`, NUL, barras absolutas de outro volume
+- Normalizar antes de I/O; um helper único (`r1_path_is_safe`)
+- Ops destrutivas em `_picoboot.nds` ou `/_pico`: confirmação explícita / `E_DENIED`
+- Nunca interpolar paths em shell (não há shell no `.nds`; no desktop: subprocess só com lista de args)

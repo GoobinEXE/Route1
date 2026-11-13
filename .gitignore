@@ -11,3 +11,8 @@ dist/
 release_artifacts/
 *.dmg
 .Python
+
+# App do console (nds/)
+nds/*.nds
+nds/*.elf
+*.r1partial

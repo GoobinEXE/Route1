@@ -48,6 +48,10 @@ O separador **DSPico → RouteDex** lê e escreve diretamente no microSD, sem br
 
 O RouteDex é um port nativo das regras do [PicoDex](https://github.com/rasalopa/picodex) de rasalopa (licença MIT; aviso em [`docs/licenses/`](docs/licenses/)).
 
+## Route Pico no console (em desenvolvimento)
+
+Em [`nds/`](nds/) está o app `.nds` do Route Pico: um gestor de ficheiros do microSD que corre no próprio DS a partir do Pico Launcher, com proteção de `_picoboot.nds` e `_pico/`. As próximas fases ligam-no ao desktop por USB (protocolo [R1USB](protocol/R1USB.md)), com cópia verificada por SHA-256 sem tirar o cartão do cartucho. Estado e fases: [`docs/console/PLAN.md`](docs/console/PLAN.md). O `.nds` ainda não foi validado em hardware.
+
 ## Pico Launcher Enhanced (opcional, recomendado)
 
 Por padrão o Route Pico instala só o Pico Launcher e o Pico Loader **oficiais** do LNH team. Em **Verificar Atualizações** pode escolher as variantes [Enhanced](https://github.com/rasalopa/pico-launcher-enhanced) de rasalopa (licença Zlib): favoritos, estatísticas, recentes, capturas, slots de save e, com o Loader Enhanced, a volta ao launcher de dentro do jogo.

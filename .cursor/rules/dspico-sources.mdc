@@ -1,6 +1,6 @@
 ---
 description: Fontes oficiais DSPico (LNH + manual ChiScart) — consultar antes de inventar layout/fluxo
-globs: core/dspico*.py,core/pico_*.py,core/routedex.py,core/updates.py,static/dspico.js,static/js/*.js,tests/test_dspico*.py,tests/test_pico_*.py,tests/test_updates.py
+globs: nds/**,core/dspico*.py,core/pico_*.py,core/routedex.py,core/updates.py,static/dspico.js,static/js/*.js,tests/test_dspico*.py,tests/test_pico_*.py,tests/test_updates.py
 alwaysApply: false
 ---
 
