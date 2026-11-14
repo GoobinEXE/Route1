@@ -45,6 +45,7 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - A gaveta Atividade não abre mais por cima da lista de atualizações, e as colunas da lista ficaram alinhadas
 - A Biblioteca TWiLight acompanha o cartão escolhido na barra de cima
 - No macOS, imagens de disco montadas (como o DMG do instalador) não aparecem mais na lista de cartões
+- Temas do Pico Launcher instalados no cartão (Win95, PiCardboard, Nitro Menu e o raspberry incluído) voltam a aparecer em Launcher → Temas e podem ser escolhidos
 
 ### Desenvolvimento
 
