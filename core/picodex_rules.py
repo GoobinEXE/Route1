@@ -162,14 +162,67 @@ def is_degenerate_title(title: str) -> bool:
     return len(normalize_title(title)) <= 2
 
 
-def region_prefs_for(system_id: str, game_code: Optional[str]) -> tuple[str, ...]:
-    if system_id == "gba" and game_code and len(game_code) == 4:
-        return REGION_PREFS_BY_GBA_CODE.get(game_code[3], DEFAULT_REGION_PREFS)
+# Etiqueta de região no nome do arquivo (No-Intro) → ordem de preferência.
+_FILE_REGION_PREFS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("(usa", ("(USA", "(World", "(Europe")),
+    ("(brazil", ("(Brazil", "(USA", "(World", "(Europe")),
+    ("(europe", ("(Europe", "(World", "(USA")),
+    ("(japan", ("(Japan", "(USA", "(Europe")),
+    ("(spain", ("(Spain", "(Europe", "(USA")),
+    ("(france", ("(France", "(Europe", "(USA")),
+    ("(germany", ("(Germany", "(Europe", "(USA")),
+    ("(italy", ("(Italy", "(Europe", "(USA")),
+)
+
+
+def region_prefs_for(system_id: str, game_code: Optional[str], file_name: str = "") -> tuple[str, ...]:
+    """Ordem de regiões para escolher a capa.
+
+    A PicoDex usa a letra de região do game code só no GBA. O Route Pico usa
+    também no NDS (o 4.º caractere segue o mesmo padrão: E = EUA, P = Europa,
+    J = Japão) e, sem código, a etiqueta de região do nome do arquivo.
+    """
+    if system_id in ("gba", "nds") and game_code and len(game_code) == 4:
+        prefs = REGION_PREFS_BY_GBA_CODE.get(game_code[3])
+        if prefs:
+            return prefs
+    low = (file_name or "").lower()
+    for tag, prefs in _FILE_REGION_PREFS:
+        if tag in low:
+            return prefs
     return DEFAULT_REGION_PREFS
 
 
 def _strip_png(entry: str) -> str:
     return entry[:-4] if entry.lower().endswith(".png") else entry
+
+
+_SEQUEL_TOKEN = re.compile(r"^(?:\d+|ii|iii|iv|v|vi|vii|viii|ix|x|ds|zero)$")
+
+
+def _same_words(a: str, b: str) -> bool:
+    """Cada palavra de um título tem par (≥ 0,8) no outro, nos dois sentidos."""
+    ta, tb = a.split(), b.split()
+    if len(ta) != len(tb):
+        return False
+    return all(max(similarity_ratio(x, y) for y in tb) >= 0.8 for x in ta) and all(
+        max(similarity_ratio(y, x) for x in ta) >= 0.8 for y in tb
+    )
+
+
+def _subtitle_extension(key: str, by_norm: dict[str, list[str]]) -> Optional[str]:
+    if len(key.split()) < 2:
+        return None  # "mario" sozinho combina com dezenas de títulos
+    best: Optional[str] = None
+    for k in by_norm:
+        if not k.startswith(key + " "):
+            continue
+        nxt = k[len(key) + 1 :].split(" ", 1)[0]
+        if _SEQUEL_TOKEN.match(nxt):
+            continue
+        if best is None or len(k) < len(best):
+            best = k
+    return best
 
 
 def pick_boxart(title: str, catalog: list[str], region_prefs: tuple[str, ...] = DEFAULT_REGION_PREFS) -> Optional[str]:
@@ -194,11 +247,23 @@ def pick_boxart(title: str, catalog: list[str], region_prefs: tuple[str, ...] = 
         best_key, best_ratio = None, 0.0
         for k in by_norm:
             r = similarity_ratio(key, k)
-            if r >= FUZZY_CUTOFF and r > best_ratio:
+            # Melhoria sobre a PicoDex: o parecido só vale se as PALAVRAS
+            # batem. "brain age" ~ "brain voyage" dá 0,86, mas é outro jogo.
+            if r >= FUZZY_CUTOFF and r > best_ratio and _same_words(key, k):
                 best_key, best_ratio = k, r
         if best_key is not None:
             candidates = by_norm.get(best_key)
-    if not candidates and prefix_key is not None:
+    if not candidates:
+        # Melhoria: o nome do arquivo sem o subtítulo ("Brain Age" para
+        # "Brain Age - Train Your Brain…"). Entre os títulos que só acrescentam
+        # palavras, ignora continuações ("Brain Age 2") e fica com o mais curto.
+        ext = _subtitle_extension(key, by_norm)
+        if ext is not None:
+            candidates = by_norm.get(ext)
+    # Último recurso da PicoDex (o prefixo mais longo). Com uma palavra só
+    # ("mario") a escolha é arbitrária: melhor nenhuma capa do que a errada.
+    # Números (720, 1942, 007) continuam valendo, como a PicoDex documenta.
+    if not candidates and prefix_key is not None and (len(key.split()) >= 2 or key.isdigit()):
         candidates = by_norm.get(prefix_key)
     if not candidates:
         return None
@@ -235,9 +300,13 @@ def search_catalog(catalog: list[str], query: str, limit: int = 24) -> list[str]
 # --------------------------------------------------------------------------- #
 
 _BOXARTS_PREFIX = "Named_Boxarts/"
+_LOGOS_PREFIX = "Named_Logos/"
+# Uma só chamada à API (árvore recursiva) traz as capas e os logos do repo.
+CATALOG_KINDS = {"boxarts": _BOXARTS_PREFIX, "logos": _LOGOS_PREFIX}
 _CATALOG_TTL_S = 7 * 24 * 3600
 _REPO_RE = re.compile(r"^[A-Za-z0-9_\-]+$")
-_mem_catalog: dict[str, list[str]] = {}
+
+_mem_catalog: dict[str, dict[str, list[str]]] = {}
 
 
 class CatalogError(RuntimeError):
@@ -248,48 +317,71 @@ def catalog_url(repo: str) -> str:
     return f"https://api.github.com/repos/libretro-thumbnails/{repo}/git/trees/master?recursive=1"
 
 
-def boxart_url(repo: str, name: str) -> str:
+def thumb_url(repo: str, name: str, kind: str = "boxarts") -> str:
+    prefix = CATALOG_KINDS.get(kind, _BOXARTS_PREFIX)
     return (
         f"https://raw.githubusercontent.com/libretro-thumbnails/{repo}/master/"
-        f"{_BOXARTS_PREFIX}{urllib.parse.quote(name, safe='')}"
+        f"{prefix}{urllib.parse.quote(name, safe='')}"
     )
 
 
-def parse_catalog(trees_json: object) -> list[str]:
+def boxart_url(repo: str, name: str) -> str:
+    return thumb_url(repo, name, "boxarts")
+
+
+def parse_catalog_kinds(trees_json: object) -> dict[str, list[str]]:
+    """Nomes por tipo (``boxarts``/``logos``) a partir da árvore do repositório."""
     if not isinstance(trees_json, dict) or not isinstance(trees_json.get("tree"), list):
         raise CatalogError("Resposta inesperada da API do GitHub (árvore de capas).")
-    names = []
+    out: dict[str, list[str]] = {k: [] for k in CATALOG_KINDS}
     for entry in trees_json["tree"]:
         path = entry.get("path") if isinstance(entry, dict) else None
-        if isinstance(path, str) and path.startswith(_BOXARTS_PREFIX) and path.endswith(".png"):
-            names.append(path[len(_BOXARTS_PREFIX):])
-    return names
+        if not isinstance(path, str) or not path.endswith(".png"):
+            continue
+        for kind, prefix in CATALOG_KINDS.items():
+            if path.startswith(prefix):
+                out[kind].append(path[len(prefix):])
+                break
+    return out
+
+
+def parse_catalog(trees_json: object) -> list[str]:
+    return parse_catalog_kinds(trees_json)["boxarts"]
 
 
 def _cache_path(repo: str) -> str:
     return os.path.join(CACHE_DIR, "libretro_catalog", f"{repo}.json")
 
 
-def fetch_catalog(repo: str, *, timeout: int = 20, opener=urllib.request.urlopen) -> list[str]:
-    """Nomes das capas de um repo libretro-thumbnails (cache em disco 7 dias).
+def fetch_catalog(
+    repo: str, *, kind: str = "boxarts", timeout: int = 20, opener=urllib.request.urlopen
+) -> list[str]:
+    """Nomes de um repo libretro-thumbnails (cache em disco 7 dias).
 
-    A API do GitHub permite 60 pedidos/hora sem conta; o cache evita gastar
-    um pedido por jogo. Uma cache expirada continua a servir se a rede falhar.
+    ``kind``: ``boxarts`` (capas) ou ``logos``. A API do GitHub permite 60
+    pedidos/hora sem conta; o cache evita gastar um pedido por jogo e uma cache
+    expirada continua a servir se a rede falhar.
     """
     if not _REPO_RE.match(repo or ""):
         raise CatalogError("Repositório de capas inválido.")
-    if repo in _mem_catalog:
-        return _mem_catalog[repo]
+    if kind not in CATALOG_KINDS:
+        raise CatalogError("Tipo de catálogo inválido.")
+    mem = _mem_catalog.get(repo)
+    if mem is not None and kind in mem:
+        return mem[kind]
     path = _cache_path(repo)
-    stale: Optional[list[str]] = None
+    stale: Optional[dict[str, list[str]]] = None
     try:
         with open(path, encoding="utf-8") as f:
             cached = json.load(f)
         if isinstance(cached, dict) and isinstance(cached.get("names"), list):
-            stale = [n for n in cached["names"] if isinstance(n, str)]
-            if time.time() - float(cached.get("fetched_at", 0)) < _CATALOG_TTL_S:
+            stale = {"boxarts": [n for n in cached["names"] if isinstance(n, str)]}
+            if isinstance(cached.get("logos"), list):
+                stale["logos"] = [n for n in cached["logos"] if isinstance(n, str)]
+            # Cache antiga (sem logos) ainda vale para capas.
+            if kind in stale and time.time() - float(cached.get("fetched_at", 0)) < _CATALOG_TTL_S:
                 _mem_catalog[repo] = stale
-                return stale
+                return stale[kind]
     except (OSError, ValueError, TypeError):
         pass
     req = urllib.request.Request(
@@ -297,13 +389,13 @@ def fetch_catalog(repo: str, *, timeout: int = 20, opener=urllib.request.urlopen
     )
     try:
         with opener(req, timeout=timeout) as resp:  # nosec B310 - URL fixa api.github.com
-            names = parse_catalog(json.loads(resp.read().decode("utf-8")))
+            kinds = parse_catalog_kinds(json.loads(resp.read().decode("utf-8")))
     except CatalogError:
         raise
     except Exception as e:
-        if stale is not None:
+        if stale is not None and kind in stale:
             _mem_catalog[repo] = stale
-            return stale
+            return stale[kind]
         msg = str(e)
         if "403" in msg or "429" in msg:
             raise CatalogError("Limite da API do GitHub atingido (60 pedidos/hora sem conta); tente mais tarde.") from e
@@ -311,10 +403,10 @@ def fetch_catalog(repo: str, *, timeout: int = 20, opener=urllib.request.urlopen
     os.makedirs(os.path.dirname(path), exist_ok=True)
     tmp = path + ".partial"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"fetched_at": time.time(), "names": names}, f)
+        json.dump({"fetched_at": time.time(), "names": kinds["boxarts"], "logos": kinds["logos"]}, f)
     os.replace(tmp, path)
-    _mem_catalog[repo] = names
-    return names
+    _mem_catalog[repo] = kinds
+    return kinds[kind]
 
 
 # --------------------------------------------------------------------------- #

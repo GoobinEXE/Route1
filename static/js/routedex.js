@@ -6,6 +6,8 @@
 const RouteDex = (() => {
   const ALL_TABS = [
     ["library", "Biblioteca"],
+    ["covers", "Capas"],
+    ["stats", "Estatísticas"],
     ["health", "Saúde do cartão"],
     ["shots", "Capturas"],
     ["folders", "Pastas"],
@@ -25,6 +27,13 @@ const RouteDex = (() => {
   let healthSel = new Set();
   let folderSel = "";
   let vlist = null;
+  // Galeria por sistema (PicoDex SystemGallery) e capas que faltam (CoversView).
+  let gallerySystem = null;
+  let gallery = null;
+  let galleryQuery = "";
+  let galleryFilter = { fav: false, done: false };
+  let galleryCovers = {};
+  let coverSel = new Set();
 
   const esc = (s) => escapeHtml(String(s == null ? "" : s));
 
@@ -155,225 +164,448 @@ const RouteDex = (() => {
     if (force) {
       overview = null;
       health = null;
+      galleryCovers = {};
     }
     if (tab === "library") await drawLibrary(my);
+    else if (tab === "covers") await drawCovers(my);
+    else if (tab === "stats") await drawStats(my);
     else if (tab === "health") await drawHealth(my);
     else if (tab === "shots") await drawShots(my);
     else if (tab === "folders") await drawFolders(my);
     else if (tab === "cheats") await drawCheats(my);
   }
 
-  // ------------------------------------------------------------------ Biblioteca
+  // ------------------------------------------------------------------ Biblioteca (PicoDex LibraryView + SystemGallery)
 
   function enhancedNotice(ov) {
     const l = (ov && ov.launcher) || {};
     if (!l.present) {
       return `<div class="note note--warn">Este cartão não tem <code>_picoboot.nds</code>. Prepare o SD primeiro.</div>`;
     }
-    if (ov.enhanced) {
-      return `<div class="note note--ok"><strong>Pico Launcher Enhanced ${esc(
-        l.version || ""
-      )}</strong> no cartão: o próprio console grava favoritos, concluídos e tempo de jogo em <code>/_pico/gamedata.json</code>. As alterações feitas aqui aparecem no DS.</div>`;
-    }
+    if (ov.enhanced) return "";
     return `<div class="note">
-      <strong>O launcher oficial não usa estes dados.</strong> Favoritos, concluídos e estatísticas são do
+      <strong>O launcher oficial não usa favoritos nem estatísticas.</strong> Eles são do
       Pico Launcher Enhanced. Pode marcá-los já aqui; passam a aparecer no DS quando instalar a variante Enhanced
-      em <button type="button" class="routedex-link" id="routedex-go-updates">Verificar Atualizações</button>.
+      em <button type="button" class="routedex-link" id="routedex-go-updates">Verificar atualizações</button>.
     </div>`;
   }
 
-  function statTile(label, value) {
-    return `<div class="routedex-stat"><span class="stat-label">${esc(label)}</span><span class="stat-value">${esc(value)}</span></div>`;
-  }
-
-  function libraryRow(g) {
-    const fav = g.favorite ? " routedex-flag--on" : "";
-    const done = g.completed ? " routedex-flag--on" : "";
-    const meta = [];
-    if (g.launchCount) meta.push(`${g.launchCount}×`);
-    if (g.playMinutes) meta.push(fmtMinutes(g.playMinutes));
-    if (g.lastPlayed) meta.push(fmtDate(g.lastPlayed));
-    const div = document.createElement("div");
-    div.className = "routedex-row";
-    div.innerHTML = `
-      <button type="button" class="routedex-flag routedex-flag--fav${fav}" data-act="favorite" title="Favorito" aria-pressed="${!!g.favorite}" aria-label="Favorito"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.5S2 10 2 5.9A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.4C14 10 8 13.5 8 13.5z"/></svg></button>
-      <button type="button" class="routedex-flag routedex-flag--done${done}" data-act="completed" title="Concluído" aria-pressed="${!!g.completed}" aria-label="Concluído"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg></button>
-      <span class="routedex-name" title="${esc(g.rel)}">${esc(g.name)}</span>
-      <span class="routedex-sys">${esc(g.system === "retro" ? (g.name.split(".").pop() || "").toUpperCase() : g.system.toUpperCase())}</span>
-      <span class="routedex-meta">${esc(meta.join(" · "))}</span>
-      <button type="button" class="btn-ghost !text-[11px]" data-act="stats">Editar</button>`;
-    div.querySelectorAll("[data-act]").forEach((b) => {
-      b.onclick = () => onRowAction(g, b.getAttribute("data-act"));
-    });
-    return div;
-  }
-
-  async function onRowAction(g, act) {
-    if (act === "favorite" || act === "completed") {
-      const res = await write("toggle_routedex_flag", [g.rel, act]);
-      if (res && res.entry) {
-        Object.assign(g, res.entry);
-        refreshLibraryList();
-        refreshTotals();
-      }
-      return;
-    }
-    if (act === "stats") {
-      const lc = prompt(`Número de vezes jogado — ${g.name}`, String(g.launchCount || 0));
-      if (lc === null) return;
-      const pm = prompt(`Tempo de jogo em minutos — ${g.name}`, String(g.playMinutes || 0));
-      if (pm === null) return;
-      const res = await write("set_routedex_stats", [g.rel, lc.trim(), pm.trim()], "Estatísticas corrigidas.");
-      if (res && res.entry) {
-        Object.assign(g, res.entry);
-        refreshLibraryList();
-        refreshTotals();
-      }
-    }
-  }
-
-  function filteredLibrary() {
-    const lib = (overview && overview.library) || [];
-    const q = query.trim().toLowerCase();
-    return lib.filter((g) => {
-      if (filter === "fav" && !g.favorite) return false;
-      if (filter === "done" && !g.completed) return false;
-      if (filter === "played" && !g.launchCount) return false;
-      if (q && !g.name.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }
-
-  function refreshLibraryList() {
-    const list = host && host.querySelector("#routedex-list");
-    if (!list) return;
-    const items = filteredLibrary();
-    const count = host.querySelector("#routedex-count");
-    if (count) count.textContent = `${items.length} de ${(overview.library || []).length}`;
-    if (items.length > 200 && window.R1K && R1K.virtual) {
-      if (!vlist) vlist = R1K.virtual.createVirtualList(list, items, { rowHeight: 44, renderRow: (g) => libraryRow(g) });
-      else vlist.setItems(items);
-      return;
-    }
-    if (vlist && vlist.destroy) vlist.destroy();
-    vlist = null;
-    list.classList.remove("vgrid");
-    list.innerHTML = "";
-    if (!items.length) {
-      list.innerHTML = `<p class="text-[12px] text-fg-mute p-3">Nenhum jogo com este filtro.</p>`;
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    items.forEach((g) => frag.appendChild(libraryRow(g)));
-    list.appendChild(frag);
-  }
-
-  function refreshTotals() {
-    const lib = (overview && overview.library) || [];
-    const t = { favorites: 0, completed: 0, played: 0, launches: 0, minutes: 0 };
-    lib.forEach((g) => {
-      t.favorites += g.favorite ? 1 : 0;
-      t.completed += g.completed ? 1 : 0;
-      if (g.launchCount) {
-        t.played += 1;
-        t.launches += g.launchCount;
-        t.minutes += g.playMinutes || 0;
-      }
-    });
-    const el = host && host.querySelector("#routedex-totals");
-    if (el) {
-      el.innerHTML =
-        statTile("Jogos", lib.length) +
-        statTile("Jogados", t.played) +
-        statTile("Favoritos", t.favorites) +
-        statTile("Concluídos", t.completed) +
-        statTile("Partidas", t.launches) +
-        statTile("Tempo total", fmtMinutes(t.minutes));
-    }
-  }
-
-  async function drawLibrary(my) {
-    loading();
-    let ov;
-    try {
-      ov = overview || (await (await api()).get_routedex_overview(mountPath));
-    } catch (e) {
-      ov = { success: false, error: e.message || String(e) };
-    }
-    if (my !== gen) return;
-    const b = body();
-    if (!(ov && ov.success)) {
-      b.innerHTML = errorHtml(ov && ov.error);
-      return;
-    }
-    overview = ov;
-    const recent = (ov.recent || [])
-      .slice(0, 6)
-      .map((e) => `<li><span class="truncate">${esc(e.fileName)}</span><span class="text-fg-mute">${esc(fmtDate(e.lastPlayed))}</span></li>`)
-      .join("");
-    const top = (ov.top || [])
-      .slice(0, 6)
-      .map((e) => `<li><span class="truncate">${esc(e.fileName)}</span><span class="text-fg-mute">${esc(e.launchCount)}× · ${esc(fmtMinutes(e.playMinutes))}</span></li>`)
-      .join("");
-    const stale = ov.stale || [];
-    b.innerHTML = `
-      ${ov.parse_error ? `<div class="note note--warn"><strong>gamedata.json não foi lido.</strong> ${esc(ov.parse_error)}</div>` : ""}
-      ${enhancedNotice(ov)}
-      <div class="routedex-stats" id="routedex-totals"></div>
-      ${
-        recent || top
-          ? `<div class="routedex-cols">
-              <div><h4 class="routedex-h">Jogados recentemente</h4><ul class="routedex-mini">${recent || "<li class='text-fg-mute'>—</li>"}</ul></div>
-              <div><h4 class="routedex-h">Mais jogados</h4><ul class="routedex-mini">${top || "<li class='text-fg-mute'>—</li>"}</ul></div>
-            </div>`
-          : ""
-      }
-      <div class="routedex-toolbar">
-        <input type="search" id="routedex-q" class="field-select routedex-input" placeholder="Procurar jogo…" value="${esc(query)}" aria-label="Procurar jogo">
-        <select id="routedex-filter" class="field-select" aria-label="Filtro">
-          <option value="all"${filter === "all" ? " selected" : ""}>Todos</option>
-          <option value="fav"${filter === "fav" ? " selected" : ""}>Favoritos</option>
-          <option value="done"${filter === "done" ? " selected" : ""}>Concluídos</option>
-          <option value="played"${filter === "played" ? " selected" : ""}>Já jogados</option>
-        </select>
-        <span class="text-[11px] text-fg-mute" id="routedex-count"></span>
-      </div>
-      <div id="routedex-list" class="routedex-list"></div>
-      ${
-        stale.length
-          ? `<div class="note mt-3"><strong>${stale.length} entrada(s) de jogos que não estão mais no cartão.</strong>
-              <span class="text-fg-mute">${esc(stale.slice(0, 5).map((e) => e.fileName).join(", "))}${stale.length > 5 ? "…" : ""}</span>
-              <div class="mt-2"><button type="button" class="btn-ghost !text-[11px]" id="routedex-prune">Remover entradas órfãs</button></div></div>`
-          : ""
-      }`;
-    refreshTotals();
-    refreshLibraryList();
-    const q = b.querySelector("#routedex-q");
-    if (q)
-      q.oninput = () => {
-        query = q.value;
-        refreshLibraryList();
-      };
-    const f = b.querySelector("#routedex-filter");
-    if (f)
-      f.onchange = () => {
-        filter = f.value;
-        refreshLibraryList();
-      };
-    const go = b.querySelector("#routedex-go-updates");
+  function bindGoUpdates(root) {
+    const go = root.querySelector("#routedex-go-updates");
     if (go)
       go.onclick = () => {
         if (!(window.R1K && R1K.shell && R1K.updates)) return;
         R1K.shell.go("dspico", "cartao");
         R1K.updates.check();
       };
-    const prune = b.querySelector("#routedex-prune");
-    if (prune)
-      prune.onclick = async () => {
+  }
+
+  function statTile(label, value) {
+    return `<div class="routedex-stat"><span class="stat-label">${esc(label)}</span><span class="stat-value">${esc(value)}</span></div>`;
+  }
+
+  const CAP_LABELS = { game_loading: "abre jogos", return_to_launcher: "volta ao launcher", cheats: "cheats" };
+
+  function componentsHtml(lib) {
+    const l = lib.launcher || {};
+    const ld = lib.loader || {};
+    const when = l.updated ? ` · atualizado em ${new Date(l.updated * 1000).toLocaleDateString("pt-BR")}` : "";
+    const lname = !l.present ? `<span class="text-danger">Não encontrado</span>` : `${l.variant === "enhanced" ? "Pico Launcher Enhanced" : l.variant === "official" ? "Pico Launcher" : "Launcher não reconhecido"} ${esc(l.version || "")}${l.variant === "enhanced" ? ` <span class="pdx-pill pdx-pill--soft">Enhanced</span>` : ""}<span class="text-fg-mute">${esc(when)}</span>`;
+    let lo = `<span class="text-danger">Não encontrado</span>`;
+    if (ld.status && ld.status !== "no-loader") {
+      const ver = ld.variant === "enhanced" ? `Loader Enhanced ${esc(ld.enhanced_version || "")}` : (ld.candidates || []).length ? esc(ld.candidates[ld.candidates.length - 1]) : "versão não identificada";
+      const api = ld.api_version ? ` · instalado (API v${esc(ld.api_version)})` : "";
+      const caps = (ld.capabilities || []).map((c) => `<span class="pdx-pill pdx-pill--soft">${esc(CAP_LABELS[c] || c)}</span>`).join(" ");
+      lo = `${ver}<span class="text-fg-mute">${api}</span> ${caps}`;
+    }
+    return `<div class="routedex-kv" aria-label="Componentes do cartão">
+      <div><span class="stat-label">Launcher</span><span>${lname}</span></div>
+      <div><span class="stat-label">Pico Loader</span><span>${lo}</span></div>
+    </div>`;
+  }
+
+  async function drawLibrary(my) {
+    if (gallerySystem) return drawGallery(my);
+    loading("Lendo a biblioteca…");
+    let lib;
+    try {
+      lib = await (await api()).get_routedex_library(mountPath);
+    } catch (e) {
+      lib = { success: false, error: e.message || String(e) };
+    }
+    if (my !== gen) return;
+    const b = body();
+    if (!(lib && lib.success)) {
+      b.innerHTML = errorHtml(lib && lib.error);
+      return;
+    }
+    const t = lib.totals || {};
+    const cards = (lib.systems || [])
+      .map((s) => {
+        const pct = s.count ? Math.round((s.covered / s.count) * 100) : 0;
+        const shared = (s.shares_folder_with || []).length;
+        return `<article class="pdx-sys">
+          <header class="pdx-sys-head">
+            <h4 class="pdx-sys-name">${esc(s.label)}</h4>
+            ${
+              s.folder
+                ? `<button type="button" class="btn-ghost !px-2 !py-1 pdx-sys-banner" data-banner="${esc(s.folder)}" title="Editar o banner da pasta ${esc(s.folder)} (ícone e nome no launcher)" aria-label="Editar o banner de ${esc(s.label)}"><svg class="ico" aria-hidden="true"><use href="#i-edit"/></svg></button>`
+                : ""
+            }
+          </header>
+          <p class="pdx-sys-count">${s.count === 1 ? "1 jogo" : `${s.count} jogos`}${s.has_banner ? ` · <span class="text-fg-mute">com banner</span>` : ""}${shared ? ` · <span class="text-fg-mute">divide a pasta com ${esc(s.shares_folder_with.join(", "))}</span>` : ""}</p>
+          <div class="pdx-meter" role="img" aria-label="${s.covered} de ${s.count} com capa"><span style="width:${pct}%"></span></div>
+          <p class="pdx-sys-covers">${s.covered}/${s.count} capas</p>
+          <button type="button" class="btn-secondary btn-sm" data-system="${esc(s.id)}">Ver jogos</button>
+        </article>`;
+      })
+      .join("");
+    b.innerHTML = `
+      ${lib.gamedata_problem ? `<div class="note note--warn"><strong>gamedata.json não foi lido.</strong> ${esc(lib.gamedata_problem)}</div>` : ""}
+      <div class="routedex-stats">
+        ${statTile("Jogos", t.games || 0)}${statTile("Sistemas", t.systems || 0)}${statTile("Favoritos", t.favorites || 0)}${statTile("Tempo de jogo", fmtMinutes(t.minutes || 0))}
+      </div>
+      ${
+        cards
+          ? `<div class="pdx-sys-grid">${cards}</div>`
+          : `<div class="note">Nenhum jogo no cartão. O Route Pico procura em todas as pastas, exceto <code>/_pico</code>: os jogos podem estar em <code>Games/nds</code>, numa pasta própria ou em qualquer outro lugar. Copie os jogos para o cartão e toque em Atualizar.</div>`
+      }
+      ${componentsHtml(lib)}`;
+    b.querySelectorAll("[data-system]").forEach((btn) => {
+      btn.onclick = () => {
+        gallerySystem = btn.getAttribute("data-system");
+        galleryQuery = "";
+        galleryFilter = { fav: false, done: false };
+        draw();
+      };
+    });
+    b.querySelectorAll("[data-banner]").forEach((btn) => {
+      btn.onclick = () => R1K.picodex.openBannerEditor(mountPath, btn.getAttribute("data-banner"), { onSaved: () => draw(true) });
+    });
+  }
+
+  function normalize(s) {
+    return String(s || "")
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase();
+  }
+
+  function galleryItems() {
+    const q = normalize(galleryQuery.trim());
+    return ((gallery && gallery.games) || []).filter((g) => {
+      if (galleryFilter.fav && !g.favorite) return false;
+      if (galleryFilter.done && !g.completed) return false;
+      if (q && !normalize(g.title).includes(q)) return false;
+      return true;
+    });
+  }
+
+  function cardHtml(g, isNds) {
+    const cover = galleryCovers[g.rel];
+    const play = g.launchCount || g.playMinutes ? `${g.launchCount}× · ${fmtMinutes(g.playMinutes)}` : "Editar";
+    return `<article class="pdx-card" data-rel="${esc(g.rel)}">
+      <button type="button" class="pdx-card-cover" data-act="cover" aria-label="Trocar a capa de ${esc(g.title)}" title="Escolher a capa certa">
+        ${typeof cover === "string" && cover.startsWith("data:image/") ? `<img src="${cover}" alt="Capa de ${esc(g.title)}" loading="lazy">` : `<span class="pdx-card-empty">${esc(g.title)}</span>`}
+        <span class="pdx-card-edit" aria-hidden="true"><svg class="ico"><use href="#i-edit"/></svg></span>
+      </button>
+      <div class="pdx-card-body">
+        <span class="pdx-card-title" title="${esc(g.name)}">${esc(g.title)}</span>
+        <div class="pdx-card-actions">
+          <button type="button" class="routedex-flag routedex-flag--fav${g.favorite ? " routedex-flag--on" : ""}" data-act="favorite" aria-pressed="${!!g.favorite}" aria-label="Favorito: ${esc(g.title)}" title="${g.favorite ? "Tirar dos favoritos" : "Marcar como favorito"}"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 13.5S2 10 2 5.9A3 3 0 0 1 8 4.5a3 3 0 0 1 6 1.4C14 10 8 13.5 8 13.5z"/></svg></button>
+          <button type="button" class="routedex-flag routedex-flag--done${g.completed ? " routedex-flag--on" : ""}" data-act="completed" aria-pressed="${!!g.completed}" aria-label="Concluído: ${esc(g.title)}" title="${g.completed ? "Desmarcar como concluído" : "Marcar como concluído"}"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8"/></svg></button>
+          <button type="button" class="pdx-play" data-act="stats" title="Corrigir partidas e tempo de jogo" aria-label="Estatísticas de ${esc(g.title)}">${esc(play)}</button>
+          ${isNds ? `<button type="button" class="pdx-play" data-act="compat" title="O que o loader faz com este jogo" aria-label="Compatibilidade de ${esc(g.title)}">Loader</button>` : ""}
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function refreshGalleryGrid() {
+    const grid = host && host.querySelector("#pdx-gallery");
+    if (!grid) return;
+    const items = galleryItems();
+    const total = ((gallery && gallery.games) || []).length;
+    const count = host.querySelector("#pdx-gallery-count");
+    if (count) count.textContent = `${items.length} de ${total}`;
+    if (!total) {
+      grid.innerHTML = `<p class="text-[12px] text-fg-mute">Nenhum jogo de ${esc(gallery.system.label)} neste cartão.</p>`;
+      return;
+    }
+    if (!items.length) {
+      grid.innerHTML = `<p class="text-[12px] text-fg-mute">Nenhum jogo corresponde à busca.</p>`;
+      return;
+    }
+    grid.innerHTML = items.map((g) => cardHtml(g, gallery.system.is_nds)).join("");
+    grid.querySelectorAll(".pdx-card").forEach((card) => {
+      const g = items.find((x) => x.rel === card.getAttribute("data-rel"));
+      card.querySelectorAll("[data-act]").forEach((btn) => {
+        btn.onclick = () => onCardAction(g, btn.getAttribute("data-act"));
+      });
+    });
+  }
+
+  async function onCardAction(g, act) {
+    if (!g) return;
+    if (act === "favorite" || act === "completed") {
+      const res = await write("toggle_routedex_flag", [g.rel, act]);
+      if (res && res.entry) {
+        g.favorite = !!res.entry.favorite;
+        g.completed = !!res.entry.completed;
+        refreshGalleryGrid();
+      }
+    } else if (act === "stats") {
+      R1K.picodex.openStatsEditor(mountPath, g, {
+        onSaved: (e) => {
+          g.launchCount = Number(e.launchCount) || 0;
+          g.playMinutes = Number(e.playMinutes) || 0;
+          refreshGalleryGrid();
+        },
+      });
+    } else if (act === "compat") {
+      R1K.picodex.openCompat(mountPath, g.rel, g.title);
+    } else if (act === "cover") {
+      R1K.picodex.openCoverPicker(mountPath, g.rel, {
+        onSaved: async () => {
+          const r = await (await api()).get_routedex_gallery_covers(mountPath, [g.rel]);
+          if (r && r.success) Object.assign(galleryCovers, r.covers || {});
+          g.has_cover = !!galleryCovers[g.rel];
+          refreshGalleryGrid();
+        },
+      });
+    }
+  }
+
+  async function drawGallery(my) {
+    loading("Lendo os jogos…");
+    const a = await api();
+    let gl;
+    try {
+      gl = await a.get_routedex_gallery(mountPath, gallerySystem);
+    } catch (e) {
+      gl = { success: false, error: e.message || String(e) };
+    }
+    if (my !== gen) return;
+    const b = body();
+    if (!(gl && gl.success)) {
+      b.innerHTML = errorHtml(gl && gl.error);
+      return;
+    }
+    gallery = gl;
+    const label = gl.system.label;
+    b.innerHTML = `
+      <div class="pdx-gallery-head">
+        <button type="button" class="btn-ghost btn-sm" id="pdx-back">← Biblioteca</button>
+        <h4 class="pdx-sys-name">${esc(label)}</h4>
+        <span class="text-[11px] text-fg-mute" id="pdx-gallery-count"></span>
+      </div>
+      <div class="routedex-toolbar">
+        <input type="search" id="pdx-gq" class="field-select routedex-input" placeholder="Procurar em ${esc(label)}…" value="${esc(galleryQuery)}" aria-label="Procurar jogos de ${esc(label)}">
+        <label class="pdx-radio"><input type="checkbox" id="pdx-gf-fav"${galleryFilter.fav ? " checked" : ""}> Favoritos</label>
+        <label class="pdx-radio"><input type="checkbox" id="pdx-gf-done"${galleryFilter.done ? " checked" : ""}> Concluídos</label>
+      </div>
+      <p class="text-[11px] text-fg-mute" id="pdx-gallery-loading" role="status"></p>
+      <div id="pdx-gallery" class="pdx-gallery"></div>`;
+    b.querySelector("#pdx-back").onclick = () => {
+      gallerySystem = null;
+      draw();
+    };
+    const q = b.querySelector("#pdx-gq");
+    q.oninput = () => {
+      galleryQuery = q.value;
+      refreshGalleryGrid();
+    };
+    b.querySelector("#pdx-gf-fav").onchange = (e) => {
+      galleryFilter.fav = e.target.checked;
+      refreshGalleryGrid();
+    };
+    b.querySelector("#pdx-gf-done").onchange = (e) => {
+      galleryFilter.done = e.target.checked;
+      refreshGalleryGrid();
+    };
+    refreshGalleryGrid();
+    // Capas em lotes (o cartão pode ter centenas de jogos).
+    const want = gl.games.filter((g) => g.has_cover && !(g.rel in galleryCovers)).map((g) => g.rel);
+    const status = b.querySelector("#pdx-gallery-loading");
+    for (let i = 0; i < want.length; i += 40) {
+      if (my !== gen) return;
+      if (status) status.textContent = `Carregando capas ${Math.min(i + 40, want.length)}/${want.length}…`;
+      const r = await a.get_routedex_gallery_covers(mountPath, want.slice(i, i + 40));
+      if (my !== gen) return;
+      if (r && r.success) Object.assign(galleryCovers, r.covers || {});
+      refreshGalleryGrid();
+    }
+    if (status) status.textContent = "";
+  }
+
+  // ------------------------------------------------------------------ Capas que faltam (CoversView)
+
+  async function drawCovers(my) {
+    loading("Procurando jogos sem capa…");
+    let r;
+    try {
+      r = await (await api()).get_missing_covers(mountPath);
+    } catch (e) {
+      r = { success: false, error: e.message || String(e) };
+    }
+    if (my !== gen) return;
+    const b = body();
+    if (!(r && r.success)) {
+      b.innerHTML = errorHtml(r && r.error);
+      return;
+    }
+    const intro = `<p class="text-[12px] text-fg-mute">Encontra os jogos do cartão sem capa e baixa as capas do catálogo libretro-thumbnails. Só entra a capa certa do jogo: quando não há um par exato, o jogo fica sem capa em vez de ganhar a de outro. As capas vão direto para o cartão, prontas para o launcher. Ícones não são trocados.</p>`;
+    if (!r.total) {
+      b.innerHTML = intro + `<div class="note">Nenhum jogo neste cartão.</div>`;
+      return;
+    }
+    if (!r.missing.length) {
+      b.innerHTML = intro + `<div class="note note--ok">${r.total === 1 ? "O seu jogo já tem capa." : `Todos os ${r.total} jogos já têm capa.`}</div>`;
+      return;
+    }
+    coverSel = new Set(r.missing.map((m) => m.rel));
+    const rows = r.missing
+      .map(
+        (m) => `<label class="pdx-miss">
+          <input type="checkbox" data-rel="${esc(m.rel)}" checked>
+          <span class="pdx-miss-name" title="${esc(m.rel)}">${esc(m.title)}</span>
+          <span class="routedex-sys">${esc(m.system_label)}</span>
+          ${m.no_gamecode ? `<span class="pdx-hint" title="Sem código de jogo, a capa vai pelo nome do arquivo: renomear o arquivo perde a capa.">sem código</span>` : ""}
+          <span class="pdx-miss-status" data-status="${esc(m.rel)}"></span>
+        </label>`
+      )
+      .join("");
+    b.innerHTML = `${intro}
+      <div class="routedex-toolbar">
+        <strong class="text-[13px]">Faltam capas</strong>
+        <button type="button" class="btn-ghost btn-sm" id="pdx-sel-all">Selecionar todos</button>
+        <button type="button" class="btn-ghost btn-sm" id="pdx-sel-none">Nenhum</button>
+        <span class="flex-1"></span>
+        <button type="button" class="btn-primary" id="pdx-fetch"></button>
+      </div>
+      <p class="text-[12px] text-fg-mute" id="pdx-fetch-msg" role="status" aria-live="polite"></p>
+      <div class="pdx-miss-list">${rows}</div>
+      <p class="pdx-hint">Para um jogo que ficou sem capa, escolha uma à mão pelo lápis na capa, em Biblioteca.</p>`;
+    const btn = b.querySelector("#pdx-fetch");
+    const label = () => {
+      btn.textContent = coverSel.size === 1 ? "Buscar 1 capa" : `Buscar ${coverSel.size} capas`;
+      btn.disabled = !coverSel.size;
+    };
+    label();
+    b.querySelectorAll(".pdx-miss input").forEach((cb) => {
+      cb.onchange = () => {
+        if (cb.checked) coverSel.add(cb.dataset.rel);
+        else coverSel.delete(cb.dataset.rel);
+        label();
+      };
+    });
+    const setAll = (on) => {
+      b.querySelectorAll(".pdx-miss input").forEach((cb) => {
+        cb.checked = on;
+        if (on) coverSel.add(cb.dataset.rel);
+        else coverSel.delete(cb.dataset.rel);
+      });
+      label();
+    };
+    b.querySelector("#pdx-sel-all").onclick = () => setAll(true);
+    b.querySelector("#pdx-sel-none").onclick = () => setAll(false);
+    btn.onclick = async () => {
+      const rels = [...coverSel];
+      b.querySelector("#pdx-fetch-msg").textContent = `Buscando capas para ${rels.length} jogo(s)…`;
+      const res = await write("fetch_missing_covers", [rels]);
+      if (!res) return;
+      const LABEL = { written: "Gravada", "no-match": "Sem par no catálogo", error: "Falhou" };
+      (res.results || []).forEach((x) => {
+        const cell = b.querySelector(`[data-status="${CSS.escape(x.rel)}"]`);
+        if (!cell) return;
+        cell.innerHTML = `${x.preview ? `<img class="pdx-miss-thumb" src="${x.preview}" alt="Capa gravada">` : ""}<span class="${x.status === "written" ? "text-ok" : x.status === "error" ? "text-danger" : "text-fg-mute"}">${esc(LABEL[x.status] || x.status)}${x.via_banner ? " · pelo nome gravado no jogo" : ""}${x.error ? ` (${esc(x.error)})` : ""}</span>`;
+      });
+      b.querySelector("#pdx-fetch-msg").textContent = res.cancelled
+        ? `Cancelado: ${res.written} gravada(s).`
+        : `Pronto: ${res.written} gravada(s) · ${res.no_match} sem par · ${res.failed} com falha.`;
+      galleryCovers = {};
+    };
+  }
+
+  // ------------------------------------------------------------------ Estatísticas (StatsView)
+
+  async function drawStats(my) {
+    loading();
+    const a = await api();
+    let st;
+    try {
+      st = await a.get_routedex_stats(mountPath);
+    } catch (e) {
+      st = { success: false, error: e.message || String(e) };
+    }
+    if (my !== gen) return;
+    const b = body();
+    if (!(st && st.success)) {
+      b.innerHTML = errorHtml(st && st.error);
+      return;
+    }
+    const t = st.totals || {};
+    const thumb = (name) => `<span class="pdx-stat-thumb" data-cover="${esc(name)}"></span>`;
+    const table = (rows, cols) =>
+      rows.length
+        ? `<table class="pdx-table"><thead><tr><th>Jogo</th>${cols.map((c) => `<th class="text-right">${c[0]}</th>`).join("")}</tr></thead><tbody>${rows
+            .map((e) => `<tr><td><span class="pdx-stat-game">${thumb(e.fileName)}<span>${esc(e.fileName.replace(/\.[^.]+$/, ""))}</span></span></td>${cols.map((c) => `<td class="text-right text-fg-mute">${esc(c[1](e))}</td>`).join("")}</tr>`)
+            .join("")}</tbody></table>`
+        : `<p class="text-[12px] text-fg-mute">Nenhum jogo foi aberto ainda.</p>`;
+    const favs = st.favorites || [];
+    b.innerHTML = `
+      ${st.parse_error ? `<div class="note note--warn"><strong>gamedata.json não foi lido.</strong> ${esc(st.parse_error)}</div>` : ""}
+      ${enhancedNotice(st)}
+      ${
+        !t.launches && !favs.length
+          ? `<div class="note"><strong>Ainda não há estatísticas.</strong> O Pico Launcher Enhanced registra as partidas, o tempo de jogo e os favoritos de cada jogo. Abra algo pelo launcher e ele aparece aqui.</div>`
+          : ""
+      }
+      <div class="routedex-stats">
+        ${statTile("Jogos jogados", t.played || 0)}${statTile("Favoritos", t.favorites || 0)}${statTile("Concluídos", t.completed || 0)}${statTile("Partidas", t.launches || 0)}${statTile("Tempo total", fmtMinutes(t.minutes || 0))}
+      </div>
+      <div class="routedex-cols">
+        <div><h4 class="routedex-h">Mais jogados</h4>${table(st.top || [], [["Partidas", (e) => `${e.launchCount}×`], ["Tempo", (e) => fmtMinutes(e.playMinutes)]])}</div>
+        <div><h4 class="routedex-h">Jogados recentemente</h4>${table(st.recent || [], [["Quando", (e) => fmtDate(e.lastPlayed)]])}</div>
+      </div>
+      <h4 class="routedex-h">Favoritos</h4>
+      ${
+        favs.length
+          ? `<div class="pdx-fav-row">${favs.map((f) => `<div class="pdx-fav">${thumb(f.fileName)}<span>${esc(f.fileName.replace(/\.[^.]+$/, ""))}</span></div>`).join("")}</div>`
+          : `<p class="text-[12px] text-fg-mute">Ainda não há favoritos. No launcher, aperte X num jogo para marcar.</p>`
+      }
+      <div id="pdx-stale"></div>`;
+    bindGoUpdates(b);
+    const names = [...new Set([...(st.top || []), ...(st.recent || []), ...favs].map((e) => e.fileName))];
+    if (names.length) {
+      const r = await a.get_routedex_covers_by_name(mountPath, names);
+      if (my !== gen) return;
+      const covers = (r && r.covers) || {};
+      b.querySelectorAll("[data-cover]").forEach((el) => {
+        const u = covers[el.getAttribute("data-cover")];
+        if (typeof u === "string" && u.startsWith("data:image/")) el.innerHTML = `<img src="${u}" alt="">`;
+      });
+    }
+    // Entradas de jogos que saíram do cartão (limpeza do gamedata.json).
+    let ov = null;
+    try {
+      ov = await a.get_routedex_overview(mountPath);
+    } catch (_e) {
+      ov = null;
+    }
+    if (my !== gen || !(ov && ov.success)) return;
+    const stale = ov.stale || [];
+    const box = b.querySelector("#pdx-stale");
+    if (stale.length && box) {
+      box.innerHTML = `<div class="note mt-3"><strong>${stale.length} entrada(s) de jogos que não estão mais no cartão.</strong>
+        <span class="text-fg-mute">${esc(stale.slice(0, 5).map((e) => e.fileName).join(", "))}${stale.length > 5 ? "…" : ""}</span>
+        <div class="mt-2"><button type="button" class="btn-ghost btn-sm" id="routedex-prune">Remover entradas órfãs</button></div></div>`;
+      box.querySelector("#routedex-prune").onclick = async () => {
         if (!confirm(`Remover ${stale.length} entrada(s) do gamedata.json?\n\nUma cópia do arquivo fica no computador.`)) return;
         const res = await write("prune_routedex_entries", [stale.map((e) => e.fileName)], "Entradas órfãs removidas.");
         if (res) draw(true);
       };
+    }
   }
 
   // ------------------------------------------------------------------ Saúde
@@ -390,10 +622,17 @@ const RouteDex = (() => {
     if (s === "unrecognised") return `<span class="text-warn">Versão não reconhecida (build própria ou release mais nova que esta app).</span>`;
     const cands = ld.candidates || [];
     const ver = cands.length ? cands[cands.length - 1] : "";
-    const behind = ld.releases_behind ? ` · ${ld.releases_behind} release(s) atrás de ${esc(ld.latest_known)}` : " · em dia";
+    // Com o Loader Enhanced, a versão oficial identificada é a base do fork, não algo a atualizar.
+    const behind =
+      ld.variant === "enhanced"
+        ? " · base oficial do fork"
+        : ld.releases_behind
+          ? ` · ${ld.releases_behind} release(s) atrás de ${esc(ld.latest_known)}`
+          : " · em dia";
     const builds = (ld.builds || []).length ? ` · build ${esc(ld.builds.join("/"))}` : "";
     const src = ld.source && ld.source.tag ? ` · dados PicoDex ${esc(ld.source.tag)}` : "";
-    return `<span class="text-ok">Pico Loader ${esc(ver)}</span>${variant}<span class="text-fg-mute">${cands.length ? behind : ""}${builds}${src}</span>`;
+    const api = ld.api_version ? ` · API v${esc(ld.api_version)} (${(ld.capabilities || []).map((c) => CAP_LABELS[c] || c).join(", ")})` : "";
+    return `<span class="text-ok">Pico Loader ${esc(ver)}</span>${variant}<span class="text-fg-mute">${cands.length ? behind : ""}${builds}${api}${src}</span>`;
   }
 
   function launcherLine(l) {
@@ -432,13 +671,17 @@ const RouteDex = (() => {
       return;
     }
     health = h;
-    // O lixo do macOS tem um dono só: Manutenção → Limpar metadados (vale para qualquer cartão).
+    // Como a PicoDex: só ._* e .DS_Store são lixo a limpar; as pastas que o
+    // macOS recria (.Trashes, .Spotlight-V100, .fseventsd) aparecem como aviso.
     healthSel = new Set([...healthSel].filter((r) => h.orphan_saves.includes(r) || h.orphan_art.includes(r)));
     const problems = (h.problems || []).map((p) => `<li>${esc(p)}</li>`).join("");
     const dups = (h.duplicate_saves || [])
       .map((d) => `<li><code>${esc(d.beside)}</code> e <code>${esc(d.in_folder)}</code></li>`)
       .join("");
     const removable = h.orphan_saves.length + h.orphan_art.length;
+    const macDirs = (h.macos_dirs || []).filter((d) => !d.kept).map((d) => d.rel);
+    const keptFsevents = (h.macos_dirs || []).some((d) => d.kept);
+    const badArt = [...(h.cover_problems || []).map((x) => ({ ...x, kind: "Capa" })), ...(h.icon_problems || []).map((x) => ({ ...x, kind: "Ícone" }))];
     b.innerHTML = `
       <div class="routedex-kv">
         <div><span class="stat-label">Launcher</span><span>${launcherLine(h.launcher)}</span></div>
@@ -458,7 +701,20 @@ const RouteDex = (() => {
       }
       ${
         h.junk.length
-          ? `<div class="note flex flex-wrap items-center justify-between gap-2"><span>${h.junk.length} arquivo(s) de lixo do macOS (<code>._*</code>, <code>.DS_Store</code>).</span><button type="button" class="btn-ghost btn-sm" data-goto="tools:card">Limpar em Manutenção</button></div>`
+          ? `<div class="note flex flex-wrap items-center justify-between gap-2"><span>${h.junk.length === 1 ? "1 arquivo deixado" : `${h.junk.length} arquivos deixados`} pelo macOS (<code>._*</code> e <code>.DS_Store</code>). Podem ser apagados sem problema: aparecem no launcher como jogos quebrados.</span><button type="button" class="btn-ghost btn-sm" id="routedex-clean-junk">Limpar ${h.junk.length === 1 ? "1 arquivo" : `${h.junk.length} arquivos`}</button></div>`
+          : `<div class="note note--ok">Nenhum arquivo de lixo do macOS.</div>`
+      }
+      ${
+        macDirs.length
+          ? `<p class="text-[11px] text-fg-mute">O macOS mantém ${macDirs.map((d) => `<code>${esc(d)}</code>`).join(", ")} no cartão e recria essas pastas toda vez que o cartão é ligado num Mac. Elas não atrapalham o launcher, então podem ficar. (A <code>.Trashes</code> é a lixeira do cartão e pode guardar arquivos apagados.)</p>`
+          : ""
+      }
+      ${keptFsevents ? `<p class="text-[11px] text-fg-mute"><code>.fseventsd</code> só tem um arquivo <code>no_log</code>, que impede o macOS de registrar as mudanças no cartão. Deixe como está.</p>` : ""}
+      ${
+        badArt.length
+          ? `<div class="note note--warn"><strong>${badArt.length === 1 ? "1 imagem que o launcher não mostra" : `${badArt.length} imagens que o launcher não mostra`}</strong>
+              <p class="text-[12px] mt-1">${badArt.length === 1 ? "Ela não está" : "Elas não estão"} no formato que o launcher lê: no console, uma capa assim aparece como ruído ou some, e um ícone aparece em branco. Isso costuma vir de salvar a imagem num editor. Abra o jogo em RouteDex → Biblioteca e salve a capa de novo: o Route Pico grava no formato certo.</p>
+              <ul class="routedex-ul">${badArt.map((x) => `<li>${esc(x.kind)} <code>${esc(x.rel)}</code> <span class="text-fg-mute">${esc(x.reason)}</span></li>`).join("")}</ul></div>`
           : ""
       }
       ${checkList("Saves sem jogo", h.orphan_saves, "saves")}
@@ -493,6 +749,13 @@ const RouteDex = (() => {
         });
       };
     });
+    const cj = b.querySelector("#routedex-clean-junk");
+    if (cj)
+      cj.onclick = async () => {
+        if (!confirm(`Apagar ${h.junk.length} arquivo(s) ._* e .DS_Store do cartão?\n\nFica uma cópia no computador.`)) return;
+        const res = await write("remove_routedex_items", [h.junk], "Lixo do macOS removido.");
+        if (res) draw();
+      };
     const rm = b.querySelector("#routedex-remove");
     if (rm)
       rm.onclick = async () => {
@@ -652,40 +915,16 @@ const RouteDex = (() => {
           <div class="text-[11px] text-fg-mute">${bn ? (bn.crc_ok ? "banner.bnr" : "banner.bnr com CRC inválido") : "sem banner"}${st.icon ? " · icon.bmp" : ""}</div>
         </div>${cover}</div>
         <div class="routedex-form">
-          <label class="text-[12px] text-fg-mute" for="routedex-title">Nome mostrado no launcher</label>
-          <input id="routedex-title" class="field-select routedex-input" maxlength="127" value="${esc(bn ? bn.title : name)}">
-          <label class="text-[12px] text-fg-mute" for="routedex-iconrom">Ícone a partir de</label>
-          <select id="routedex-iconrom" class="field-select">
-            ${(st.roms || []).map((r) => `<option value="rom:${esc(r)}">${esc(r)}</option>`).join("")}
-            <option value="image">Imagem do computador (PNG ou BMP)…</option>
-          </select>
+          <p class="text-[12px] text-fg-mute">O banner troca o ícone e o nome que o launcher mostra para a pasta; o nome real da pasta no cartão não muda. Precisa de um Pico Launcher mais novo que a v1.3.0.</p>
           <div class="flex gap-2 flex-wrap">
-            <button type="button" class="btn-primary" id="routedex-banner-save">Gravar banner</button>
+            <button type="button" class="btn-primary" id="routedex-banner-edit">${bn ? "Editar banner" : "Criar banner"}</button>
             <button type="button" class="btn-ghost" id="routedex-cover-save">Escolher capa da pasta…</button>
-            ${bn ? `<button type="button" class="btn-ghost btn-ghost--muted" data-rm="banner">Remover banner</button>` : ""}
             ${st.cover ? `<button type="button" class="btn-ghost btn-ghost--muted" data-rm="cover">Remover capa</button>` : ""}
           </div>
         </div>
       </div>`;
-    box.querySelector("#routedex-banner-save").onclick = async () => {
-      const title = box.querySelector("#routedex-title").value.trim();
-      if (!title) {
-        alert("Indique o nome a mostrar.");
-        return;
-      }
-      const src = box.querySelector("#routedex-iconrom").value;
-      let rom = "";
-      let image = "";
-      if (src === "image") {
-        const p = await a.pick_image_file();
-        if (!p || !p.success || p.cancelled) return;
-        image = p.path;
-      } else {
-        rom = src.slice(4);
-      }
-      const res = await write("write_routedex_folder_banner", [folderSel, title, rom, image], `Banner gravado em ${folderSel}.`);
-      if (res) drawFolderDetail(gen);
-    };
+    box.querySelector("#routedex-banner-edit").onclick = () =>
+      R1K.picodex.openBannerEditor(mountPath, folderSel, { onSaved: () => drawFolderDetail(gen) });
     box.querySelector("#routedex-cover-save").onclick = async () => {
       const p = await a.pick_image_file();
       if (!p || !p.success || p.cancelled) return;
@@ -816,10 +1055,20 @@ const RouteDex = (() => {
       health = null;
       healthSel = new Set();
       folderSel = "";
+      gallerySystem = null;
+      galleryCovers = {};
     }
     mountPath = m;
     await draw();
   }
 
-  return { render, renderNight, credits: creditHtml };
+  /** Abre a próxima renderização numa aba (ex.: "covers" a partir de Jogos). */
+  function showTab(id) {
+    if (ALL_TABS.some(([t]) => t === id)) {
+      tab = id;
+      gallerySystem = null;
+    }
+  }
+
+  return { render, renderNight, showTab, credits: creditHtml };
 })();

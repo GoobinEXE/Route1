@@ -478,12 +478,12 @@ def _picodex_matches(
         names = search_catalog(catalog, query, limit)
     else:
         title = os.path.splitext(basename or "")[0]
-        best = pick_boxart(title, catalog, region_prefs_for(sys_id, tid))
+        best = pick_boxart(title, catalog, region_prefs_for(sys_id, tid, basename))
         if best is None and sys_id == "nds" and full and is_degenerate_title(title):
             banner = read_nds_banner_title(full)
             if banner:
                 title = banner
-                best = pick_boxart(banner, catalog, region_prefs_for(sys_id, tid))
+                best = pick_boxart(banner, catalog, region_prefs_for(sys_id, tid, basename))
         if best:
             names.append(best)
         for n in search_catalog(catalog, title, limit):
@@ -803,23 +803,15 @@ def _write_pico_bmp(
         if not dest or dest in seen:
             continue
         seen.add(dest)
-        os.makedirs(os.path.dirname(dest), exist_ok=True)
-        partial = dest + ".partial"
+        from core.art_picker import ArtPickerError, _write_verified
+
         try:
-            with open(partial, "wb") as f:
-                f.write(bmp)
-                f.flush()
-                os.fsync(f.fileno())
             if len(bmp) < 64:
                 raise OSError("BMP gerado pequeno demais.")
-            os.replace(partial, dest)
+            # .partial → fsync → relê e confere → os.replace (verify-before-replace).
+            _write_verified(dest, bmp)
             written.append(dest)
-        except OSError as e:
-            try:
-                if os.path.exists(partial):
-                    os.remove(partial)
-            except OSError:
-                pass
+        except (OSError, ArtPickerError) as e:
             return False, f"Falha ao gravar arte: {e}", stats
 
     if not defer_sync:

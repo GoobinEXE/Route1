@@ -189,13 +189,18 @@ def test_health_finds_junk_orphans_and_duplicates_and_removes_with_backup(fake_s
     rep = routedex.check_health(str(sd))
     assert rep["orphan_saves"] == ["Games/Lost.sav"]
     assert rep["duplicate_saves"][0]["in_folder"] == "Games/saves/Kept.sav"
-    assert "Games/._Kept.nds" in rep["junk"] and ".Spotlight-V100" in rep["junk"]
-    assert ".fseventsd" not in rep["junk"]
+    assert rep["junk"] == ["Games/._Kept.nds"]
+    # Pastas do macOS não são lixo a limpar (PicoDex): só aparecem como aviso.
+    dirs = {d["rel"]: d["kept"] for d in rep["macos_dirs"]}
+    assert dirs == {".Spotlight-V100": False, ".fseventsd": True}
     assert rep["orphan_art"] == ["_pico/covers/user/Gone.nds.bmp"]
+    assert rep["cover_problems"] == [{"rel": "_pico/covers/user/Gone.nds.bmp", "reason": "arquivo pequeno demais (2 bytes)"}]
     assert "picoLoader7.bin" in rep["missing_required"]
 
     with pytest.raises(routedex.RouteDexError):
         routedex.remove_card_items(str(sd), ["Games/Kept.sav"])
+    with pytest.raises(routedex.RouteDexError):
+        routedex.remove_card_items(str(sd), [".Spotlight-V100"])
     out = routedex.remove_card_items(str(sd), ["Games/Lost.sav"])
     assert out["removed"] == ["Games/Lost.sav"] and not (sd / "Games" / "Lost.sav").exists()
     backups = [os.path.join(r, f) for r, _d, fs in os.walk(routedex.CACHE_DIR) for f in fs]
@@ -359,3 +364,26 @@ def test_enhanced_variant_is_opt_in_and_allowlisted():
     assert not updates._is_allowed_url("https://github.com/rasalopa/other/releases/download/x/a.zip")
     res = updates.install_dspico_component("/nonexistent", "pico-launcher", "pinned", variant="bogus")
     assert res["success"] is False
+
+
+def test_launcher_art_problems_follow_launcher_rules(fake_sd):
+    from core import pico_bmp
+
+    sd = _card(fake_sd)
+    good_cover = pico_bmp.rgba_to_cover_bmp(2, 2, bytes([200, 10, 10, 255] * 4))
+    good_icon = pico_bmp.rgba_to_icon_bmp(2, 2, bytes([10, 200, 10, 255] * 4))
+    _write(sd / "_pico" / "covers" / "nds" / "AMCE.bmp", good_cover)
+    _write(sd / "_pico" / "icons" / "user" / "Ok.nds.bmp", good_icon)
+    # Capa com DIB de 108 bytes (V4): o launcher do LNH recusa, o Enhanced aceita.
+    v4 = bytearray(good_cover)
+    struct.pack_into("<I", v4, 14, 108)
+    _write(sd / "_pico" / "covers" / "user" / "V4.nds.bmp", bytes(v4))
+    bad_icon = bytearray(good_icon)
+    struct.pack_into("<H", bad_icon, 28, 8)
+    _write(sd / "_pico" / "icons" / "gba" / "BPEE.bmp", bytes(bad_icon))
+    covers, icons = routedex.launcher_art_problems(str(sd), "stock")
+    assert [c["rel"] for c in covers] == ["_pico/covers/user/V4.nds.bmp"]
+    assert "40" in covers[0]["reason"]
+    assert icons == [{"rel": "_pico/icons/gba/BPEE.bmp", "reason": "8 bits por pixel; o launcher precisa de 4"}]
+    covers_enh, _ = routedex.launcher_art_problems(str(sd), "enhanced")
+    assert covers_enh == []

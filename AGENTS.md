@@ -37,7 +37,11 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/picodex_rules.py` | Regras da PicoDex onde o app faz o mesmo: sistemas e pastas `Games/<sistema>/`, destino da arte (`artPaths`), correspondência de capas no catálogo libretro-thumbnails (`matching`) |
 | `core/data/picodex/loaderReleases.json` | Manifesto de versões do Pico Loader **mantido pela PicoDex** (cópia fixada no lock; o usuário pode atualizá-lo pelo painel) |
 | `core/data/pico_manifest.json` | SHA-256 do `LAUNCHER.nds` (oficial + Enhanced) e do Loader Enhanced — só o que a PicoDex não cobre; `tools/gen_pico_manifest.py` |
-| `static/js/routedex.js` | UI do separador DSPico → RouteDex |
+| `static/js/routedex.js` | UI do separador DSPico → RouteDex (biblioteca por sistema, galeria, capas, estatísticas, capturas, pastas, cheats) |
+| `core/library_views.py` | Vistas da PicoDex: biblioteca por sistema, galeria, capas que faltam (só par exato, nunca ícones), estatísticas |
+| `core/art_picker.py` | Janela de capa e ícone + banner de pasta (PicoDex CoverPicker/BannerEditor): Python fornece imagens (data URL), a UI compõe no canvas, Python codifica/valida/grava com verify-before-replace |
+| `core/loader_compat.py` | Compatibilidade por jogo com o Pico Loader (port de `loaderlists.ts`) |
+| `static/js/picodex-ui.js` + `static/picodex.css` | Janelas da PicoDex: capa e ícone, banner de pasta, estatísticas, compatibilidade, associações de arquivo |
 | `core/pico_themes.py` | Temas Pico Launcher (`/_pico/themes/`) |
 | `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB + Libretro → TWiLight `boxart/` / `icons/` |
 | `core/steamgriddb.py` | Cliente API SteamGridDB (chave em prefs / `STEAMGRIDDB_API_KEY`) |

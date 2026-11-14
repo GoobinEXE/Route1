@@ -651,14 +651,14 @@
   }
 
   function anyOverlayOpen() {
-    const art = $("dspico-art-panel");
-    if (art && !art.classList.contains("hidden")) return true;
+    // Janelas da PicoDex (capa e ícone, banner, estatísticas, compatibilidade).
+    if (document.querySelector(".pdx-overlay")) return true;
     const menu = $("theme-menu");
     return !!(menu && !menu.classList.contains("hidden"));
   }
 
   function onGlobalKeys(ev) {
-    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && /^[1-4]$/.test(ev.key)) {
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && /^[1-4]$/.test(ev.key) && !anyOverlayOpen()) {
       ev.preventDefault();
       const n = Number(ev.key);
       if (n === 2) go("dspico", "cartao");

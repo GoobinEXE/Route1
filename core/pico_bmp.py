@@ -239,20 +239,89 @@ def decode_image_rgba(data: bytes) -> tuple[int, int, bytes]:
     raise ValueError("Formato de imagem não suportado (use PNG ou BMP).")
 
 
+def _axis_weights(src_n: int, dst_n: int) -> list[list[tuple[int, float]]]:
+    """Pesos de reamostragem num eixo: média por área ao reduzir, linear ao ampliar.
+
+    Reduzir com média por área dá o mesmo resultado suave do ``drawImage`` do
+    navegador usado pela PicoDex (o vizinho mais próximo deixava capas serrilhadas).
+    """
+    out: list[list[tuple[int, float]]] = []
+    scale = src_n / dst_n
+    for d in range(dst_n):
+        if scale >= 1.0:
+            lo, hi = d * scale, (d + 1) * scale
+            i0 = int(lo)
+            taps: list[tuple[int, float]] = []
+            i = i0
+            while i < hi and i < src_n:
+                w = min(hi, i + 1) - max(lo, i)
+                if w > 0:
+                    taps.append((i, w))
+                i += 1
+        else:
+            c = (d + 0.5) * scale - 0.5
+            i0 = int(c // 1)
+            f = c - i0
+            a, b = max(0, min(src_n - 1, i0)), max(0, min(src_n - 1, i0 + 1))
+            taps = [(a, 1.0 - f), (b, f)] if a != b else [(a, 1.0)]
+        total = sum(w for _i, w in taps) or 1.0
+        out.append([(i, w / total) for i, w in taps])
+    return out
+
+
 def _resize_rgba(
     src_w: int, src_h: int, src: bytes, dst_w: int, dst_h: int
 ) -> bytes:
-    """Nearest-neighbor resize."""
+    """Redimensiona RGBA (separável, alfa pré-multiplicado para não sujar bordas)."""
     out = bytearray(dst_w * dst_h * 4)
-    if src_w < 1 or src_h < 1:
+    if src_w < 1 or src_h < 1 or dst_w < 1 or dst_h < 1:
         return bytes(out)
-    for y in range(dst_h):
-        sy = min(src_h - 1, (y * src_h) // dst_h)
+    if (src_w, src_h) == (dst_w, dst_h):
+        return bytes(src[: dst_w * dst_h * 4])
+    # Pré-multiplica uma vez.
+    pre = [0.0] * (src_w * src_h * 4)
+    for i in range(src_w * src_h):
+        o = i * 4
+        a = src[o + 3] / 255.0
+        pre[o] = src[o] * a
+        pre[o + 1] = src[o + 1] * a
+        pre[o + 2] = src[o + 2] * a
+        pre[o + 3] = float(src[o + 3])
+    wx = _axis_weights(src_w, dst_w)
+    wy = _axis_weights(src_h, dst_h)
+    # Passo horizontal: src_h linhas × dst_w colunas.
+    mid = [0.0] * (dst_w * src_h * 4)
+    for y in range(src_h):
+        row = y * src_w * 4
+        mrow = y * dst_w * 4
+        for x, taps in enumerate(wx):
+            r = g = b = a = 0.0
+            for i, w in taps:
+                o = row + i * 4
+                r += pre[o] * w
+                g += pre[o + 1] * w
+                b += pre[o + 2] * w
+                a += pre[o + 3] * w
+            m = mrow + x * 4
+            mid[m], mid[m + 1], mid[m + 2], mid[m + 3] = r, g, b, a
+    # Passo vertical + despré-multiplica.
+    for y, taps in enumerate(wy):
         for x in range(dst_w):
-            sx = min(src_w - 1, (x * src_w) // dst_w)
-            si = (sy * src_w + sx) * 4
-            di = (y * dst_w + x) * 4
-            out[di : di + 4] = src[si : si + 4]
+            r = g = b = a = 0.0
+            for j, w in taps:
+                o = (j * dst_w + x) * 4
+                r += mid[o] * w
+                g += mid[o + 1] * w
+                b += mid[o + 2] * w
+                a += mid[o + 3] * w
+            d = (y * dst_w + x) * 4
+            if a <= 0.0:
+                continue
+            k = 255.0 / a
+            out[d] = min(255, int(r * k + 0.5))
+            out[d + 1] = min(255, int(g * k + 0.5))
+            out[d + 2] = min(255, int(b * k + 0.5))
+            out[d + 3] = min(255, int(a + 0.5))
     return bytes(out)
 
 
@@ -415,30 +484,168 @@ def _pack_bmp(
     return header + info + bytes(pal) + bytes(pixels)
 
 
+def _weighted_median_cut(counts: dict[tuple[int, int, int], int], max_colors: int) -> list[tuple[int, int, int]]:
+    """Median cut ponderado sobre todas as cores (PicoDex ``bmp.ts``), sem dithering."""
+    if not counts:
+        return [(0, 0, 0)]
+    if len(counts) <= max_colors:
+        return list(counts.keys())
+    def make(entries):
+        # (pode dividir, maior amplitude, canal dominante, entradas): calculado uma vez por caixa.
+        if len(entries) < 2:
+            return (False, 0, 0, entries)
+        ranges = [max(c[0][k] for c in entries) - min(c[0][k] for c in entries) for k in range(3)]
+        ch = max(range(3), key=lambda k: ranges[k])
+        return (True, ranges[ch], ch, entries)
+
+    boxes = [make(list(counts.items()))]
+    while len(boxes) < max_colors:
+        best = max(range(len(boxes)), key=lambda i: (boxes[i][0], boxes[i][1]))
+        splittable, _spread, ch, box = boxes[best]
+        if not splittable:
+            break
+        box.sort(key=lambda c: c[0][ch])
+        total = sum(n for _c, n in box)
+        acc, cut = 0, 1
+        for i, (_c, n) in enumerate(box):
+            acc += n
+            if acc * 2 >= total:
+                cut = min(max(1, i + 1), len(box) - 1)
+                break
+        boxes[best] = make(box[:cut])
+        boxes.append(make(box[cut:]))
+    palette = []
+    for _s, _sp, _ch, box in boxes:
+        tot = sum(n for _c, n in box) or 1
+        palette.append(
+            (
+                (sum(c[0] * n for c, n in box) + tot // 2) // tot,
+                (sum(c[1] * n for c, n in box) + tot // 2) // tot,
+                (sum(c[2] * n for c, n in box) + tot // 2) // tot,
+            )
+        )
+    return palette
+
+
+def _map_to_palette(pixels: list[tuple[int, int, int]], palette: list[tuple[int, int, int]], start: int = 0) -> bytearray:
+    cache: dict[tuple[int, int, int], int] = {}
+    out = bytearray(len(pixels))
+    for i, px in enumerate(pixels):
+        idx = cache.get(px)
+        if idx is None:
+            idx = _nearest_index(px[0], px[1], px[2], palette, start)
+            cache[px] = idx
+        out[i] = idx
+    return out
+
+
 def rgba_to_cover_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
-    """Converte imagem → capa Pico 128×96 8 bpp (conteúdo em 106×96)."""
-    fitted = _fit_contain(src_w, src_h, rgba, COVER_VISIBLE_W, COVER_H)
-    canvas = bytearray(COVER_W * COVER_H * 4)
-    for y in range(COVER_H):
-        for x in range(COVER_VISIBLE_W):
-            si = (y * COVER_VISIBLE_W + x) * 4
-            di = (y * COVER_W + x) * 4
-            canvas[di : di + 4] = fitted[si : si + 4]
-    # amostragem para paleta (saltar padding preto)
-    samples = []
-    step = max(1, (COVER_VISIBLE_W * COVER_H) // 4000)
-    for i in range(0, COVER_VISIBLE_W * COVER_H, step):
-        o = ((i // COVER_VISIBLE_W) * COVER_W + (i % COVER_VISIBLE_W)) * 4
-        samples.append((canvas[o], canvas[o + 1], canvas[o + 2]))
-    palette_rgb = _median_cut_palette(samples, 256)
-    palette = [(r, g, b, 255) for r, g, b in palette_rgb]
-    indices = bytearray(COVER_W * COVER_H)
+    """Converte imagem → capa Pico 128×96 8 bpp.
+
+    Como a PicoDex (``composeCoverRgba``): a arte é esticada para preencher a
+    área visível de 106×96 (convenção das capas da comunidade), sobre preto;
+    as colunas 106–127 ficam pretas.
+    """
+    stretched = _resize_rgba(src_w, src_h, rgba, COVER_VISIBLE_W, COVER_H)
+    pixels: list[tuple[int, int, int]] = []
     for y in range(COVER_H):
         for x in range(COVER_W):
-            o = (y * COVER_W + x) * 4
-            r, g, b = canvas[o], canvas[o + 1], canvas[o + 2]
-            indices[y * COVER_W + x] = _nearest_index(r, g, b, palette_rgb, 0)
+            if x >= COVER_VISIBLE_W:
+                pixels.append((0, 0, 0))
+                continue
+            o = (y * COVER_VISIBLE_W + x) * 4
+            a = stretched[o + 3]
+            # Composição sobre preto, como o canvas da PicoDex.
+            pixels.append(
+                (stretched[o] * a // 255, stretched[o + 1] * a // 255, stretched[o + 2] * a // 255)
+            )
+    counts: dict[tuple[int, int, int], int] = {}
+    for px in pixels:
+        counts[px] = counts.get(px, 0) + 1
+    palette_rgb = _weighted_median_cut(counts, 256)
+    indices = _map_to_palette(pixels, palette_rgb, 0)
+    while len(palette_rgb) < 256:
+        palette_rgb.append((0, 0, 0))
+    palette = [(r, g, b, 255) for r, g, b in palette_rgb]
     return _pack_bmp(COVER_W, COVER_H, 8, palette, bytes(indices))
+
+
+# --------------------------------------------------------------------------- #
+# O que o Pico Launcher aceita (PicoDex bmp.ts: validateLauncher*Bmp)
+# --------------------------------------------------------------------------- #
+
+_BMP_FILE_HEADER = 14
+_BMP_DIB_HEADER = 40
+_ENHANCED_MAX_DIB_HEADER = 124
+
+
+def validate_launcher_icon_bmp(data: bytes) -> Optional[str]:
+    """``None`` se o launcher mostra o ícone; senão o motivo (em pt-BR).
+
+    Espelha ``BmpHeader::Validate(32, 32, 4)``: o launcher desenha um ícone
+    inválido EM BRANCO (não volta ao ícone do jogo).
+    """
+    header_size = _BMP_FILE_HEADER + _BMP_DIB_HEADER + 16 * 4  # 118
+    if len(data) < header_size:
+        return f"arquivo pequeno demais ({len(data)} bytes)"
+    if data[:2] != b"BM":
+        return "não começa com 'BM'"
+    data_off, dib = struct.unpack_from("<II", data, 10)
+    width, height = struct.unpack_from("<ii", data, 18)
+    height = abs(height)
+    bpp = struct.unpack_from("<H", data, 28)[0]
+    compression = struct.unpack_from("<I", data, 30)[0]
+    clr_used = struct.unpack_from("<I", data, 46)[0]
+    if dib != _BMP_DIB_HEADER:
+        return f"cabeçalho DIB de {dib} bytes; o launcher precisa de 40"
+    if width != ICON_SIZE or height != ICON_SIZE:
+        return f"{width}×{height}; o launcher precisa de 32×32"
+    if bpp != 4:
+        return f"{bpp} bits por pixel; o launcher precisa de 4"
+    if compression != 0:
+        return "comprimido; o launcher precisa de BMP sem compressão"
+    if clr_used not in (0, 16):
+        return f"{clr_used} cores na paleta; o launcher precisa de 16"
+    if data_off < header_size:
+        return f"pixels no offset {data_off}; o launcher precisa de 118 ou mais"
+    if data_off + (ICON_SIZE // 2) * ICON_SIZE > len(data):
+        return "pixels truncados"
+    return None
+
+
+def validate_launcher_cover_bmp(head: bytes, file_size: Optional[int] = None, launcher: str = "stock") -> Optional[str]:
+    """``None`` se o launcher mostra a capa; senão o motivo (em pt-BR).
+
+    ``launcher``: ``stock`` (Pico Launcher do LNH team, exige DIB de 40 bytes)
+    ou ``enhanced`` (aceita DIB até 124). Basta o começo do arquivo em ``head``
+    quando ``file_size`` traz o tamanho total.
+    """
+    size = len(head) if file_size is None else int(file_size)
+    header_size = _BMP_FILE_HEADER + _BMP_DIB_HEADER + 256 * 4  # 1078
+    if size < header_size:
+        return f"arquivo pequeno demais ({size} bytes)"
+    if len(head) < _BMP_FILE_HEADER + _BMP_DIB_HEADER:
+        return f"arquivo pequeno demais ({len(head)} bytes)"
+    if head[:2] != b"BM":
+        return "não começa com 'BM'"
+    data_off, dib = struct.unpack_from("<II", head, 10)
+    width, height = struct.unpack_from("<ii", head, 18)
+    height = abs(height)
+    bpp = struct.unpack_from("<H", head, 28)[0]
+    compression = struct.unpack_from("<I", head, 30)[0]
+    if launcher == "stock" and dib != _BMP_DIB_HEADER:
+        return f"cabeçalho DIB de {dib} bytes; o launcher precisa de 40"
+    if dib < _BMP_DIB_HEADER or dib > _ENHANCED_MAX_DIB_HEADER:
+        return f"cabeçalho DIB de {dib} bytes; o launcher aceita de 40 a {_ENHANCED_MAX_DIB_HEADER}"
+    if width != COVER_W or height != COVER_H:
+        return f"{width}×{height}; o launcher precisa de {COVER_W}×{COVER_H}"
+    if bpp != 8:
+        return f"{bpp} bits por pixel; o launcher precisa de 8"
+    if compression != 0:
+        return "comprimido; o launcher precisa de BMP sem compressão"
+    if data_off + COVER_W * COVER_H > size:
+        return "pixels truncados"
+    return None
 
 
 def rgba_to_icon_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
@@ -446,13 +653,14 @@ def rgba_to_icon_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
     fitted = _fit_contain(
         src_w, src_h, rgba, ICON_SIZE, ICON_SIZE, pad_alpha=0
     )
-    samples = []
+    counts: dict[tuple[int, int, int], int] = {}
     for i in range(ICON_SIZE * ICON_SIZE):
         o = i * 4
         if fitted[o + 3] < 128:
             continue
-        samples.append((fitted[o], fitted[o + 1], fitted[o + 2]))
-    palette_rgb = [(0, 0, 0)] + _median_cut_palette(samples, 15)
+        px = (fitted[o], fitted[o + 1], fitted[o + 2])
+        counts[px] = counts.get(px, 0) + 1
+    palette_rgb = [(0, 0, 0)] + _weighted_median_cut(counts, 15)
     while len(palette_rgb) < 16:
         palette_rgb.append((0, 0, 0))
     palette = [(r, g, b, 0 if i == 0 else 255) for i, (r, g, b) in enumerate(palette_rgb)]
@@ -471,13 +679,14 @@ def rgba_to_icon_bmp(src_w: int, src_h: int, rgba: bytes) -> bytes:
 def _quantize_icon_rgba(src_w: int, src_h: int, rgba: bytes, size: int) -> bytes:
     """Encaixa em size×size e reduz a 16 cores (índice 0 transparente) → RGBA."""
     fitted = _fit_contain(src_w, src_h, rgba, size, size, pad_alpha=0)
-    samples = []
+    counts: dict[tuple[int, int, int], int] = {}
     for i in range(size * size):
         o = i * 4
         if fitted[o + 3] < 128:
             continue
-        samples.append((fitted[o], fitted[o + 1], fitted[o + 2]))
-    palette_rgb = [(0, 0, 0)] + _median_cut_palette(samples, 15)
+        px = (fitted[o], fitted[o + 1], fitted[o + 2])
+        counts[px] = counts.get(px, 0) + 1
+    palette_rgb = [(0, 0, 0)] + _weighted_median_cut(counts, 15)
     while len(palette_rgb) < 16:
         palette_rgb.append((0, 0, 0))
     out = bytearray(size * size * 4)

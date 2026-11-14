@@ -320,8 +320,9 @@ def test_collect_candidates_picodex_first_with_region(fake_sd):
         query="",
     )
     assert items[0]["source"] == "picodex"
-    # Preferência de região por omissão da PicoDex: Europe → USA → World.
-    assert "Mario%20Kart%20DS%20%28Europe%29" in items[0]["url"]
+    # AMCE termina em E (EUA): a região vem do game code também no NDS (melhoria
+    # sobre a PicoDex, que só usa o código no GBA e cai em Europe → USA → World).
+    assert "Mario%20Kart%20DS%20%28USA" in items[0]["url"]
     assert items[0]["url"].startswith("https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Nintendo_DS/")
     sources = [i["source"] for i in items]
     assert "gametdb" in sources and sources.index("gametdb") > sources.index("picodex")

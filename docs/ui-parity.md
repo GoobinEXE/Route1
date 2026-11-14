@@ -21,7 +21,7 @@ Menu de console: barra de status (seletor do microSD, progresso, hora, medidor),
 | Vista | Abas |
 |-------|------|
 | Início | Estado do microSD (nome, espaço usado, próximo passo com botão, primeiros passos sem cartão); blocos Cartão, Jogos, RouteDex, Launcher, Emuladores e apps USB, Avançado, Softmod DSi, Flashcards R4/GEi, Biblioteca TWiLight, Manutenção; selos «Preparar» no Cartão e contagem de jogos em Jogos |
-| DSPico | Cartão (estado com uma ação principal; recolhíveis: atualizações + Enhanced, saúde do cartão, reinstalar ou começar do zero, manuais) · Jogos (biblioteca primeiro; organizar pastas recolhido) · RouteDex (biblioteca, capturas, pastas, cheats) · Launcher (`settings.json`, temas do launcher, fundos noturnos) · Emuladores e apps USB (emuladores, apps USB LNH) · Avançado (emunand, firmware) |
+| DSPico | Cartão (estado com uma ação principal; recolhíveis: atualizações + Enhanced, saúde do cartão, reinstalar ou começar do zero, manuais) · Jogos (biblioteca primeiro; organizar pastas recolhido) · RouteDex (biblioteca por sistema → galeria; capas que faltam; estatísticas; capturas; pastas; cheats) · Launcher (`settings.json`, associações de arquivo, temas do launcher, fundos noturnos) · Emuladores e apps USB (emuladores, apps USB LNH) · Avançado (emunand, firmware) |
 | Mais ferramentas | Softmod DSi (identificar, assistente só do SD do DSi, passos manuais) · Flashcards R4/GEi (assistente do cartucho: GEi, R4 e DSPico do zero) · Biblioteca TWiLight (`/roms/`, organizar, cheats, capas; recolhível Apps homebrew) · Manutenção (relatório, backup, limpeza, formatação) |
 | Configurações (só na barra de ícones) | SteamGridDB, Aparência (tema e modo), Sobre (recolhível) |
 
@@ -48,6 +48,13 @@ Menu de console: barra de status (seletor do microSD, progresso, hora, medidor),
 | `check_routedex_health` / `remove_routedex_items` | DSPico → Cartão → Saúde do cartão |
 | `list/get/export/delete_routedex_screenshot(s)` | DSPico → RouteDex → Capturas |
 | `get_routedex_folder_art` / `write_routedex_folder_banner` / `write_routedex_folder_cover` / `remove_routedex_folder_art` | DSPico → RouteDex → Pastas |
+| `get_routedex_library` / `get_routedex_gallery` / `get_routedex_gallery_covers` | DSPico → RouteDex → Biblioteca (visão por sistema e galeria) |
+| `get_missing_covers` / `fetch_missing_covers` | DSPico → RouteDex → Capas (e Jogos → Capas que faltam) |
+| `get_routedex_stats` / `get_routedex_covers_by_name` | DSPico → RouteDex → Estatísticas |
+| `get_routedex_compat` | DSPico → RouteDex → Biblioteca → galeria → Loader |
+| `get_art_picker_context` / `search_art_catalog` / `get_art_catalog_thumbs` / `get_art_catalog_image` / `get_art_remote_image` / `pick_art_image` / `encode_art` / `get_icon_sources` / `save_game_art` | Janela de capa e ícone (galeria e Jogos) |
+| `get_banner_context` / `get_banner_icon_sources` / `save_folder_banner` | Banner de pasta (Biblioteca → lápis do sistema; Pastas) |
+| `get_file_associations` / `set_file_associations` | DSPico → Launcher → Associações de arquivo |
 | `list_routedex_night_themes` / `generate/remove_routedex_night_backgrounds` | DSPico → Launcher |
 | `get_routedex_cheats` / `pick_usrcheat_file` / `import_routedex_cheats` | DSPico → RouteDex → Cheats |
 | `get_routedex_credits` | Sobre (créditos de terceiros) |

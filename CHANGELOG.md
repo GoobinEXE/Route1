@@ -10,6 +10,34 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+### Adicionado
+
+- **Tudo o que a PicoDex faz, dentro do Route Pico** (RouteDex): biblioteca por sistema com quantas capas cada um tem, galeria de capas com busca e filtros, estatísticas com as capas (mais jogados, recentes, favoritos) e a ficha de cada jogo de DS com o que o Pico Loader faz ao abri-lo (correção anti-pirataria, save, patches)
+- **Nova janela de capa e ícone**: mostra o jogo como no console (capa em cima, linha da lista com os vizinhos embaixo), busca instantânea no catálogo de capas com a da região do jogo sugerida, e ícone de quatro fontes: gerado da capa, o do próprio jogo, SteamGridDB e logos do catálogo libretro
+- **Novo editor de banner de pasta**, com prévia, busca de ícones e avisos de pasta dividida e do launcher v1.3.0
+- **Capas que faltam**: lista os jogos sem capa e busca só as certas; um jogo sem par exato fica sem capa em vez de ganhar a de outro
+- **Associações de arquivo** em Launcher: qual emulador abre cada extensão, sem editar o settings.json à mão
+- **Importar por sistema**: cada ROM vai para a pasta do seu sistema, ganha a capa na hora e o resultado de cada arquivo aparece no fim
+- A Saúde do cartão mostra as capas e ícones que o launcher não consegue mostrar, limpa o lixo do macOS ali mesmo e diz o que o Pico Loader instalado sabe fazer
+- O app lembra o último cartão aberto
+
+### Alterado
+
+- Capas mais nítidas: a imagem é reduzida com suavização e preenche a área da capa, como as capas da comunidade
+- A capa sugerida respeita a região do jogo de DS (EUA, Europa, Japão) e a etiqueta de região do nome do arquivo
+- A busca de capas em lote não troca mais o ícone dos jogos de DS pela capa encolhida
+- As pastas que o macOS recria (como a lixeira do cartão) não são mais apagadas como lixo
+
+### Corrigido
+
+- O Route Pico não grava mais por cima de um settings.json corrompido, o que apagava as associações de arquivo
+- "Brain Age" e outros nomes curtos não recebem mais a capa de outro jogo parecido
+- Campos de texto não mostram mais a seta de lista
+
+### Desenvolvimento
+
+- `core/loader_compat.py`, `core/art_picker.py`, `core/library_views.py`, `static/js/picodex-ui.js`, `static/picodex.css`; catálogo libretro com logos na mesma chamada da API; `validate_launcher_cover_bmp` / `validate_launcher_icon_bmp`; gravação de arte com verify-before-replace
+
 ## [1.2.0] — 2026-11-14
 
 ### Alterado

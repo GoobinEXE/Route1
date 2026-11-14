@@ -448,7 +448,13 @@ class Api:
 
     @_run_mount_op(min_free_mb=8)
     def import_dspico_games(
-        self, mount_path, host_paths=None, dest_rel_dir="", conflict_resolutions=None
+        self,
+        mount_path,
+        host_paths=None,
+        dest_rel_dir="",
+        conflict_resolutions=None,
+        by_system=False,
+        fetch_covers=False,
     ):
         from core.dspico import import_dspico_games as do_import_dspico_games
         from core.rom_manager import normalize_conflict_resolutions
@@ -479,9 +485,26 @@ class Api:
             dest_rel_dir=dest,
             log_callback=add_log,
             conflict_resolutions=resolutions,
+            by_system=_as_bool(by_system),
         )
+        stats = stats or {}
+        # Como a PicoDex: logo após copiar, busca a capa dos jogos novos (só o par
+        # exato do catálogo; nunca sobrescreve). Ainda dentro do OP_LOCK.
+        if success and _as_bool(fetch_covers):
+            from core.library_views import fetch_missing_covers
+
+            added = [i for i in stats.get("items", []) if i.get("status") == "added" and i.get("bucket") != "apps"]
+            if added:
+                try:
+                    covers = fetch_missing_covers(mount_path, [i["rel"] for i in added], log=add_log)
+                    by_rel = {r["rel"]: r["status"] for r in covers.get("results", [])}
+                    for i in added:
+                        st = by_rel.get(i["rel"])
+                        i["cover"] = "fetched" if st == "written" else ("none" if st in ("no-match", None) else "error")
+                except Exception as e:  # capas são um bônus: nunca derrubam a importação
+                    add_log(f"⚠️ Capas após importar: {redact_text(str(e))}")
         result = _api_result(success, msg)
-        result["stats"] = stats or {}
+        result["stats"] = stats
         return result
 
     def find_duplicate_dspico_games(self, mount_path):
@@ -1835,6 +1858,213 @@ class Api:
         from core.routedex import check_health
 
         return self._routedex_read(mount_path, check_health)
+
+    def get_routedex_compat(self, mount_path, rel):
+        """Ficha de compatibilidade do Pico Loader para um jogo NDS (só leitura)."""
+        from core.loader_compat import game_compat
+        from core.routedex import resolve_card_path
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        if not r.lower().endswith((".nds", ".dsi", ".srl")):
+            return _reject("A ficha de compatibilidade é só para jogos de DS.")
+        return self._routedex_read(mount_path, lambda p: game_compat(p, resolve_card_path(p, r)))
+
+    # --- Vistas da PicoDex: biblioteca por sistema, galeria, capas, estatísticas
+
+    def get_routedex_library(self, mount_path):
+        from core.library_views import library_overview
+
+        return self._routedex_read(mount_path, library_overview)
+
+    def get_routedex_gallery(self, mount_path, system_id):
+        from core.library_views import system_gallery
+
+        return self._routedex_read(mount_path, system_gallery, str(system_id or "")[:16])
+
+    def get_routedex_gallery_covers(self, mount_path, rels):
+        from core.library_views import gallery_covers
+
+        return self._routedex_read(mount_path, gallery_covers, rels if isinstance(rels, list) else [])
+
+    def get_routedex_covers_by_name(self, mount_path, file_names):
+        from core.library_views import gallery_covers_by_name
+
+        return self._routedex_read(mount_path, gallery_covers_by_name, file_names if isinstance(file_names, list) else [])
+
+    def get_missing_covers(self, mount_path):
+        from core.library_views import missing_covers
+
+        return self._routedex_read(mount_path, missing_covers)
+
+    @_run_mount_op(min_free_mb=8)
+    def fetch_missing_covers(self, mount_path, rels):
+        from core.library_views import fetch_missing_covers
+
+        if not isinstance(rels, list):
+            return _reject("Lista inválida.")
+        return fetch_missing_covers(mount_path, [str(r) for r in rels][:500], log=add_log)
+
+    def get_routedex_stats(self, mount_path):
+        from core.library_views import play_stats
+
+        return self._routedex_read(mount_path, play_stats)
+
+    # --- Associações de arquivo (settings.json → fileAssociations)
+
+    def get_file_associations(self, mount_path):
+        from core.dspico import get_file_associations
+
+        return self._routedex_read(mount_path, get_file_associations)
+
+    @_run_mount_op(min_free_mb=1)
+    def set_file_associations(self, mount_path, items):
+        from core.dspico import set_file_associations
+
+        ok, msg = set_file_associations(mount_path, items, log_callback=add_log)
+        return _api_result(ok, msg)
+
+    # --- Janela de capa e ícone / banner de pasta (PicoDex CoverPicker, BannerEditor)
+
+    def _art_call(self, fn, *args):
+        from core.art_picker import ArtPickerError
+        from core.routedex import RouteDexError
+
+        try:
+            return fn(*args)
+        except (ArtPickerError, RouteDexError) as e:
+            return _reject(str(e))
+        except Exception as e:
+            return _reject(e)
+
+    def get_art_picker_context(self, mount_path, rel):
+        from core.art_picker import ArtPickerError, picker_context
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+
+        def run(p):
+            try:
+                return picker_context(p, r)
+            except ArtPickerError as e:
+                return _reject(str(e))
+
+        return self._routedex_read(mount_path, run)
+
+    def search_art_catalog(self, repo, query="", kind="boxarts", title="", game_code="", system_id=""):
+        from core.art_picker import catalog_search
+
+        return self._art_call(
+            catalog_search, str(repo or ""), str(query or "")[:120], str(kind or "boxarts"),
+            str(title or "")[:200], str(game_code or "")[:8], str(system_id or "")[:16],
+        )
+
+    def get_art_catalog_thumbs(self, repo, names, kind="boxarts"):
+        from core.art_picker import catalog_thumbs
+
+        return self._art_call(catalog_thumbs, str(repo or ""), names, str(kind or "boxarts"))
+
+    def get_art_catalog_image(self, repo, name, kind="boxarts"):
+        from core.art_picker import catalog_image
+
+        return self._art_call(catalog_image, str(repo or ""), str(name or ""), str(kind or "boxarts"))
+
+    def get_art_remote_image(self, url):
+        from core.art_picker import remote_image
+
+        return self._art_call(remote_image, str(url or ""))
+
+    def pick_art_image(self):
+        """Escolhe uma imagem do computador e devolve-a como data URL (a UI compõe)."""
+        from core.art_picker import host_image
+
+        if self._picker is None:
+            return _reject("Diálogo de arquivos indisponível.")
+        try:
+            cancelled, paths = self._picker.open_files(
+                caption="Escolher imagem",
+                filters=("Imagens (*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp)", "Todos os arquivos (*.*)"),
+                multiple=False,
+            )
+        except Exception as e:
+            return _reject(e)
+        if cancelled or not paths:
+            return {"success": True, "cancelled": True}
+        out = host_image(paths[0])
+        if out.get("success"):
+            out["name"] = os.path.basename(paths[0])
+        return out
+
+    def encode_art(self, kind, rgba_b64):
+        from core.art_picker import encode_art
+
+        return self._art_call(encode_art, str(kind or ""), rgba_b64)
+
+    def get_icon_sources(self, mount_path, rel, query=""):
+        """Candidatas a ícone (ROM, SteamGridDB, logos libretro). Rede sem OP_LOCK."""
+        from core.art_picker import icon_sources
+
+        path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return self._art_call(icon_sources, path, r, str(query or "")[:120])
+
+    @_run_mount_op(min_free_mb=1)
+    def save_game_art(self, mount_path, rel, cover_token=None, icon_token=None):
+        from core.art_picker import save_art
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return self._art_call(save_art, mount_path, r, cover_token, icon_token, add_log)
+
+    def get_banner_context(self, mount_path, rel_folder):
+        from core.art_picker import ArtPickerError, banner_context
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+
+        def run(p):
+            try:
+                return banner_context(p, rf)
+            except ArtPickerError as e:
+                return _reject(str(e))
+
+        return self._routedex_read(mount_path, run)
+
+    def get_banner_icon_sources(self, mount_path, rel_folder, query="", game=""):
+        from core.art_picker import banner_icon_sources
+
+        path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        return self._art_call(banner_icon_sources, path, rf, str(query or "")[:120], str(game or "")[:255])
+
+    @_run_mount_op(min_free_mb=1)
+    def save_folder_banner(self, mount_path, rel_folder, title, icon_token=None, keep_icon=False):
+        from core.art_picker import save_banner
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        return self._art_call(
+            save_banner, mount_path, rf, str(title or "")[:127], icon_token, bool(_as_bool(keep_icon)), add_log
+        )
 
     @_run_mount_op(min_free_mb=1)
     def remove_routedex_items(self, mount_path, rels):

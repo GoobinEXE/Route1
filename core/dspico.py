@@ -1362,11 +1362,15 @@ def import_dspico_games(
     dest_rel_dir: str = "",
     log_callback=None,
     conflict_resolutions=None,
+    by_system: bool = False,
 ) -> tuple[bool, str, dict]:
     """
     Copia ROMs do host para Games/ (NDS, apps em Games/Apps/, retro).
     Aceita arquivos zip/7z/rar. Emite progresso para a UI.
     conflict_resolutions: mapa conflict_id → replace|keep_both|skip.
+    by_system: como a PicoDex, cada jogo vai para Games/<pasta do sistema>/
+    (nds, gba, gb…), ignorando ``dest_rel_dir``. ``stats["items"]`` traz o
+    resultado de cada arquivo (added | duplicate | unknown-type | skipped | failed).
     """
     from core.archive_roms import cleanup_expand_staging, expand_rom_sources
 
@@ -1401,6 +1405,7 @@ def import_dspico_games(
     apps_n = 0
     retro_n = 0
     replaced = 0
+    items: list[dict[str, Any]] = []
 
     log(f"=== Importar {len(source_paths)} item(ns) para Games/ ===")
     try:
@@ -1458,6 +1463,7 @@ def import_dspico_games(
                 )
                 if nds_kind == "system":
                     log(f"⏭️ Ignorado (sistema): {base_name}")
+                    items.append({"name": base_name, "status": "skipped"})
                     skipped += 1
                     tracker.advance_item(
                         bytes_delta=src_size, label=base_name, skipped=True
@@ -1466,10 +1472,17 @@ def import_dspico_games(
             dest_dir, bucket = _dest_dir_for_import(
                 mount_path, ext, games_dest, nds_kind=nds_kind
             )
+            if by_system and bucket in ("games", "retro"):
+                from core.picodex_rules import system_for_extension as _sys_for
+
+                _system = _sys_for(base_name)
+                if _system is not None:
+                    dest_dir = os.path.join(games_root, _system.games_dir)
             tracker.set_label(base_name)
             tracker.tick(force=True)
             if not dest_dir or not bucket:
                 errors.append(f"Extensão não suportada: {base_name}")
+                items.append({"name": base_name, "status": "unknown-type"})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1484,6 +1497,7 @@ def import_dspico_games(
                 resolution = resolutions.get(cid, "keep_both")
             if resolution == "skip":
                 log(f"⏭️ Ignorado (duplicata): {base_name}")
+                items.append({"name": base_name, "status": "duplicate"})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1494,6 +1508,7 @@ def import_dspico_games(
                 os.makedirs(dest_dir, exist_ok=True)
             except OSError as e:
                 errors.append(f"{base_name}: pasta destino — {e}")
+                items.append({"name": base_name, "status": "failed", "error": redact_path(str(e))})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1560,6 +1575,7 @@ def import_dspico_games(
                     games_n += 1
                 rel = os.path.relpath(dest, games_root).replace("\\", "/")
                 log(f"📥 {base_name} → Games/{rel}")
+                items.append({"name": base_name, "status": "added", "rel": f"{GAMES_DIRNAME}/{rel}", "bucket": bucket})
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, written=True
                 )
@@ -1589,6 +1605,7 @@ def import_dspico_games(
                             break
             except Exception as e:
                 errors.append(f"{base_name}: {e}")
+                items.append({"name": base_name, "status": "failed", "error": redact_path(str(e))})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, failed=True
@@ -1606,6 +1623,7 @@ def import_dspico_games(
             "apps": apps_n,
             "retro": retro_n,
             "replaced": replaced,
+            "items": items[:1000],
         }
         tracker.written = copied
         tracker.skipped = skipped
@@ -2424,6 +2442,37 @@ def _import_named_file(
 # --- Settings ---------------------------------------------------------------
 
 
+_SETTINGS_KEEP_ADVICE = (
+    "Não abra o Pico Launcher antes de corrigir: se ele também não conseguir ler o arquivo, "
+    "troca por um padrão e as associações de arquivo se perdem."
+)
+
+
+def settings_file_problem(mount_path: str) -> Optional[dict[str, str]]:
+    """Por que um settings.json EXISTENTE não pode ser lido (PicoDex 0.10.1), ou None.
+
+    ``kind``: ``bom`` | ``invalid`` | ``not-object`` | ``unreadable``. Um arquivo
+    ausente não é problema (o launcher cria um ao abrir).
+    """
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError as e:
+        return {"kind": "unreadable", "message": f"O Route Pico encontrou o settings.json mas não conseguiu abrir: outro programa pode estar usando o arquivo ou o cartão tem um problema. {_SETTINGS_KEEP_ADVICE}", "detail": str(e)}
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return {"kind": "bom", "message": f"O settings.json começa com uma marca invisível (BOM) que alguns editores colocam ao salvar. O launcher não lê um arquivo assim. Salve-o de novo sem BOM (UTF-8 simples). {_SETTINGS_KEEP_ADVICE}", "detail": ""}
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as e:
+        return {"kind": "invalid", "message": f"O settings.json não é um JSON válido. {_SETTINGS_KEEP_ADVICE}", "detail": str(e)}
+    if not isinstance(obj, dict):
+        return {"kind": "not-object", "message": "O settings.json não guarda configurações (o conteúdo não é um objeto JSON). Troque o conteúdo por {} ou apague o arquivo.", "detail": ""}
+    return None
+
+
 def get_dspico_settings(mount_path: str) -> dict[str, Any]:
     path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
     if not os.path.isfile(path):
@@ -2484,15 +2533,16 @@ def set_dspico_settings(
     os.makedirs(pico, exist_ok=True)
     path = os.path.join(pico, SETTINGS_FILENAME)
 
+    # Nunca gravar por cima de um settings.json que não deu para ler: isso
+    # apagaria as associações e o resto do arquivo do usuário.
+    problem = settings_file_problem(mount_path)
+    if problem:
+        return False, "Nada foi salvo. " + problem["message"]
     current: dict[str, Any] = {}
     if os.path.isfile(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                loaded = json.load(f)
-            if isinstance(loaded, dict):
-                current = loaded
-        except (OSError, json.JSONDecodeError):
-            current = {}
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        current = loaded if isinstance(loaded, dict) else {}
 
     current.update(clean)
     partial = path + ".partial"
@@ -2673,3 +2723,99 @@ def flash_dspico_firmware(
             log("ℹ️ Volume RPI-RP2 desapareceu (normal após flash).")
             return True, "Firmware enviado (volume RPI-RP2 ejectou)."
         return False, f"Falha ao gravar UF2: {e}"
+
+
+# --------------------------------------------------------------------------- #
+# Associações de arquivo (PicoDex AssociationsView)
+# --------------------------------------------------------------------------- #
+
+# Exemplos do guia de emuladores do Pico Launcher (os mesmos da PicoDex).
+ASSOCIATION_EXAMPLES = (
+    "/_pico/emulators/nesDS.nds",
+    "/_pico/emulators/GBARunner3.nds",
+    "/_pico/emulators/gameyob.nds",
+    "/_pico/emulators/PicoDriveTWL.nds",
+    "/_pico/emulators/S8DS.nds",
+)
+_EXT_RE = re.compile(r"^[a-z0-9]{1,8}$")
+
+
+def normalize_extension(ext: Any) -> Optional[str]:
+    if not isinstance(ext, str):
+        return None
+    e = ext.strip().lower().lstrip(".")
+    return e if _EXT_RE.match(e) else None
+
+
+def get_file_associations(mount_path: str) -> dict[str, Any]:
+    """Associações extensão → app do settings.json, mais exemplos do que já está no cartão."""
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    problem = settings_file_problem(mount_path)
+    items: list[dict[str, str]] = []
+    exists = os.path.isfile(path)
+    if exists and not problem:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        raw = data.get("fileAssociations") if isinstance(data, dict) else None
+        if isinstance(raw, dict):
+            for ext, val in raw.items():
+                n = normalize_extension(ext)
+                app = val.get("appPath") if isinstance(val, dict) else None
+                if n and isinstance(app, str):
+                    items.append({"ext": n, "app_path": app})
+    examples: list[str] = []
+    for folder in ("_pico/emulators", "Emulators"):
+        d = os.path.join(mount_path, *folder.split("/"))
+        try:
+            for n in sorted(os.listdir(d), key=str.lower):
+                if n.lower().endswith(".nds") and not n.startswith("."):
+                    examples.append(f"/{folder}/{n}")
+        except OSError:
+            pass
+    for ex in ASSOCIATION_EXAMPLES:
+        if ex not in examples:
+            examples.append(ex)
+    return {
+        "success": True,
+        "exists": exists,
+        "problem": problem,
+        "associations": sorted(items, key=lambda i: i["ext"]),
+        "examples": examples,
+        "path": f"/_pico/{SETTINGS_FILENAME}",
+    }
+
+
+def set_file_associations(mount_path: str, items: Any, log_callback=None) -> tuple[bool, str]:
+    """Troca a lista inteira de associações, preservando o resto do settings.json."""
+    if not isinstance(items, list):
+        return False, "Lista de associações inválida."
+    if settings_file_problem(mount_path) is None and not os.path.isfile(os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)):
+        return False, "Não há settings.json no cartão. Abra o Pico Launcher uma vez no console para ele criar o arquivo."
+    current = get_file_associations(mount_path)
+    if current.get("problem"):
+        return False, "Nada foi salvo. " + current["problem"]["message"]
+    # Campos extras de cada entrada (se existirem) são mantidos.
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    with open(path, "r", encoding="utf-8") as f:
+        old_raw = (json.load(f) or {}).get("fileAssociations")
+    old = old_raw if isinstance(old_raw, dict) else {}
+    out: dict[str, Any] = {}
+    for it in items[:200]:
+        if not isinstance(it, dict):
+            return False, "Associação inválida."
+        ext = normalize_extension(it.get("ext"))
+        app = it.get("app_path")
+        if not ext:
+            return False, "Digite as letras da extensão, por exemplo nes."
+        if not isinstance(app, str) or not app.strip():
+            return False, f"O caminho do aplicativo de .{ext} está vazio. Preencha ou remova a linha."
+        app = app.strip().replace("\\", "/")
+        if not app.startswith("/") or ".." in app.split("/") or "\x00" in app:
+            return False, f"Caminho inválido para .{ext}: use um caminho do cartão começando por /."
+        if ext in out:
+            return False, f"A extensão .{ext} aparece duas vezes."
+        prev = old.get(ext)
+        entry = dict(prev) if isinstance(prev, dict) else {}
+        entry["appPath"] = app
+        out[ext] = entry
+    return set_dspico_settings(mount_path, {"fileAssociations": out}, log_callback=log_callback)

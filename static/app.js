@@ -546,8 +546,11 @@ async function fetchDrives(options) {
       document.getElementById("drive-info-badge")?.classList.add("hidden");
     } else {
       const keep = currentDrives.find((d) => d.mount_path === previous);
-      // Sem escolha anterior: preferir um microSD com marcadores do DSPico.
-      selectedDrive = keep || currentDrives.find((d) => d && d.dspico_likely) || currentDrives[0];
+      // Sem escolha nesta sessão: o último cartão aberto (como a PicoDex), depois
+      // um microSD com marcadores do DSPico.
+      const last = lastDriveName();
+      const remembered = last ? currentDrives.find((d) => d && d.name === last) : null;
+      selectedDrive = keep || remembered || currentDrives.find((d) => d && d.dspico_likely) || currentDrives[0];
       setDriveStatus(true);
       updateDriveBadge();
     }
@@ -574,11 +577,27 @@ async function fetchDrives(options) {
   }
 }
 
+const LAST_DRIVE_KEY = "routepico.lastDrive";
+function lastDriveName() {
+  try {
+    return localStorage.getItem(LAST_DRIVE_KEY) || "";
+  } catch (_e) {
+    return "";
+  }
+}
+
 function onDriveSelected() {
   const select = document.getElementById("drive-select");
   if (!select) return;
   const path = select.value;
   selectedDrive = currentDrives.find((d) => d.mount_path === path) || null;
+  if (selectedDrive && selectedDrive.name) {
+    try {
+      localStorage.setItem(LAST_DRIVE_KEY, String(selectedDrive.name).slice(0, 64));
+    } catch (_e) {
+      /* só nesta sessão */
+    }
+  }
   syncDriveSelects();
   updateDriveBadge();
   setDriveStatus(!!selectedDrive);

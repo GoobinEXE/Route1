@@ -121,8 +121,8 @@ O roteiro abaixo leva um microSD vazio até um cartão pronto para jogar.
 3. **Escolha o cartão** no seletor da barra de cima. Só aparecem cartões e pendrives removíveis; o disco do computador nunca aparece na lista. Se o cartão não estiver lá, clique no botão de atualizar ao lado do seletor.
 4. **Leia o próximo passo.** No topo do Início há um quadro que diz o estado do cartão e mostra um botão com o que fazer agora. Em um cartão vazio, ele vai sugerir preparar o cartão.
 5. **Prepare o cartão.** Clique no botão do próximo passo ou abra o bloco **Cartão** e use **Instalar pacote oficial**. O app baixa o Pico Launcher e o Pico Loader, confere a impressão digital (SHA-256) de cada arquivo e grava no cartão. Se o cartão precisar ser formatado do zero, abra a seção **Reinstalar ou começar do zero** dentro de Cartão e use **Começar do zero**, que formata e prepara em sequência. A formatação apaga tudo o que estiver no cartão.
-6. **Adicione jogos.** Abra o bloco **Jogos** e clique em **Adicionar jogos**. Escolha os arquivos no computador. Jogos de DS e DSi vão para `Games/nds/`; jogos de outros sistemas vão para a pasta do sistema correspondente.
-7. **Coloque capas (opcional).** Na lista de jogos, clique em um jogo para abrir a janela de arte. O app procura a capa e o ícone, mostra opções parecidas e grava no formato do menu do DSPico. Você também pode escolher uma imagem sua.
+6. **Adicione jogos.** Abra o bloco **Jogos**, marque **Cada sistema na sua pasta** e clique em **Adicionar jogos** (ou arraste os arquivos para a lista). Jogos de DS e DSi vão para `Games/nds/`, os de outros sistemas para a pasta do sistema, e cada jogo novo já recebe a capa do catálogo quando há uma certa. No fim aparece o resultado de cada arquivo.
+7. **Confira as capas (opcional).** Em **RouteDex → Capas**, o app lista os jogos que ficaram sem capa e busca as que faltam. Para trocar uma capa ou o ícone de um jogo, clique na capa dele em **RouteDex → Biblioteca**.
 8. **Ejete o cartão** pelo sistema antes de tirar do leitor ("Ejetar" no macOS, "Remover hardware com segurança" no Windows).
 9. **Ponha o microSD no DSPico**, encaixe o cartucho no console e ligue. O Pico Launcher abre com os seus jogos.
 
@@ -161,22 +161,28 @@ A janela do Route Pico segue a ideia do menu inicial de um console.
 **Cartão.** É a tela de estado do microSD. No topo aparece "Cartão pronto" ou "Cartão sem o pacote completo", com uma lista do que foi encontrado (`_picoboot.nds`, pasta `_pico/`, pasta `Games/`, arquivos de emunand, emuladores) e um único botão principal: **Instalar pacote oficial** quando falta algo, ou **Verificar atualizações** quando o cartão está completo. Abaixo ficam quatro seções recolhíveis:
 
 - **Atualizações e variantes Enhanced** compara a versão no cartão com a versão que vem com o app e com a mais recente publicada no GitHub, e permite instalar a mais recente ou trocar para as variantes Enhanced (e voltar ao oficial depois).
-- **Saúde do cartão** identifica a versão do Pico Loader e do launcher pela impressão digital dos arquivos, aponta arquivos ausentes ou de versões misturadas, saves sem jogo correspondente, saves duplicados e capas órfãs. Também conta os arquivos de lixo do macOS e leva você até a Manutenção para limpá-los. Antes de remover qualquer coisa, o app faz uma cópia no computador.
+- **Saúde do cartão** identifica a versão do Pico Loader e do launcher pela impressão digital dos arquivos e o que o loader sabe fazer (abrir jogos, voltar ao launcher, cheats). Aponta arquivos ausentes ou de versões misturadas, saves sem jogo correspondente, saves duplicados, capas órfãs e as capas e ícones que o launcher não consegue mostrar (aparecem como ruído ou em branco no console). Limpa ali mesmo os arquivos `._*` e `.DS_Store` que o macOS deixa; as pastas que o macOS recria (como a lixeira `.Trashes`) só aparecem como aviso e não são apagadas. Antes de remover qualquer coisa, o app faz uma cópia no computador.
 - **Reinstalar ou começar do zero** regrava o pacote oficial mantendo jogos e saves, ou abre o assistente "Começar do zero", que formata o cartão e prepara tudo em sequência.
 - **Manuais e links oficiais** reúne o manual do DSPico, os guias e os repositórios do LNH team.
 
-**Jogos.** Abre direto na lista de jogos do cartão, com navegação por pastas. O botão principal é **Adicionar jogos**. Os outros botões permitem criar pasta, mover, renomear e remover. Clicar em um jogo abre a janela de capa e ícone. A seção recolhível **Organizar pastas** reorganiza a biblioteca inteira em um dos quatro arranjos: por franquia (`Games/<franquia>/`), por sistema (`Games/nds/`, `Games/gba/` e assim por diante), soltos dentro de `Games/` ou soltos na raiz do cartão ao lado do launcher. A organização preserva as pastas dos emuladores e o arquivo do launcher.
+**Jogos.** Abre direto na lista de jogos do cartão, com navegação por pastas. O botão principal é **Adicionar jogos**; com **Cada sistema na sua pasta** marcado, cada ROM vai para `Games/<sistema>/` e ganha a capa na hora, e um quadro mostra o resultado de cada arquivo (adicionado, repetido, tipo não suportado). Os outros botões permitem criar pasta, mover, renomear e remover. Clicar em um jogo abre a janela de capa e ícone. A seção recolhível **Organizar pastas** reorganiza a biblioteca inteira em um dos quatro arranjos: por franquia (`Games/<franquia>/`), por sistema (`Games/nds/`, `Games/gba/` e assim por diante), soltos dentro de `Games/` ou soltos na raiz do cartão ao lado do launcher. A organização preserva as pastas dos emuladores e o arquivo do launcher.
 
-**RouteDex.** Mostra os dados que o **Pico Launcher Enhanced** guarda no cartão. Tem quatro abas:
+**RouteDex.** A biblioteca do cartão, com todas as funções da PicoDex. Tem seis abas:
 
-- **Biblioteca:** favoritos, jogos concluídos, número de vezes que cada jogo foi aberto, tempo de jogo e últimos jogados, com edição à mão.
+- **Biblioteca:** cada sistema do cartão com o número de jogos e quantos têm capa, o banner de cada pasta de sistema (lápis no cartão do sistema) e o que está instalado (launcher, loader e o que ele sabe fazer). **Ver jogos** abre a galeria do sistema: capas, busca, filtros de favoritos e concluídos, e em cada jogo os botões de favorito, concluído, partidas e tempo (para corrigir à mão) e, nos jogos de DS, **Loader**, que mostra o que o Pico Loader faz com aquele jogo ao abrir (correção anti-pirataria, tipo e tamanho do save, patches).
+- **Capas:** lista os jogos sem capa, deixa escolher quais e baixa as capas do catálogo libretro-thumbnails. Só entra a capa certa: sem um par exato, o jogo fica sem capa em vez de ganhar a de outro. Ícones não são trocados.
+- **Estatísticas:** totais, mais jogados, jogados recentemente e favoritos, com as capas, e a limpeza de entradas de jogos que saíram do cartão.
 - **Capturas:** as fotos de tela tiradas no console, com as duas telas juntas, para salvar em PNG no computador ou apagar do cartão.
 - **Pastas:** o ícone e o nome que cada pasta mostra no menu (`banner.bnr`) e a capa de pasta (`cover.bmp`).
 - **Cheats:** importar um arquivo `usrcheat.dat` seu, que o app valida antes de copiar.
 
-Se você usa o launcher oficial, a Biblioteca e as Capturas ficam vazias, porque só o Enhanced registra esses dados.
+Se você usa o launcher oficial, favoritos, estatísticas e capturas ficam vazios, porque só o Enhanced registra esses dados.
 
-**Launcher.** Ajusta o menu do DSPico. Edita o arquivo de configuração `_pico/settings.json` com campos explicados (tema, layout da lista de jogos, ordenação e outras opções documentadas pelo LNH team), instala e remove temas do Pico Launcher em `_pico/themes/` e troca os fundos noturnos dos temas.
+**Janela de capa e ícone.** Abre ao clicar na capa de um jogo. Mostra o jogo como ele vai aparecer no console: a capa na tela de cima e a linha da lista, com os jogos vizinhos, na de baixo. A busca no catálogo de capas é instantânea e já sugere a capa da região do jogo. Também dá para usar as fontes SteamGridDB e GameTDB ou uma imagem do computador (PNG, JPG, WebP). O ícone pode vir de quatro fontes: gerado a partir da capa, o ícone que o próprio jogo de DS traz, SteamGridDB e os logos do catálogo libretro (sistemas que têm logos, como Game Boy e GBA). Capa e ícone são salvos juntos, no formato exato que o launcher lê.
+
+**Banner de pasta.** Abre pelo lápis de um sistema na Biblioteca ou pela aba Pastas. Edita o nome e o ícone que o launcher mostra para a pasta, com prévia. O ícone pode ser mantido, procurado (SteamGridDB e logos), tirado de um jogo da pasta ou de uma imagem. Avisa quando a pasta é dividida por dois sistemas (Game Boy e Game Boy Color) e quando o launcher instalado é o v1.3.0, que ignora banners e ícones próprios.
+
+**Launcher.** Ajusta o menu do DSPico. Edita o arquivo de configuração `_pico/settings.json` com campos explicados (tema, layout da lista de jogos, ordenação e outras opções documentadas pelo LNH team) e, em **Associações de arquivo**, qual emulador abre cada extensão (`.gba`, `.nes` e outras), com sugestões dos emuladores do cartão. Se o `settings.json` estiver corrompido, o app avisa e não grava por cima. Também instala e remove temas do Pico Launcher em `_pico/themes/` e troca os fundos noturnos dos temas.
 
 **Emuladores e apps USB.** Instala emuladores do guia do Pico Launcher (GBARunner, GameYob, nesDS e outros) com um clique por emulador ou com **Selecionar populares**. A barra **Instalar selecionados** fica fixa embaixo e mostra quantos você escolheu. O app cria as pastas `ROMs/` de cada sistema e registra qual emulador abre qual tipo de arquivo. BIOS de consoles nunca são baixadas, porque são arquivos protegidos; se um emulador precisar de uma, você copia a sua. Na mesma tela ficam os **apps USB oficiais** do LNH team (pendrive, alto-falante, vídeo e microfone pelo cabo USB do cartucho).
 
@@ -368,7 +374,7 @@ O layout segue o [GUIDE](https://github.com/LNH-team/dspico/blob/develop/GUIDE.m
 
 Pastas por sistema em `Games/` seguem [`core/picodex_rules.py`](core/picodex_rules.py): Game Boy e Game Boy Color dividem `gb/`, Mega Drive fica em `gen/`, WonderSwan e WonderSwan Color dividem `ws/`, Neo Geo Pocket e Pocket Color dividem `ngp/`, e `.dsi` vai para `nds/`.
 
-Uma capa ou ícone novo vai para um único destino: se já existe `user/<arquivo>.bmp`, ele é substituído no lugar (o launcher dá prioridade a ele); senão, sistemas identificados por game code com código utilizável vão para `nds/<CODE>.bmp` ou `gba/<CODE>.bmp`; o resto vai para `user/`. A conversão para BMP fica em [`core/pico_bmp.py`](core/pico_bmp.py). A busca de capas consulta primeiro o catálogo libretro-thumbnails com o algoritmo de correspondência da PicoDex, depois SteamGridDB e GameTDB.
+Uma capa ou ícone novo vai para um único destino: se já existe `user/<arquivo>.bmp`, ele é substituído no lugar (o launcher dá prioridade a ele); senão, sistemas identificados por game code com código utilizável vão para `nds/<CODE>.bmp` ou `gba/<CODE>.bmp`; o resto vai para `user/`. A conversão para BMP fica em [`core/pico_bmp.py`](core/pico_bmp.py): a arte é esticada para a área visível de 106×96 (convenção das capas da comunidade, como a PicoDex), reduzida com média por área e quantizada por median cut ponderado; ícones são encaixados em 32×32 sem esticar, com 15 cores mais a transparente. Tudo o que é gravado passa antes pelas mesmas regras de leitura do launcher (`validate_launcher_cover_bmp` / `validate_launcher_icon_bmp`).
 
 O firmware do RP2040 não fica no microSD: ele é gravado no volume `RPI-RP2` que o cartucho expõe em modo BOOTSEL, e só a partir de um `.uf2` fixado de [LNH-team/dspico-firmware](https://github.com/LNH-team/dspico-firmware) (`dspico_firmware_uf2_ready()`).
 
@@ -378,7 +384,13 @@ O RouteDex ([`core/routedex.py`](core/routedex.py), UI em [`static/js/routedex.j
 
 **`gamedata.json` sem perdas.** O app lê e grava `_pico/gamedata.json` preservando campos desconhecidos. Se o arquivo não fizer parse, ele nunca é sobrescrito; a interface mostra o erro e não oferece edição.
 
-**Saúde do cartão.** Identifica versões do Pico Loader pelo manifesto `loaderReleases.json` mantido pela PicoDex (cópia fixada em [`core/data/picodex/`](core/data/picodex/)) e versões do launcher pelo `pico_manifest.json`, o que inclui detectar arquivos de releases misturadas ou de outro flashcard. Também lista saves sem jogo, saves duplicados, capas órfãs e lixo do macOS (a remoção do lixo é feita em Manutenção).
+**Saúde do cartão.** Identifica versões do Pico Loader pelo manifesto `loaderReleases.json` mantido pela PicoDex (cópia fixada em [`core/data/picodex/`](core/data/picodex/)) e versões do launcher pelo `pico_manifest.json`, o que inclui detectar arquivos de releases misturadas ou de outro flashcard. Lê a versão da API do loader (u16 em `0x0A` do `picoLoader7.bin`: v1 abre jogos, v2 volta ao launcher, v3 cheats). Também lista saves sem jogo, saves duplicados, capas órfãs, capas e ícones fora do formato do launcher (regra do launcher oficial ou do Enhanced, conforme o instalado) e lixo do macOS. Como na PicoDex, só `._*` e `.DS_Store` contam como lixo removível; `.Trashes`, `.Spotlight-V100` e `.fseventsd` aparecem como aviso, e um `.fseventsd` com só `no_log` é mantido.
+
+**Compatibilidade por jogo.** [`core/loader_compat.py`](core/loader_compat.py) porta `loaderlists.ts`: lê `aplist.bin` (correção anti-pirataria por game code e revisão), `savelist.bin` (tipo e tamanho do save) e `patchlist.bin` (patches por game code e revisão) e responde na mesma ordem do loader: homebrew não passa por nenhuma lista, DSiWare usa os tamanhos do cabeçalho TWL e só a lista de patches, e um save NAND é medido pelo cabeçalho antes do `savelist.bin`. "Não listado" é dito como fato sobre a lista, porque o loader também tem correções fixas no código.
+
+**Capas automáticas.** `pick_boxart` segue a PicoDex (título normalizado, prefixo, parecido acima de 0,85, região, sem demos e kiosks), com três melhorias: a região vem também do game code de jogos de DS e da etiqueta de região do nome do arquivo; um título parecido só vale se as palavras baterem ("Brain Age" não vira "Brain Voyage"); e um nome sem subtítulo encontra o título com subtítulo, pulando continuações ("Brain Age" acha "Brain Age - Train Your Brain…", não "Brain Age 2"). Um nome de uma palavra só que não bate exatamente fica sem capa.
+
+**Associações e `settings.json`.** O editor troca só `fileAssociations` e preserva o resto do arquivo e os campos extras de cada entrada. Um `settings.json` com BOM, JSON inválido ou sem objeto na raiz nunca é sobrescrito (o launcher trocaria o arquivo por um padrão e as associações se perderiam).
 
 **Remoções reversíveis.** Tudo o que o RouteDex remove é copiado antes para `~/.route_1_kit_cache/routedex_backup/<data>_<rótulo>/`.
 
@@ -445,6 +457,9 @@ npx --yes tailwindcss@3.4.17 -i ./static/tailwind.input.css -o ./static/tailwind
 | `core/upstreams.py` | Registro das cinco fontes oficiais |
 | `core/picodex_rules.py` | Sistemas, pastas, destino da arte e correspondência de capas da PicoDex |
 | `core/routedex.py` | `gamedata.json`, saúde do cartão, capturas, banners, fundos noturnos, cheats |
+| `core/library_views.py` | Biblioteca por sistema, galeria, capas que faltam (só par exato), estatísticas |
+| `core/art_picker.py` | Janela de capa e ícone e banner de pasta: catálogo, fontes de ícone, gravação conferida |
+| `core/loader_compat.py` | Compatibilidade por jogo: `aplist.bin`, `savelist.bin`, `patchlist.bin` |
 | `core/pico_themes.py` | Temas do Pico Launcher |
 | `core/artwork.py`, `core/pico_artwork.py`, `core/pico_bmp.py`, `core/steamgriddb.py` | Busca e conversão de capas e ícones |
 | `core/rom_manager.py`, `core/rom_cleaner.py` | Importar, mover, remover e organizar jogos; saves |

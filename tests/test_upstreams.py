@@ -153,3 +153,31 @@ def test_catalog_parse_and_urls():
     assert picodex_rules.boxart_url("Nintendo_-_Nintendo_DS", "A & B (USA).png") == (
         "https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Nintendo_DS/master/Named_Boxarts/A%20%26%20B%20%28USA%29.png"
     )
+
+
+def test_region_prefs_use_nds_code_and_file_name_tags():
+    assert picodex_rules.region_prefs_for("nds", "AMCE")[0] == "(USA"
+    assert picodex_rules.region_prefs_for("nds", "AMCP")[0] == "(Europe"
+    assert picodex_rules.region_prefs_for("gb", None, "Tetris (USA).gb")[0] == "(USA"
+    assert picodex_rules.region_prefs_for("gb", None, "Zelda (Japan).gb")[0] == "(Japan"
+    assert picodex_rules.region_prefs_for("gb", None, "Tetris.gb") == picodex_rules.DEFAULT_REGION_PREFS
+    names = ["Mario Kart DS (Europe) (En,Fr,De,Es,It).png", "Mario Kart DS (USA, Australia) (En,Fr,De,Es,It).png"]
+    assert picodex_rules.pick_boxart("Mario Kart DS", names, picodex_rules.region_prefs_for("nds", "AMCE")) == names[1]
+
+
+def test_pick_boxart_never_takes_another_game():
+    """Melhorias sobre a PicoDex: palavras diferentes não contam como parecidas."""
+    names = [
+        "Brain Age - Train Your Brain in Minutes a Day! (USA).png",
+        "Brain Age 2 - More Training in Minutes a Day! (USA).png",
+        "Brain Voyage (USA) (En,Fr,Es).png",
+        "Mario vs. Donkey Kong 2 - MiniMini Daikoushin! (Japan).png",
+        "Mario Kart DS (USA) (En,Fr,De,Es,It).png",
+        "1942 (Japan).png",
+    ]
+    us = picodex_rules.region_prefs_for("nds", "ANDE")
+    assert picodex_rules.pick_boxart("Brain Age", names, us) == names[0]
+    assert picodex_rules.pick_boxart("Brain Voyage", names, us) == names[2]
+    assert picodex_rules.pick_boxart("Mario", names, us) is None
+    assert picodex_rules.pick_boxart("Mario Kart DS", names, us) == names[4]
+    assert picodex_rules.pick_boxart("1942", names, us) == names[5]

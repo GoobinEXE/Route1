@@ -16,9 +16,6 @@ const Dspico = (() => {
   let selectedRels = new Set();
   let lastInspect = null;
   let renderGen = 0;
-  let artRel = null;
-  let artKind = "cover";
-  let artGen = 0;
   let artEscBound = false;
   let artMeta = null;
   let artCandidates = [];
@@ -35,7 +32,7 @@ const Dspico = (() => {
     cartao: ["status", "health", "setup", "links"],
     games: ["games"],
     routedex: ["routedex"],
-    launcher: ["settings", "picothemes", "night"],
+    launcher: ["settings", "assoc", "picothemes", "night"],
     extras: ["emulators", "usbapps"],
     avancado: ["emunand", "firmware"],
   };
@@ -152,6 +149,10 @@ const Dspico = (() => {
       links: renderLinks,
       settings: renderSettings,
       picothemes: renderPicoThemes,
+      assoc: async (gen, m) => {
+        const el = document.getElementById("dspico-section-assoc");
+        if (el && m && gen === renderGen && window.R1K && R1K.picodex) await R1K.picodex.renderAssociations(el, m);
+      },
       night: renderNight,
       emulators: renderEmulators,
       usbapps: renderUsbApps,
@@ -332,7 +333,7 @@ const Dspico = (() => {
       return;
     }
     if (gen !== renderGen) return;
-    await RouteDex.render(gen, m, el, { only: ["library", "shots", "folders", "cheats"] });
+    await RouteDex.render(gen, m, el, { only: ["library", "covers", "stats", "shots", "folders", "cheats"] });
   }
 
   async function renderPicoThemes(gen, m) {
@@ -522,7 +523,8 @@ const Dspico = (() => {
         <section class="panel p-5 space-y-3 relative" id="dspico-games-panel">
           <div class="games-toolbar">
             <button type="button" class="btn-primary" id="dspico-games-add">Adicionar jogos</button>
-            <button type="button" class="btn-ghost btn-sm" id="dspico-games-batch-art">Buscar capas e ícones</button>
+            <label class="pdx-radio" title="Como a PicoDex: cada jogo vai para Games/<pasta do sistema> (nds, gba, gb…) e ganha a capa do catálogo"><input type="checkbox" id="dspico-games-bysystem"> Cada sistema na sua pasta</label>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-batch-art">Capas que faltam</button>
             <button type="button" class="btn-ghost btn-sm" id="dspico-games-mkdir">Nova pasta</button>
             <button type="button" class="btn-ghost btn-sm" id="dspico-games-dupes">Apagar duplicatas</button>
             <button type="button" class="btn-ghost btn-sm text-danger" id="dspico-games-del" disabled>Remover</button>
@@ -531,6 +533,7 @@ const Dspico = (() => {
             <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" disabled aria-label="Pasta acima">↑</button>
             <code>SD/</code> <span class="text-fg-mute">biblioteca</span>
           </div>
+          <div id="dspico-import-results" class="hidden"></div>
           <div id="dspico-games-drop" class="dspico-games-drop rounded-md border border-dashed border-line p-2">
             <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">Listando…</p>
             <div id="dspico-games-list" class="dspico-games-list space-y-0.5"></div>
@@ -577,6 +580,22 @@ const Dspico = (() => {
           confirmOrganize: true,
           sourceBtn: orgBtn,
         });
+      };
+    }
+    const bySys = document.getElementById("dspico-games-bysystem");
+    if (bySys && !bySys._dspicoBound) {
+      bySys._dspicoBound = true;
+      try {
+        bySys.checked = localStorage.getItem(IMPORT_KEY) === "1";
+      } catch (_e) {
+        bySys.checked = false;
+      }
+      bySys.onchange = () => {
+        try {
+          localStorage.setItem(IMPORT_KEY, bySys.checked ? "1" : "0");
+        } catch (_e) {
+          /* preferência só desta sessão */
+        }
       };
     }
     const batchArtBtn = document.getElementById("dspico-games-batch-art");
@@ -1055,586 +1074,17 @@ const Dspico = (() => {
     }
   }
 
-  function ensureArtEsc() {
-    if (artEscBound) return;
-    artEscBound = true;
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key !== "Escape") return;
-      const panel = document.getElementById("dspico-art-panel");
-      if (panel && !panel.classList.contains("hidden")) {
-        closeArtPanel();
-      }
-    });
-  }
-
-  function artQueryValue() {
-    const el = document.getElementById("dspico-art-query");
-    if (el) artQueryDraft = String(el.value || "");
-    return artQueryDraft;
-  }
-
-  function artPathLabel(state) {
-    const rel = (state && state.rel_path) || artRel || "";
-    const area = (state && state.area) || (artMeta && artMeta.area) || "";
-    if (!rel) return "";
-    if (rel.startsWith("ROMs/") || rel.startsWith("Games/")) return rel;
-    if (area === "roms") return "ROMs/" + rel.replace(/^ROMs\//, "");
-    return "Games/" + rel.replace(/^Games\//, "");
-  }
-
-  function closeArtPanel() {
-    artQueryValue();
-    artRel = null;
-    artMeta = null;
-    artCandidates = [];
-    artSearching = false;
-    artGen += 1;
-    const panel = document.getElementById("dspico-art-panel");
-    const backdrop = document.getElementById("dspico-art-backdrop");
-    if (panel) {
-      panel.classList.add("hidden");
-      panel.setAttribute("aria-hidden", "true");
-    }
-    if (backdrop) backdrop.classList.add("hidden");
-  }
-
-  function bindArtControls(candidates) {
-    const body = document.getElementById("dspico-art-body");
-    if (!body) return;
-    body.querySelectorAll("[data-art-kind]").forEach((tab) => {
-      tab.onclick = () => {
-        const k = tab.getAttribute("data-art-kind");
-        if (k !== "cover" && k !== "icon") return;
-        if (artKind === k) return;
-        artQueryValue();
-        artKind = k;
-        artCandidates = [];
-        artSearching = false;
-        renderArtBody({
-          ...(artMeta || {}),
-          kind: artKind,
-          current:
-            artKind === "icon"
-              ? artMeta && artMeta.icon
-              : artMeta && artMeta.cover,
-          candidates: [],
-          message:
-            "Escolha «Pesquisar» ou «Buscar online» para ver opções de " +
-            (artKind === "icon" ? "ícone" : "capa") +
-            ".",
-        });
-      };
-    });
-    const queryEl = document.getElementById("dspico-art-query");
-    if (queryEl) {
-      queryEl.oninput = () => {
-        artQueryDraft = String(queryEl.value || "");
-      };
-      queryEl.onkeydown = (ev) => {
-        if (ev.key === "Enter") {
-          ev.preventDefault();
-          runArtSearch(artQueryValue());
-        }
-      };
-    }
-    const searchBtn = document.getElementById("dspico-art-search-btn");
-    if (searchBtn) searchBtn.onclick = () => runArtSearch(artQueryValue());
-    const autoBtn = document.getElementById("dspico-art-auto");
-    if (autoBtn) {
-      autoBtn.onclick = () => runArtSearch("", { clearQuery: false });
-    }
-    const manBtn = document.getElementById("dspico-art-manual");
-    if (manBtn) manBtn.onclick = () => pickArtFile();
-    body.querySelectorAll("[data-art-idx]").forEach((btn) => {
-      btn.onclick = () => {
-        const idx = parseInt(btn.getAttribute("data-art-idx") || "-1", 10);
-        const c = candidates[idx];
-        if (c && c.url) applyArtUrl(c.url);
-      };
-    });
-  }
-
-  function renderArtBody(state) {
-    const body = document.getElementById("dspico-art-body");
-    if (!body) return;
-    const kind = state.kind || artKind;
-    const current = state.current;
-    const candidates = Array.isArray(state.candidates)
-      ? state.candidates
-      : artCandidates;
-    artCandidates = candidates;
-    const hints = state.hints || (artMeta && artMeta.hints) || {};
-    const isIcon = kind === "icon";
-
-    // Preservar texto da pesquisa entre re-renders (nunca depender de toolbar fora do body).
-    const qEl = document.getElementById("dspico-art-query");
-    if (qEl) artQueryDraft = String(qEl.value || "");
-    if (typeof state.query === "string") artQueryDraft = state.query;
-    const queryVal = artQueryDraft;
-    const restoreFocus =
-      qEl && document.activeElement === qEl ? qEl.selectionStart : null;
-
-    const currentHtml = current
-      ? `<img src="${current}" alt="" draggable="false">`
-      : `<div class="dspico-art-ph ${
-          isIcon ? "dspico-art-ph--icon" : ""
-        }">Sem ${isIcon ? "ícone" : "capa"}</div>`;
-
-    const plat = (state.platform || (artMeta && artMeta.platform) || "")
-      .toString()
-      .toUpperCase();
-    const pathLabel = artPathLabel(state);
-
-    const opts = candidates
-      .map((c, i) => {
-        const src = escapeHtml(c.preview || c.url || "");
-        const srcLabel = escapeHtml(
-          (c.source ? c.source + " · " : "") + (c.label || "opção")
-        );
-        return (
-          `<button type="button" class="dspico-art-opt ${
-            isIcon ? "dspico-art-opt--icon" : ""
-          }" data-art-idx="${i}">
-            <img src="${src}" alt="" draggable="false" loading="lazy" referrerpolicy="no-referrer"
-                 onerror="this.classList.add('hidden'); this.insertAdjacentHTML('afterend','<div class=\\'dspico-art-ph${
-                   isIcon ? " dspico-art-ph--icon" : ""
-                 }\\'>—</div>');">
-            <span class="dspico-art-opt-label">${srcLabel}</span>
-          </button>`
-        );
-      })
-      .join("");
-
-    body.innerHTML =
-      `<div>
-        <p class="text-[13px] font-medium text-fg">${escapeHtml(
-          state.display_name ||
-            (artMeta && artMeta.display_name) ||
-            artRel ||
-            ""
-        )}</p>
-        <p class="text-[11px] text-fg-mute mt-0.5">${escapeHtml(pathLabel)}${
-          state.game_code || (artMeta && artMeta.game_code)
-            ? " · " +
-              escapeHtml(state.game_code || (artMeta && artMeta.game_code) || "")
-            : ""
-        }${plat ? " · " + escapeHtml(plat) : ""}</p>
-      </div>` +
-      `<div class="dspico-art-tabs">
-        <button type="button" class="dspico-art-tab ${
-          kind === "cover" ? "dspico-art-tab--on" : ""
-        }" data-art-kind="cover" id="dspico-art-tab-cover">Capa</button>
-        <button type="button" class="dspico-art-tab ${
-          kind === "icon" ? "dspico-art-tab--on" : ""
-        }" data-art-kind="icon" id="dspico-art-tab-icon">Ícone</button>
-      </div>` +
-      `<div class="dspico-art-current ${
-        isIcon ? "dspico-art-current--icon" : ""
-      }">${currentHtml}
-        <div class="min-w-0">
-          <p class="text-[12px] text-fg-soft">Actual no cartão</p>
-          <p class="text-[11px] text-fg-mute mt-1 leading-relaxed">${escapeHtml(
-            hints[kind] || ""
-          )}</p>
-        </div>
-      </div>` +
-      `<div class="dspico-art-search">
-        <div class="dspico-art-search-row">
-          <input type="text" id="dspico-art-query" placeholder="Pesquisar por nome ou TID…" autocomplete="off" spellcheck="false" value="${escapeHtml(
-            queryVal
-          )}">
-          <button type="button" class="btn-secondary" id="dspico-art-search-btn">Pesquisar</button>
-        </div>
-      </div>` +
-      `<div class="dspico-art-actions">
-        <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="dspico-art-auto">Buscar online</button>
-        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="dspico-art-manual">Escolher arquivo do PC…</button>
-      </div>` +
-      `<p class="dspico-art-local-hint">Do teu PC: PNG ou BMP (JPEG não suportado).</p>` +
-      (state.searching || artSearching
-        ? `<p class="text-[12px] text-fg-mute">Procurando na Internet…</p>`
-        : "") +
-      (state.message
-        ? `<p class="text-[12px] text-fg-soft">${escapeHtml(state.message)}</p>`
-        : "") +
-      (candidates.length
-        ? `<div class="dspico-art-grid">${opts}</div>
-           <p class="text-[11px] text-fg-mute">Clique em uma opção para gravar no formato Pico Launcher (BMP).</p>`
-        : !(state.searching || artSearching)
-          ? `<p class="text-[12px] text-fg-mute">Use «Pesquisar» ou «Buscar online» para ver capas/ícones, ou escolha um arquivo do PC.</p>`
-          : "");
-
-    bindArtControls(candidates);
-    const newQ = document.getElementById("dspico-art-query");
-    if (newQ && restoreFocus != null) {
-      newQ.focus();
-      try {
-        const pos = Math.min(restoreFocus, newQ.value.length);
-        newQ.setSelectionRange(pos, pos);
-      } catch (_e) {
-        /* ignore */
-      }
-    }
-  }
-
-  function renderBatchMissing(missing) {
-    const el = document.getElementById("dspico-batch-missing");
-    if (!el) return;
-    const list = Array.isArray(missing) ? missing : [];
-    if (!list.length) {
-      el.classList.add("hidden");
-      el.innerHTML = "";
-      return;
-    }
-    el.classList.remove("hidden");
-    const rows = list
-      .map((item, idx) => {
-        const name = escapeHtml(item.display_name || item.rel_path || "?");
-        const bits = [];
-        if (item.missing_cover) bits.push("capa");
-        if (item.missing_icon) bits.push("ícone");
-        const need = bits.length ? bits.join(" + ") : "arte";
-        const rel = escapeHtml(item.rel_path || "");
-        return `<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded border border-line text-[12px]" data-miss-idx="${idx}">
-          <div>
-            <div class="font-medium text-fg">${name}</div>
-            <div class="text-[11px] text-fg-mute">Faltando: ${escapeHtml(need)}</div>
-          </div>
-          <div class="flex flex-wrap gap-1">
-            <button type="button" class="btn-secondary !text-[11px] !py-1 !px-2" data-miss-search="${rel}">Pesquisar</button>
-            <button type="button" class="btn-ghost !text-[11px] !py-1 !px-2" data-miss-file="${rel}" data-miss-kind="${
-              item.missing_cover ? "cover" : "icon"
-            }">Escolher arquivo</button>
-          </div>
-        </div>`;
-      })
-      .join("");
-    el.innerHTML = `
-      <div class="rounded-lg border border-line p-3 space-y-2 bg-surface-2/40">
-        <p class="text-[12px] font-semibold text-fg">Jogos sem capa/ícone após o lote</p>
-        <p class="text-[11px] text-fg-mute">Pesquise online ou escolha um arquivo. Só DSPico — não afecta TWiLight.</p>
-        <div class="space-y-2 max-h-56 overflow-y-auto">${rows}</div>
-      </div>`;
-    el.querySelectorAll("[data-miss-search]").forEach((btn) => {
-      btn.onclick = () => {
-        const rel = btn.getAttribute("data-miss-search") || "";
-        if (rel) openArtPanel(rel);
-      };
-    });
-    el.querySelectorAll("[data-miss-file]").forEach((btn) => {
-      btn.onclick = async () => {
-        const rel = btn.getAttribute("data-miss-file") || "";
-        const kind = btn.getAttribute("data-miss-kind") || "cover";
-        if (!rel) return;
-        artRel = rel;
-        artKind = kind === "icon" ? "icon" : "cover";
-        await pickArtFile();
-      };
-    });
-  }
-
-  async function runDspicoArtworkBatch() {
+  /** Capa e ícone de um jogo: janela portada da PicoDex (static/js/picodex-ui.js). */
+  function openArtPanel(rel) {
     const m = mount();
-    if (!m) {
-      alert("Selecione um cartão.");
-      return;
-    }
-    if (typeof busy !== "undefined" && busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    try {
-      const api = getApi() || (await waitForApi());
-      const fn =
-        api &&
-        (api.generate_dspico_artwork_batch || api.generate_dspico_covers_batch);
-      if (!fn) {
-        appendLog("API de lote DSPico indisponível.", "error");
-        return;
-      }
-      setBusy(true, null, {
-        op: "generate_dspico_artwork_batch",
-        label: "Buscando capas e ícones…",
-      });
-      appendLog("Buscando capas e ícones DSPico em lote…", "info");
-      const res = await fn.call(api, m);
-      if (res && res.success) {
-        appendLog(res.message || "Lote concluído.", "success");
-        renderBatchMissing(res.missing || []);
-        refresh();
-      } else {
-        appendLog((res && res.error) || "Falha no lote DSPico.", "error");
-        renderBatchMissing([]);
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
+    if (!rel || !m || !(window.R1K && R1K.picodex)) return;
+    R1K.picodex.openCoverPicker(m, rel, { onSaved: () => refresh() });
   }
 
-  async function openArtPanel(rel, keepKind) {
-    if (!rel || !mount()) return;
-    ensureArtEsc();
-    const gen = ++artGen;
-    const sameGame = artRel === rel;
-    artRel = rel;
-    if (!keepKind && !sameGame) {
-      artKind = "cover";
-      artQueryDraft = "";
-    }
-    const panel = document.getElementById("dspico-art-panel");
-    const backdrop = document.getElementById("dspico-art-backdrop");
-    const title = document.getElementById("dspico-art-title");
-    if (title) title.textContent = "Arte do jogo";
-    if (panel) {
-      panel.classList.remove("hidden");
-      panel.setAttribute("aria-hidden", "false");
-    }
-    if (backdrop) backdrop.classList.remove("hidden");
-    artSearching = false;
-    artCandidates = [];
-    renderArtBody({
-      display_name: (rel.split("/").pop() || rel).replace(/\.[^.]+$/, ""),
-      rel_path: rel,
-      kind: artKind,
-      query: artQueryDraft,
-      searching: false,
-      message: "Carregando…",
-      candidates: [],
-    });
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.get_dspico_game_artwork !== "function") {
-        if (gen !== artGen) return;
-        renderArtBody({
-          rel_path: rel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: "API de arte DSPico indisponível.",
-          candidates: [],
-        });
-        return;
-      }
-      const meta = await api.get_dspico_game_artwork(mount(), rel);
-      if (gen !== artGen) return;
-      if (!(meta && meta.success)) {
-        renderArtBody({
-          rel_path: rel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: (meta && meta.error) || "Falha ao carregar.",
-          candidates: [],
-        });
-        return;
-      }
-      artMeta = meta;
-      renderArtBody({
-        ...meta,
-        kind: artKind,
-        query: artQueryDraft,
-        current: artKind === "icon" ? meta.icon : meta.cover,
-        candidates: [],
-        searching: false,
-        message:
-          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um arquivo do PC.",
-      });
-    } catch (e) {
-      if (gen !== artGen) return;
-      renderArtBody({
-        rel_path: rel,
-        kind: artKind,
-        query: artQueryDraft,
-        message: e.message || String(e),
-        candidates: [],
-      });
-    }
-  }
-
-  async function runArtSearch(query, opts) {
-    if (!artRel || !mount()) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    const options = opts && typeof opts === "object" ? opts : {};
-    if (typeof opts === "number") {
-      options.expectedGen = opts;
-    }
-    const gen =
-      options.expectedGen != null ? options.expectedGen : ++artGen;
-    let q = typeof query === "string" ? query : artQueryValue();
-    if (options.clearQuery) {
-      artQueryDraft = "";
-      q = "";
-    } else {
-      artQueryDraft = q;
-    }
-    artSearching = true;
-    artCandidates = [];
-    renderArtBody({
-      ...(artMeta || {}),
-      rel_path: artRel,
-      kind: artKind,
-      query: artQueryDraft,
-      searching: true,
-      message: "Procurando na Internet…",
-      candidates: [],
-      current:
-        artKind === "icon"
-          ? artMeta && artMeta.icon
-          : artMeta && artMeta.cover,
-    });
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.search_dspico_artwork !== "function") {
-        if (gen !== artGen) return;
-        artSearching = false;
-        appendLog("API de pesquisa de arte indisponível.", "error");
-        renderArtBody({
-          ...(artMeta || {}),
-          rel_path: artRel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: "API de pesquisa indisponível.",
-          candidates: [],
-        });
-        return;
-      }
-      setBusy(true, null, { soft: true });
-      const data = await api.search_dspico_artwork(
-        mount(),
-        artRel,
-        artKind,
-        q
-      );
-      if (gen !== artGen) return;
-      artSearching = false;
-      if (!(data && data.success)) {
-        renderArtBody({
-          ...(artMeta || {}),
-          rel_path: artRel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: (data && data.error) || "Pesquisa falhou.",
-          candidates: [],
-          current:
-            artKind === "icon"
-              ? artMeta && artMeta.icon
-              : artMeta && artMeta.cover,
-        });
-        return;
-      }
-      artMeta = { ...(artMeta || {}), ...data };
-      renderArtBody({
-        ...data,
-        kind: artKind,
-        query: artQueryDraft,
-        searching: false,
-      });
-    } catch (e) {
-      if (gen !== artGen) return;
-      artSearching = false;
-      renderArtBody({
-        ...(artMeta || {}),
-        rel_path: artRel,
-        kind: artKind,
-        query: artQueryDraft,
-        message: e.message || String(e),
-        candidates: [],
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function applyArtUrl(url) {
-    if (!artRel || !mount() || !url) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    let ok = false;
-    const rel = artRel;
-    try {
-      const api = getApi() || (await waitForApi());
-      setBusy(true);
-      appendLog(
-        artKind === "icon" ? "Gravando ícone…" : "Gravando capa…",
-        "info"
-      );
-      const res = await api.apply_dspico_artwork_url(
-        mount(),
-        rel,
-        artKind,
-        url
-      );
-      if (res && res.success) {
-        appendLog(res.message || "Arte gravada.", "success");
-        ok = true;
-      } else {
-        appendLog((res && res.error) || "Falha ao gravar arte.", "error");
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
-    if (ok) {
-      await openArtPanel(rel, true);
-      refresh();
-    }
-  }
-
-  async function pickArtFile() {
-    if (!artRel || !mount()) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    let ok = false;
-    const rel = artRel;
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.pick_image_file !== "function") {
-        appendLog("Diálogo de imagem indisponível.", "error");
-        return;
-      }
-      const picked = await api.pick_image_file();
-      if (!picked || !picked.success) {
-        appendLog(
-          `Erro ao escolher imagem: ${(picked && picked.error) || "falha"}`,
-          "error"
-        );
-        return;
-      }
-      if (picked.cancelled || !picked.path) return;
-      setBusy(true);
-      appendLog(
-        artKind === "icon" ? "Gravando ícone…" : "Gravando capa…",
-        "info"
-      );
-      const res = await api.set_dspico_artwork(
-        mount(),
-        rel,
-        artKind,
-        picked.path
-      );
-      if (res && res.success) {
-        appendLog(res.message || "Arte gravada.", "success");
-        ok = true;
-      } else {
-        appendLog((res && res.error) || "Falha ao gravar arte.", "error");
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
-    if (ok) {
-      await openArtPanel(rel, true);
-      refresh();
-    }
+  /** Capas em lote: a tela RouteDex → Capas (lista o que falta, escolhe e busca só capas). */
+  function runDspicoArtworkBatch() {
+    if (typeof RouteDex !== "undefined" && RouteDex.showTab) RouteDex.showTab("covers");
+    if (window.R1K && R1K.shell) R1K.shell.go("dspico", "routedex");
   }
 
   function closeDspicoOverlay(id) {
@@ -1734,7 +1184,8 @@ const Dspico = (() => {
     let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
-      const destRel = gamesDestRel(gamesCwd);
+      const bySystem = importBySystem();
+      const destRel = bySystem ? "" : gamesDestRel(gamesCwd);
       const check = await api.check_dspico_import_conflicts(m, list, destRel);
       if (!check || !check.success) {
         appendLog(
@@ -1754,23 +1205,67 @@ const Dspico = (() => {
         setBusy(true);
       }
       appendLog(
-        `Importando ${list.length} item(ns) para Games/…`,
+        bySystem
+          ? `Importando ${list.length} item(ns) para a pasta de cada sistema em Games/…`
+          : `Importando ${list.length} item(ns) para Games/…`,
         "info"
       );
       const res = await api.import_dspico_games(
         m,
         list,
         destRel,
-        resolutions
+        resolutions,
+        bySystem,
+        true
       );
       if (res && res.success) appendLog(res.message || "Importado.", "success");
       else appendLog((res && res.error) || "Falha ao importar.", "error");
+      showImportResults((res && res.stats && res.stats.items) || []);
     } catch (e) {
       appendLog(e.message || String(e), "error");
     } finally {
       setBusy(false);
       refresh();
     }
+  }
+
+  const IMPORT_KEY = "routepico.import.bySystem";
+  function importBySystem() {
+    const cb = document.getElementById("dspico-games-bysystem");
+    return !!(cb && cb.checked);
+  }
+
+  /** Resultado de cada arquivo da importação (PicoDex DropImport). */
+  function showImportResults(items) {
+    const box = document.getElementById("dspico-import-results");
+    if (!box) return;
+    if (!items.length) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    const LABEL = {
+      added: "Adicionado",
+      duplicate: "Pulado (já está no cartão ou veio duas vezes)",
+      "unknown-type": "Pulado (não é um ROM suportado)",
+      skipped: "Pulado (arquivo de sistema)",
+      failed: "Falhou",
+    };
+    const COVER = { fetched: ", capa encontrada", none: ", sem capa no catálogo", error: ", capa falhou" };
+    const added = items.filter((i) => i.status === "added").length;
+    box.className = "note pdx-import";
+    box.innerHTML = `
+      <div class="flex items-center justify-between gap-2"><strong>Importação concluída · ${added === 1 ? "1 adicionado" : `${added} adicionados`}</strong>
+        <button type="button" class="btn-ghost btn-sm" id="dspico-import-dismiss">Fechar</button></div>
+      <ul class="pdx-import-list" aria-label="Resultado da importação">${items
+        .map(
+          (i) => `<li><span class="truncate" title="${escapeHtml(i.rel || i.name)}">${escapeHtml(i.name)}</span>
+            <span class="${i.status === "added" ? "text-ok" : i.status === "failed" ? "text-danger" : "text-fg-mute"}">${escapeHtml(
+              (LABEL[i.status] || i.status) + (i.status === "added" ? COVER[i.cover] || "" : "") + (i.error ? ` (${i.error})` : "")
+            )}</span></li>`
+        )
+        .join("")}</ul>`;
+    box.querySelector("#dspico-import-dismiss").onclick = () => showImportResults([]);
   }
 
   async function openDspicoDupesSheet() {
@@ -2409,7 +1904,6 @@ const Dspico = (() => {
     addGames,
     importPaths,
     openArtPanel,
-    closeArtPanel,
     runDspicoArtworkBatch,
   };
 })();

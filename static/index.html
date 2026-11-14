@@ -14,11 +14,12 @@
   <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png?v=h1">
   <link rel="apple-touch-icon" href="assets/app-icon-256.png?v=h1">
   <link rel="stylesheet" href="themes.css?v=g1">
-  <link rel="stylesheet" href="tailwind.css?v=g1">
-  <link rel="stylesheet" href="style.css?v=rp5">
+  <link rel="stylesheet" href="tailwind.css?v=p1">
+  <link rel="stylesheet" href="style.css?v=p1">
   <link rel="stylesheet" href="app.css?v=k7">
   <link rel="stylesheet" href="skins.css?v=k6">
   <link rel="stylesheet" href="console.css?v=k4">
+  <link rel="stylesheet" href="picodex.css?v=p1">
   <script src="theme-data.js?v=c3"></script>
   <script src="theme.js?v=c4"></script>
 </head>
@@ -43,6 +44,7 @@
     <symbol id="i-next" viewBox="0 0 24 24"><path d="M8.6 4.2 16.4 12l-7.8 7.8-1.9-1.9 5.9-5.9-5.9-5.9z"/></symbol>
     <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M18.4 6.6A8 8 0 1 0 20 12h-2.6a5.4 5.4 0 1 1-1.6-3.8L13 11h8V3z"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M5.4 3.6 12 10.2l6.6-6.6 1.8 1.8-6.6 6.6 6.6 6.6-1.8 1.8-6.6-6.6-6.6 6.6-1.8-1.8 6.6-6.6-6.6-6.6z"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M3 17.2 14.6 5.6l3.8 3.8L6.8 21H3zM16 4.2 18.2 2 22 5.8 19.8 8z"/></symbol>
   </svg>
 
   <div class="app-shell">
@@ -213,6 +215,7 @@
     </div>
     <div id="dspico-pane-launcher" class="hidden space-y-4" role="tabpanel">
       <div id="dspico-section-settings" class="space-y-4"></div>
+      <div id="dspico-section-assoc" class="space-y-4"></div>
       <div id="dspico-section-picothemes" class="space-y-4"></div>
       <div id="dspico-section-night" class="space-y-4"></div>
     </div>
@@ -860,32 +863,16 @@
   </div>
 
 
-  <!-- Fora de .view-pane: position:fixed não pode ter ancestral com transform. -->
-  <div id="dspico-art-backdrop" class="dspico-art-backdrop hidden" onclick="Dspico.closeArtPanel()"></div>
-  <aside
-    id="dspico-art-panel"
-    class="dspico-art-panel hidden"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="dspico-art-title"
-    aria-hidden="true"
-  >
-    <div class="dspico-art-head">
-      <h2 class="dspico-art-title" id="dspico-art-title">Arte do jogo</h2>
-      <button type="button" class="btn-ghost !px-2 !py-1" onclick="Dspico.closeArtPanel()" aria-label="Fechar"><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg></button>
-    </div>
-    <div class="dspico-art-body" id="dspico-art-body"></div>
-  </aside>
-
   <script src="js/events.js?v=sgdb3"></script>
-  <script src="js/shell.js?v=k6"></script>
+  <script src="js/shell.js?v=p1"></script>
   <script src="js/updates.js?v=k8"></script>
   <script src="js/launcher-extras.js?v=br1"></script>
   <script src="js/virtual-grid.js?v=sgdb3"></script>
-  <script src="app.js?v=k4"></script>
+  <script src="app.js?v=p1"></script>
   <script src="rom_explorer.js?v=br1"></script>
-  <script src="js/routedex.js?v=k4"></script>
-  <script src="dspico.js?v=k4"></script>
+  <script src="js/picodex-ui.js?v=p1"></script>
+  <script src="js/routedex.js?v=p1"></script>
+  <script src="dspico.js?v=p1"></script>
   <script src="wizard.js?v=k7"></script>
 </body>
 </html>

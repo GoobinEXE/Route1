@@ -271,6 +271,10 @@ def scan_card(mount_path: str) -> dict[str, Any]:
     games: list[dict[str, Any]] = []
     saves: list[dict[str, Any]] = []
     junk: list[str] = []
+    # Pastas que o macOS recria a cada vez que o cartão é montado (.Trashes,
+    # .Spotlight-V100, .fseventsd). Como na PicoDex, não são lixo a limpar: são
+    # só mostradas. A .Trashes pode guardar arquivos apagados pelo usuário.
+    macos_dirs: list[dict[str, Any]] = []
     skip = {s.lower() for s in _COLLECT_SKIP_DIRS} - {".fseventsd", ".trashes", ".spotlight-v100"}
     for root, dirs, files in os.walk(mount_path):
         rel_root = _rel(mount_path, root)
@@ -279,8 +283,9 @@ def scan_card(mount_path: str) -> dict[str, Any]:
         for d in dirs:
             full = os.path.join(root, d)
             if d in JUNK_DIR_NAMES:
-                if not (d == ".fseventsd" and _fsevents_prevention_only(full)):
-                    junk.append(_rel(mount_path, full))
+                macos_dirs.append(
+                    {"rel": _rel(mount_path, full), "kept": d == ".fseventsd" and _fsevents_prevention_only(full)}
+                )
                 continue
             if d.lower() in skip or d.startswith("."):
                 continue
@@ -309,7 +314,7 @@ def scan_card(mount_path: str) -> dict[str, Any]:
                 if _is_junk_file(name):
                     junk.append(_rel(mount_path, os.path.join(root, name)))
     games.sort(key=lambda g: g["rel"].lower())
-    return {"games": games, "saves": saves, "junk": sorted(set(junk))}
+    return {"games": games, "saves": saves, "junk": sorted(set(junk)), "macos_dirs": macos_dirs}
 
 
 # --------------------------------------------------------------------------- #
@@ -425,6 +430,35 @@ def _intersect(sets: list[set[str]]) -> set[str]:
     return out
 
 
+_LOADER_API_VERSION_OFFSET = 0x0A
+_KNOWN_MAX_LOADER_API = 16
+
+
+def loader_api_info(mount_path: str) -> dict[str, Any]:
+    """Versão da API do Pico Loader (u16 em 0x0A do picoLoader7.bin) e o que ela permite.
+
+    Port de PicoDex ``loader.ts``: v1 abre jogos, v2 volta ao launcher, v3 cheats.
+    Valores 0 ou acima do maior conhecido contam como desconhecidos.
+    """
+    api: Optional[int] = None
+    try:
+        with open(_pico(mount_path, "picoLoader7.bin"), "rb") as f:
+            head = f.read(_LOADER_API_VERSION_OFFSET + 2)
+        if len(head) >= _LOADER_API_VERSION_OFFSET + 2:
+            v = int.from_bytes(head[_LOADER_API_VERSION_OFFSET : _LOADER_API_VERSION_OFFSET + 2], "little")
+            api = v if 0 < v <= _KNOWN_MAX_LOADER_API else None
+    except OSError:
+        api = None
+    caps: list[str] = []
+    if api is not None:
+        caps.append("game_loading")
+        if api >= 2:
+            caps.append("return_to_launcher")
+        if api >= 3:
+            caps.append("cheats")
+    return {"api_version": api, "capabilities": caps}
+
+
 def identify_loader(mount_path: str) -> dict[str, Any]:
     """Port de identifyLoader (PicoDex loaderVersion.ts), ciente do Loader Enhanced.
 
@@ -491,6 +525,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
         "releases_behind": 0,
         "mismatch": None,
     }
+    result.update(loader_api_info(mount_path))
     if not present:
         result["status"] = "no-loader"
         return result
@@ -793,6 +828,48 @@ def _settings_problem(mount_path: str) -> Optional[str]:
     return None
 
 
+_ART_HEAD_BYTES = 64
+
+
+def launcher_art_problems(mount_path: str, launcher: str = "stock") -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Capas e ícones em /_pico que o Pico Launcher não consegue mostrar, e por quê.
+
+    PicoDex 0.10.3: uma capa fora do formato aparece como ruído ou some; um
+    ícone fora do formato aparece em branco. Quase sempre vêm de salvar a
+    imagem num editor; salvar de novo pelo Route Pico corrige.
+    """
+    from core.pico_bmp import validate_launcher_cover_bmp, validate_launcher_icon_bmp
+
+    covers: list[dict[str, str]] = []
+    icons: list[dict[str, str]] = []
+    for kind, out in (("covers", covers), ("icons", icons)):
+        for bucket in ("nds", "gba", "user"):
+            folder = _pico(mount_path, kind, bucket)
+            try:
+                names = sorted(os.listdir(folder), key=str.lower)
+            except OSError:
+                continue
+            for n in names:
+                if _is_junk_file(n) or not n.lower().endswith(".bmp"):
+                    continue
+                path = os.path.join(folder, n)
+                try:
+                    size = os.path.getsize(path)
+                    with open(path, "rb") as f:
+                        data = f.read(_ART_HEAD_BYTES if kind == "covers" else 4096)
+                except OSError as e:
+                    out.append({"rel": f"{PICO_DIR}/{kind}/{bucket}/{n}", "reason": f"não foi possível ler ({e.__class__.__name__})"})
+                    continue
+                reason = (
+                    validate_launcher_cover_bmp(data, size, launcher)
+                    if kind == "covers"
+                    else validate_launcher_icon_bmp(data)
+                )
+                if reason:
+                    out.append({"rel": f"{PICO_DIR}/{kind}/{bucket}/{n}", "reason": reason})
+    return covers, icons
+
+
 def check_health(mount_path: str) -> dict[str, Any]:
     scan = scan_card(mount_path)
     games, saves = scan["games"], scan["saves"]
@@ -855,6 +932,9 @@ def check_health(mount_path: str) -> dict[str, Any]:
 
     launcher = identify_launcher(mount_path)
     loader = identify_loader(mount_path)
+    cover_problems, icon_problems = launcher_art_problems(
+        mount_path, "enhanced" if launcher.get("variant") == "enhanced" else "stock"
+    )
     problems = []
     if not launcher["present"]:
         problems.append("Falta /_picoboot.nds: o DSPico não inicia o Pico Launcher.")
@@ -881,6 +961,9 @@ def check_health(mount_path: str) -> dict[str, Any]:
         "missing_required": missing_required,
         "missing_optional": missing_optional,
         "junk": scan["junk"],
+        "macos_dirs": scan["macos_dirs"],
+        "cover_problems": cover_problems,
+        "icon_problems": icon_problems,
         "orphan_saves": orphan_saves,
         "duplicate_saves": duplicate_saves,
         "orphan_art": orphan_art,
