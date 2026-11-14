@@ -4,18 +4,21 @@
  * Depende de getApi / waitForApi / escapeHtml / setBusy / isHardBusy / appendLog (app.js).
  */
 const RouteDex = (() => {
+  // Mesmas abas e na mesma ordem da PicoDex (Library, Covers, Pico Enhanced,
+  // Associations, Screenshots, Health), mais Pastas e Cheats do Route Pico.
   const ALL_TABS = [
     ["library", "Biblioteca"],
     ["covers", "Capas"],
     ["stats", "Estatísticas"],
-    ["health", "Saúde do cartão"],
+    ["assoc", "Associações"],
     ["shots", "Capturas"],
+    ["health", "Saúde do cartão"],
     ["folders", "Pastas"],
     ["cheats", "Cheats"],
   ];
   // Cada tela mostra só as abas dela: a saúde do cartão vive na tela Cartão.
   let TABS = ALL_TABS;
-  let view = { title: "RouteDex", intro: "A sua biblioteca do Pico Launcher, lida e escrita direto no microSD." };
+  let view = { title: "RouteDex", intro: "Tudo o que a PicoDex faz, direto no microSD: capas, biblioteca, estatísticas, associações, capturas e saúde do cartão." };
   let tab = "library";
   let filter = "all";
   let query = "";
@@ -135,6 +138,8 @@ const RouteDex = (() => {
       b.onclick = () => {
         if (hardBusy()) return;
         tab = b.getAttribute("data-tab");
+        // Como na PicoDex: a aba Biblioteca sempre volta à visão por sistema.
+        if (tab === "library") gallerySystem = null;
         draw();
       };
     });
@@ -169,6 +174,7 @@ const RouteDex = (() => {
     if (tab === "library") await drawLibrary(my);
     else if (tab === "covers") await drawCovers(my);
     else if (tab === "stats") await drawStats(my);
+    else if (tab === "assoc") await drawAssoc(my);
     else if (tab === "health") await drawHealth(my);
     else if (tab === "shots") await drawShots(my);
     else if (tab === "folders") await drawFolders(my);
@@ -525,6 +531,16 @@ const RouteDex = (() => {
         : `Pronto: ${res.written} gravada(s) · ${res.no_match} sem par · ${res.failed} com falha.`;
       galleryCovers = {};
     };
+  }
+
+  // ------------------------------------------------------------------ Associações (AssociationsView)
+
+  async function drawAssoc(my) {
+    loading("Lendo o settings.json…");
+    if (!(window.R1K && R1K.picodex)) return;
+    const el = body();
+    if (my !== gen || !el) return;
+    await R1K.picodex.renderAssociations(el, mountPath, { bare: true });
   }
 
   // ------------------------------------------------------------------ Estatísticas (StatsView)
@@ -1046,7 +1062,7 @@ const RouteDex = (() => {
     view = {
       bare: !!o.bare,
       title: o.title || "RouteDex",
-      intro: o.intro || "A sua biblioteca do Pico Launcher, lida e escrita direto no microSD.",
+      intro: o.intro || "Tudo o que a PicoDex faz, direto no microSD: capas, biblioteca, estatísticas, associações, capturas e saúde do cartão.",
     };
     if (!TABS.some(([id]) => id === tab)) tab = TABS[0][0];
     host = el;

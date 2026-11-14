@@ -88,5 +88,5 @@ def expand_user_path(path: str) -> str:
     if not cleaned:
         return ""
     if cleaned.startswith("~"):
-        return os.path.expanduser(cleaned)
+        return os.path.normpath(os.path.expanduser(cleaned))
     return cleaned

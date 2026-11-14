@@ -797,7 +797,8 @@ def install_gei_kernel(mount_path, log_callback=None):
     if not src:
         return (
             False,
-            "Pacote GEi não encontrado (vendor/GEiv4.2_EN nem Downloads/GEiv4.2_EN).",
+            "Pacote GEi não encontrado. Baixe o pacote oficial GEi v4.2 EN no site do "
+            "fabricante do cartucho, extraia e deixe a pasta GEiv4.2_EN em Downloads.",
         )
 
     required = ["_DS_MENU.DAT", "_DS_MSHL.NDS"]

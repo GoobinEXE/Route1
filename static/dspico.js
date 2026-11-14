@@ -333,7 +333,7 @@ const Dspico = (() => {
       return;
     }
     if (gen !== renderGen) return;
-    await RouteDex.render(gen, m, el, { only: ["library", "covers", "stats", "shots", "folders", "cheats"] });
+    await RouteDex.render(gen, m, el, { only: ["library", "covers", "stats", "assoc", "shots", "health", "folders", "cheats"] });
   }
 
   async function renderPicoThemes(gen, m) {

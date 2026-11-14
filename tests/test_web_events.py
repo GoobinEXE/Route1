@@ -28,7 +28,10 @@ def test_emit_coalesces_same_event_type(monkeypatch):
     for i in range(25):
         web_events.emit("log", {"message": f"log-{i}"})
     web_events.start()
-    time.sleep(0.25)
+    deadline = time.time() + 5
+    while time.time() < deadline and not any('"type": "log"' in c for c in win.calls):
+        time.sleep(0.02)
+    time.sleep(0.1)
     web_events.stop()
     log_calls = [
         c for c in win.calls if '"type": "log"' in c or "\"type\": \"log\"" in c

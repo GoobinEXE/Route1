@@ -840,9 +840,11 @@
   // ------------------------------------------------------------------ associações de arquivo
 
   /** Editor de fileAssociations do settings.json (PicoDex AssociationsView). */
-  async function renderAssociations(el, mount) {
+  async function renderAssociations(el, mount, opts) {
     if (!el) return;
-    const card = (inner) => `<section class="panel p-5 space-y-3"><h3 class="section-label">Associações de arquivo</h3>${inner}</section>`;
+    const bare = !!(opts && opts.bare);
+    const card = (inner) =>
+      bare ? `<div class="space-y-3">${inner}</div>` : `<section class="panel p-5 space-y-3"><h3 class="section-label">Associações de arquivo</h3>${inner}</section>`;
     el.innerHTML = card(`<p class="text-[12px] text-fg-mute">Lendo o settings.json…</p>`);
     const a = await api();
     let r;
@@ -928,7 +930,7 @@
         const res = await write("set_file_associations", [mount, draft], "Salvando associações…");
         if (res && res.success) {
           appendLog("Associações de arquivo salvas.", "ok");
-          renderAssociations(el, mount);
+          renderAssociations(el, mount, opts);
         }
       };
     }

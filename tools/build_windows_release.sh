@@ -111,6 +111,8 @@ want_local_sign() {
 run_build() {
   rm -rf "$DIST" "$BUILD"
   mkdir -p "$DIST"
+  echo "==> Avisos de terceiros (licenças do que vai no app)"
+  python tools/gen_third_party_notices.py
   echo "==> PyInstaller (Route Pico ${VERSION})"
   python -m PyInstaller \
     --noconfirm \

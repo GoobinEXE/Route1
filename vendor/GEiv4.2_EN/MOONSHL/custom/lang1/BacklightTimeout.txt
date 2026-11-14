@@ -1,3 +1,0 @@
-Dim the backlight after the selected
-time interval to save power for each
-of the below states:

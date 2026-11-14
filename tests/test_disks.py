@@ -127,7 +127,7 @@ def test_macos_force_cluster_retries_admin_on_permission(monkeypatch):
 
     monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
     monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
-    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501, raising=False)
     monkeypatch.setattr(
         disks,
         "_macos_terminal_newfs",
@@ -150,7 +150,7 @@ def test_macos_force_cluster_terminal_fallback_on_eperm(monkeypatch):
 
     monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
     monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
-    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501, raising=False)
     monkeypatch.setattr(
         disks,
         "_macos_terminal_newfs",

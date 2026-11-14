@@ -479,18 +479,24 @@ class Api:
         resolutions = normalize_conflict_resolutions(conflict_resolutions)
         if resolutions is None:
             return _reject("Resoluções de conflito inválidas.")
+        by_system_b, err = _as_bool(by_system, default=False)
+        if err:
+            return _reject(err)
+        fetch_covers_b, err = _as_bool(fetch_covers, default=False)
+        if err:
+            return _reject(err)
         success, msg, stats = do_import_dspico_games(
             mount_path,
             expanded,
             dest_rel_dir=dest,
             log_callback=add_log,
             conflict_resolutions=resolutions,
-            by_system=_as_bool(by_system),
+            by_system=by_system_b,
         )
         stats = stats or {}
         # Como a PicoDex: logo após copiar, busca a capa dos jogos novos (só o par
         # exato do catálogo; nunca sobrescreve). Ainda dentro do OP_LOCK.
-        if success and _as_bool(fetch_covers):
+        if success and fetch_covers_b:
             from core.library_views import fetch_missing_covers
 
             added = [i for i in stats.get("items", []) if i.get("status") == "added" and i.get("bucket") != "apps"]
@@ -2062,9 +2068,10 @@ class Api:
         rf, err = _as_path_str(rel_folder, label="pasta")
         if err:
             return _reject(err)
-        return self._art_call(
-            save_banner, mount_path, rf, str(title or "")[:127], icon_token, bool(_as_bool(keep_icon)), add_log
-        )
+        keep, err = _as_bool(keep_icon, default=False)
+        if err:
+            return _reject(err)
+        return self._art_call(save_banner, mount_path, rf, str(title or "")[:127], icon_token, keep, add_log)
 
     @_run_mount_op(min_free_mb=1)
     def remove_routedex_items(self, mount_path, rels):

@@ -30,7 +30,11 @@ datas = [
     (os.path.join(ROOT, "CHANGELOG.md"), "."),
     # Manifesto de hashes Pico Loader/Launcher usado pelo RouteDex (offline).
     (os.path.join(ROOT, "core", "data"), os.path.join("core", "data")),
-    (os.path.join(ROOT, "vendor", "GEiv4.2_EN"), os.path.join("vendor", "GEiv4.2_EN")),
+    # Licença do Route Pico e avisos de terceiros vão junto com o binário.
+    (os.path.join(ROOT, "LICENSE"), "."),
+    (os.path.join(ROOT, "docs", "licenses"), os.path.join("docs", "licenses")),
+    # O pacote GEi (kernel/MoonShell) é software de terceiros sem licença de
+    # redistribuição: NÃO entra no app; o usuário baixa o oficial (Downloads).
 ]
 binaries = []
 hiddenimports = list(collect_submodules("core")) + list(collect_submodules("services"))

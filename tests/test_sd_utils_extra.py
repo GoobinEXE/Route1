@@ -35,6 +35,7 @@ def test_copy_nand_backup(tmp_path, monkeypatch):
     desktop = tmp_path / "Desktop"
     desktop.mkdir()
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setattr(sd_utils, "is_safe_mount_path", lambda p: True)
     # expanduser("~") uses HOME
     ok, msg = sd_utils.copy_nand_backup(str(sd))
@@ -54,6 +55,7 @@ def test_install_cheats_from_downloads(tmp_path, monkeypatch):
     cheat.write_bytes(b"C" * (200 * 1024))
 
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setattr(sd_utils, "is_safe_mount_path", lambda p: True)
     monkeypatch.setattr("core.sdio.sync_volume", lambda *a, **k: None)
 

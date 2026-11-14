@@ -16,3 +16,6 @@ release_artifacts/
 nds/*.nds
 nds/*.elf
 *.r1partial
+
+# Pacote GEi do fabricante: sem licença de redistribuição (ver vendor/README.md)
+vendor/GEiv4.2_EN/

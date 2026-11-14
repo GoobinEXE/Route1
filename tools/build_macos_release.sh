@@ -97,6 +97,8 @@ case "$SIGN_MODE" in
   *) echo "==> Sem certificado Developer ID: assinatura ad-hoc (o macOS vai pedir confirmação ao abrir)" ;;
 esac
 
+echo "==> Avisos de terceiros (licenças do que vai no app)"
+python tools/gen_third_party_notices.py
 echo "==> PyInstaller (Route Pico ${VERSION}, ${ARCH})"
 if [[ "$SIGN_MODE" == "adhoc" ]]; then
   ROUTE_PICO_CODESIGN_IDENTITY="" python -m PyInstaller --noconfirm --clean \

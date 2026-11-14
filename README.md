@@ -238,7 +238,7 @@ Quem já conhece o processo pode usar a seção **Passos manuais**, que grava ca
 
 O assistente do bloco **Flashcards R4/GEi** tem dois objetivos. **Criar flashcard do zero** prepara um microSD novo ou que você quer limpar: escolha a marca, formate em FAT32 se for preciso (a formatação apaga tudo) e o app instala o sistema do cartucho e a estrutura de pastas. **Atualizar flashcard** recomenda um backup e troca só o sistema do cartucho.
 
-Para o **GEi (Galaxy Eagle i)**, o app usa o pacote que vem junto com ele. Para o **R4**, a atenção é maior: existem dezenas de clones com o mesmo nome, e cada um precisa do sistema do seu modelo. Com o sistema errado, o cartucho não liga (o cartão pode ser refeito, o cartucho não estraga). Confira o site impresso no seu cartucho antes de escolher.
+Para o **GEi (Galaxy Eagle i)**, baixe o pacote oficial GEi v4.2 EN no site do fabricante, extraia e deixe a pasta `GEiv4.2_EN` em Downloads: o app usa os arquivos de lá. O kernel e o MoonShell são do fabricante e não vêm com o Route Pico. Para o **R4**, a atenção é maior: existem dezenas de clones com o mesmo nome, e cada um precisa do sistema do seu modelo. Com o sistema errado, o cartucho não liga (o cartão pode ser refeito, o cartucho não estraga). Confira o site impresso no seu cartucho antes de escolher.
 
 Para o DSPico, use o bloco **Cartão** do grupo DSPico, e não este assistente.
 

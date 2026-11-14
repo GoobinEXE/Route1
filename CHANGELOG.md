@@ -10,6 +10,8 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-11-14
+
 ### Adicionado
 
 - **Tudo o que a PicoDex faz, dentro do Route Pico** (RouteDex): biblioteca por sistema com quantas capas cada um tem, galeria de capas com busca e filtros, estatísticas com as capas (mais jogados, recentes, favoritos) e a ficha de cada jogo de DS com o que o Pico Loader faz ao abri-lo (correção anti-pirataria, save, patches)
@@ -20,37 +22,6 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - **Importar por sistema**: cada ROM vai para a pasta do seu sistema, ganha a capa na hora e o resultado de cada arquivo aparece no fim
 - A Saúde do cartão mostra as capas e ícones que o launcher não consegue mostrar, limpa o lixo do macOS ali mesmo e diz o que o Pico Loader instalado sabe fazer
 - O app lembra o último cartão aberto
-
-### Alterado
-
-- Capas mais nítidas: a imagem é reduzida com suavização e preenche a área da capa, como as capas da comunidade
-- A capa sugerida respeita a região do jogo de DS (EUA, Europa, Japão) e a etiqueta de região do nome do arquivo
-- A busca de capas em lote não troca mais o ícone dos jogos de DS pela capa encolhida
-- As pastas que o macOS recria (como a lixeira do cartão) não são mais apagadas como lixo
-
-### Corrigido
-
-- O Route Pico não grava mais por cima de um settings.json corrompido, o que apagava as associações de arquivo
-- "Brain Age" e outros nomes curtos não recebem mais a capa de outro jogo parecido
-- Campos de texto não mostram mais a seta de lista
-
-### Desenvolvimento
-
-- `core/loader_compat.py`, `core/art_picker.py`, `core/library_views.py`, `static/js/picodex-ui.js`, `static/picodex.css`; catálogo libretro com logos na mesma chamada da API; `validate_launcher_cover_bmp` / `validate_launcher_icon_bmp`; gravação de arte com verify-before-replace
-
-## [1.2.0] — 2026-11-14
-
-### Alterado
-
-- **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas**
-
-- **Navegação de console**: o app abre num Início com blocos para cada tarefa, como o menu de um console; cada bloco abre uma tela com Voltar, e embaixo ficam a barra de ícones (Início, Atividade, Configurações). Setas movem a seleção, Enter abre, Esc volta. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima e a gaveta Atividade abre sozinha durante operações
-
-- **Regras da PicoDex primeiro**: capas escolhidas no catálogo libretro-thumbnails como na PicoDex (antes de SteamGridDB e GameTDB), cada capa/ícone gravado em um só destino, pastas `Games/` por sistema iguais às da PicoDex (GB e GBC em `gb/`, Mega Drive em `gen/`, `.dsi` em `nds/`) e versão do Pico Loader identificada pelo manifesto da PicoDex
-- **Pico Loader 1.7.1** no pacote oficial; a atualização do loader passa a copiar também `patchlist.bin`
-
-### Adicionado
-
 - **Temas novos**: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D e Híbrido, inspirados em menus de consoles, cada um com paleta original e modos Claro (Catppuccin Latte), Noturno (Catppuccin Mocha) ou Sistema. Cada tema arruma o Início do seu jeito: duas telas com cantos azuis, fileira de ícones com balão, grade de canais com barra curva e relógio, grade de vidro com bloco ciano, painéis violeta com barra dourada, bandeja de blocos com cantos menta, ou fileira de blocos com doca redonda
 - **Início** com o estado do microSD, o próximo passo (preparar, adicionar jogos, ver jogos) com um botão, dez blocos com ícones coloridos e selos, hora e medidor de espaço na barra de cima
 - **Funções reunidas**: a saúde do cartão foi para a tela Cartão; as Apps homebrew entraram na Biblioteca TWiLight; o assistente se dividiu entre Softmod DSi (SD lateral) e Flashcards R4/GEi (cartucho); o pacote DSPico ficou só no Cartão, com o caminho «Começar do zero»; Configurações fica só na barra de baixo
@@ -66,8 +37,24 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - **Banners e capas de pasta**, **fundos noturnos** dos temas e **importar cheats** (`usrcheat.dat`)
 - **Pico Launcher Enhanced / Pico Loader Enhanced** como opção recomendada em Verificar Atualizações, com aviso de versão não oficial e «Voltar ao oficial»
 
+### Alterado
+
+- O RouteDex reúne todas as abas da PicoDex, na mesma ordem: Biblioteca, Capas, Estatísticas, Associações, Capturas e Saúde do cartão, mais Pastas e Cheats. A aba Biblioteca sempre volta à visão por sistema
+- Capas mais nítidas: a imagem é reduzida com suavização e preenche a área da capa, como as capas da comunidade
+- A capa sugerida respeita a região do jogo de DS (EUA, Europa, Japão) e a etiqueta de região do nome do arquivo
+- A busca de capas em lote não troca mais o ícone dos jogos de DS pela capa encolhida
+- As pastas que o macOS recria (como a lixeira do cartão) não são mais apagadas como lixo
+- **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas**
+- **Navegação de console**: o app abre num Início com blocos para cada tarefa, como o menu de um console; cada bloco abre uma tela com Voltar, e embaixo ficam a barra de ícones (Início, Atividade, Configurações). Setas movem a seleção, Enter abre, Esc volta. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima e a gaveta Atividade abre sozinha durante operações
+- **Regras da PicoDex primeiro**: capas escolhidas no catálogo libretro-thumbnails como na PicoDex (antes de SteamGridDB e GameTDB), cada capa/ícone gravado em um só destino, pastas `Games/` por sistema iguais às da PicoDex (GB e GBC em `gb/`, Mega Drive em `gen/`, `.dsi` em `nds/`) e versão do Pico Loader identificada pelo manifesto da PicoDex
+- **Pico Loader 1.7.1** no pacote oficial; a atualização do loader passa a copiar também `patchlist.bin`
+- O pacote do flashcard GEi (kernel e MoonShell do fabricante) não vem mais com o app: baixe o pacote oficial e deixe a pasta `GEiv4.2_EN` em Downloads; o assistente mostra onde
+
 ### Corrigido
 
+- O Route Pico não grava mais por cima de um settings.json corrompido, o que apagava as associações de arquivo
+- "Brain Age" e outros nomes curtos não recebem mais a capa de outro jogo parecido
+- Campos de texto não mostram mais a seta de lista
 - O app no macOS passa a ser assinado e notarizado pela Apple: abre sem o aviso de desenvolvedor não identificado
 - A tela Cartão não mostra mais «Outra operação já está em andamento» ao abrir enquanto o Início ainda verifica o cartão
 - A gaveta Atividade não abre mais por cima da lista de atualizações, e as colunas da lista ficaram alinhadas
@@ -77,6 +64,7 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ### Desenvolvimento
 
+- `core/loader_compat.py`, `core/art_picker.py`, `core/library_views.py`, `static/js/picodex-ui.js`, `static/picodex.css`; catálogo libretro com logos na mesma chamada da API; `validate_launcher_cover_bmp` / `validate_launcher_icon_bmp`; gravação de arte com verify-before-replace
 - RouteDex baseado no PicoDex de rasalopa (MIT); licenças em `docs/licenses/`
 - `tools/gen_pico_manifest.py` gera `core/data/pico_manifest.json`; pins `pico_launcher_enhanced` / `pico_loader_enhanced_dspico`
 - Repositório Route1-DSi integrado: app do console em `nds/`, spec R1USB unificada em `protocol/R1USB.md`, plano e manuais em `docs/console/`; testes C e de conformidade do protocolo rodam no `pytest`
@@ -84,6 +72,9 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - Versão única em `core/__init__.py`: o Info.plist do macOS e o instalador Windows leem dali
 - macOS: assinatura Developer ID com hardened runtime, notarização e staple no `tools/build_macos_release.sh` e no workflow de release (ver `docs/MACOS_SIGNING.md`)
 - Testes isolados das preferências reais do usuário e da chave SteamGridDB do ambiente
+- App leva `LICENSE` e `docs/licenses/` (inclui `THIRD_PARTY_NOTICES.txt`, gerado por `tools/gen_third_party_notices.py` em cada build, e `IBM-Plex-OFL.txt`)
+- `vendor/GEiv4.2_EN` saiu do repositório e do pacote (sem licença de redistribuição)
+- CI: testes C do app do console compilam no Linux (`-D_DEFAULT_SOURCE`) e são pulados no Windows; `expand_user_path` normaliza separadores; testes isolados de `HOME`/`USERPROFILE` e sem espera fixa em `web_events`
 
 ## [1.1.0] — 2026-10-11
 

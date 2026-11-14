@@ -794,8 +794,8 @@ const Wizard = (() => {
       ${
         isGei
           ? `<div class="note">
-              O kernel <strong>GEi v4.2 EN</strong> vem incluído no app (<code>vendor/GEiv4.2_EN</code>).
-              Pode sobrescrever com uma pasta <code>GEiv4.2_EN</code> completa em Downloads se precisar de outra build.
+              O kernel <strong>GEi v4.2 EN</strong> é do fabricante do cartucho e não vem com o Route Pico.
+              Baixe o pacote oficial no site do fabricante, extraia e deixe a pasta <code>GEiv4.2_EN</code> em Downloads; o app usa os arquivos de lá.
             </div>
             <ol class="guide-list list-decimal">
               <li>Confirme que o cartucho é Galaxy Eagle i / GEi.</li>

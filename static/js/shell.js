@@ -26,7 +26,7 @@
   const SCREENS = {
     "dspico:cartao": ["Cartão", "Estado, saúde, pacote oficial e atualizações do microSD", "i-card", 3],
     "dspico:games": ["Jogos", "Importar jogos, organizar pastas e capas", "i-games", 1],
-    "dspico:routedex": ["RouteDex", "Favoritos, tempo de jogo, capturas, pastas e cheats", "i-dex", 5],
+    "dspico:routedex": ["RouteDex", "Capas, biblioteca, estatísticas, associações e saúde (PicoDex)", "i-dex", 5],
     "dspico:launcher": ["Launcher", "settings.json, temas e fundos noturnos", "i-launcher", 7],
     "dspico:extras": ["Emuladores e apps USB", "Emuladores do Pico Launcher e apps USB oficiais do LNH team", "i-extras", 2],
     "dspico:avancado": ["Avançado", "Emunand, BIOS e firmware do cartucho", "i-chip", 4],
