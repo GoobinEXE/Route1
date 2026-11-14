@@ -32,7 +32,7 @@ const Dspico = (() => {
   const GAMES_VIRTUAL_THRESHOLD = 80;
   // Aba → seções renderizadas dentro dela (ids dspico-section-<seção>).
   const TABS = {
-    cartao: ["status", "setup"],
+    cartao: ["status", "health", "setup", "links"],
     games: ["games"],
     routedex: ["routedex"],
     launcher: ["settings", "picothemes", "night"],
@@ -148,6 +148,8 @@ const Dspico = (() => {
       setup: renderSetup,
       games: renderGames,
       routedex: renderRoutedex,
+      health: renderHealth,
+      links: renderLinks,
       settings: renderSettings,
       picothemes: renderPicoThemes,
       night: renderNight,
@@ -223,18 +225,25 @@ const Dspico = (() => {
   async function renderStatus(gen, m) {
     const el = document.getElementById("dspico-section-status");
     if (!el) return;
+    bindUpdatesFold();
     if (!m) {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A inspeccionar…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Verificando o cartão…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
-      const data = await api.inspect_dspico(m);
+      let data = await api.inspect_dspico(m);
+      // O Início pode estar lendo o cartão neste instante: espera e tenta de novo.
+      for (let i = 0; i < 4 && data && !data.success && /andamento/i.test(String(data.error || "")); i++) {
+        await new Promise((r) => setTimeout(r, 350));
+        if (gen !== renderGen) return;
+        data = await api.inspect_dspico(m);
+      }
       if (gen !== renderGen) return;
       if (!(data && data.success)) {
         el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">${escapeHtml(
-          (data && data.error) || "Falha ao inspeccionar."
+          (data && data.error) || "Falha ao verificar o cartão."
         )}</p></section>`;
         return;
       }
@@ -249,7 +258,7 @@ const Dspico = (() => {
         <section class="panel p-5 space-y-4">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h3 class="section-label">Estado do microSD</h3>
+              <h3 class="section-label">${data.markers_ok ? "Cartão pronto" : "Cartão sem o pacote completo"}</h3>
               <p class="text-[12px] text-fg-mute mt-1">
                 Pacote: ${
                   data.markers_ok
@@ -259,7 +268,13 @@ const Dspico = (() => {
                 · Jogos em <code>Games/</code>: ${escapeHtml(String(data.games_count || 0))}
               </p>
             </div>
-            <button type="button" class="btn-ghost !text-[11px]" id="dspico-refresh-status">Atualizar</button>
+            <div class="flex flex-wrap gap-2">
+              ${
+                data.markers_ok
+                  ? '<button type="button" class="btn-primary" id="dspico-status-main">Verificar atualizações</button>'
+                  : '<button type="button" class="btn-primary" id="dspico-status-main">Instalar pacote oficial</button>'
+              }
+            </div>
           </div>
           <ul class="space-y-2">
             ${checklist
@@ -283,11 +298,20 @@ const Dspico = (() => {
           : "ainda sem asset nas releases LNH (compile via GUIDE)"
       }
           </div>
-          ${linksHtml(data.official_links)}
         </section>`;
-      bindLinkButtons(el);
-      const btn = document.getElementById("dspico-refresh-status");
-      if (btn) btn.onclick = () => refresh();
+      const main = document.getElementById("dspico-status-main");
+      if (main) {
+        main.onclick = data.markers_ok
+          ? () => {
+              // Abrir a seção já dispara a verificação (ver bindUpdatesFold).
+              const fold = document.getElementById("fold-updates");
+              if (!fold) return;
+              if (fold.open && window.R1K && R1K.updates) R1K.updates.check();
+              fold.open = true;
+              fold.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          : () => installOfficialPackage();
+      }
     } catch (e) {
       if (gen !== renderGen) return;
       el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">${escapeHtml(
@@ -308,7 +332,7 @@ const Dspico = (() => {
       return;
     }
     if (gen !== renderGen) return;
-    await RouteDex.render(gen, m, el);
+    await RouteDex.render(gen, m, el, { only: ["library", "shots", "folders", "cheats"] });
   }
 
   async function renderPicoThemes(gen, m) {
@@ -340,63 +364,87 @@ const Dspico = (() => {
 
   async function renderSetup(gen, m) {
     const el = document.getElementById("dspico-section-setup");
-    if (!el) return;
+    if (!el || !foldIsOpen(el)) return;
     if (!m) {
       el.innerHTML = needDriveHtml();
       return;
     }
+    el.innerHTML = `
+      <section class="panel space-y-3">
+        <p class="text-[13px] text-fg-soft leading-relaxed">
+          Baixa e verifica (SHA-256) o <strong>Pico Launcher</strong> e o <strong>Pico Loader DSPICO</strong>
+          oficiais do LNH team e reescreve <code>_picoboot.nds</code> e <code>_pico/</code>. Jogos e saves ficam.
+        </p>
+        <button type="button" class="btn-secondary" id="dspico-btn-setup">Reinstalar pacote oficial</button>
+      </section>`;
+    const btn = document.getElementById("dspico-btn-setup");
+    if (btn) btn.onclick = () => installOfficialPackage();
+    if (typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root-dspico", "dspico");
+  }
+
+  async function installOfficialPackage() {
+    if (
+      !confirm(
+        "Escrever o pacote oficial DSPico neste microSD?\n\n" +
+          "Serão atualizados _picoboot.nds e a pasta _pico/."
+      )
+    ) {
+      return;
+    }
+    await runMountOp({ method: "setup_dspico" });
+  }
+
+  /** A seção Atualizações verifica sozinha na primeira abertura. */
+  function bindUpdatesFold() {
+    const fold = document.getElementById("fold-updates");
+    if (!fold || fold.dataset.bound) return;
+    fold.dataset.bound = "1";
+    fold.addEventListener("toggle", () => {
+      const panel = document.getElementById("updates-panel");
+      const empty = !panel || panel.classList.contains("hidden") || !panel.textContent.trim();
+      if (fold.open && empty && window.R1K && R1K.updates) R1K.updates.check();
+    });
+  }
+
+  /** Seções recolhíveis: só carregam quando abertas (a saúde lê o cartão). */
+  function foldIsOpen(el) {
+    const d = el && el.closest("details");
+    if (!d || d.open) return true;
+    if (!d.dataset.lazyBound) {
+      d.dataset.lazyBound = "1";
+      d.addEventListener("toggle", () => {
+        if (d.open && section === "cartao") refresh();
+      });
+    }
+    el.innerHTML = "";
+    return false;
+  }
+
+  async function renderHealth(gen, m) {
+    const el = document.getElementById("dspico-section-health");
+    if (!el || !foldIsOpen(el)) return;
+    if (typeof RouteDex === "undefined") return;
+    if (gen !== renderGen) return;
+    // Dentro da seção recolhível: o resumo já dá título e descrição.
+    await RouteDex.render(gen, m, el, { only: ["health"], bare: true });
+  }
+
+  async function renderLinks(gen, m) {
+    const el = document.getElementById("dspico-section-links");
+    if (!el || !foldIsOpen(el)) return;
     let links = (lastInspect && lastInspect.official_links) || null;
     if (!links) {
       try {
         const api = getApi() || (await waitForApi());
         const res = await api.get_dspico_official_links();
-        if (gen !== renderGen) return;
         links = (res && res.links) || {};
       } catch (_e) {
         links = {};
       }
     }
-    el.innerHTML = `
-      <section class="panel p-5 space-y-4">
-        <div>
-          <h3 class="section-label">Preparar microSD</h3>
-          <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
-            Baixa e verifica (SHA-256) o <strong>Pico Launcher</strong> e o
-            <strong>Pico Loader DSPICO</strong> oficiais e escreve
-            <code>_picoboot.nds</code> + <code>_pico/</code> + <code>Games/</code>.
-          </p>
-        </div>
-        <div class="note">
-          O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado no app.
-        </div>
-        <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / atualizar pacote oficial</button>
-        <div class="enhanced-card">
-          <h4>Depois: Pico Launcher Enhanced <span class="enhanced-tag">Recomendado</span><span class="enhanced-tag enhanced-tag--warn">Não oficial</span></h4>
-          <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de tela e,
-          com o Loader Enhanced, a volta ao launcher de dentro do jogo. É opcional, troca só o <code>_picoboot.nds</code>
-          (e os <code>picoLoader*.bin</code>, se escolher o loader) e pode voltar ao oficial quando quiser. O RouteDex usa estes dados.</p>
-          <p class="enhanced-disclaimer">Não é suportado pelo LNH team: problemas com a variante Enhanced vão para github.com/rasalopa/pico-launcher-enhanced.</p>
-          <div><button type="button" class="btn-ghost !text-[11px]" id="dspico-btn-enhanced">Ver variantes Enhanced</button></div>
-        </div>
-        ${linksHtml(links)}
-      </section>`;
+    if (gen !== renderGen) return;
+    el.innerHTML = `<p class="text-[12px] text-fg-mute">Abrem no navegador do sistema.</p>${linksHtml(links)}`;
     bindLinkButtons(el);
-    const enh = document.getElementById("dspico-btn-enhanced");
-    if (enh) enh.onclick = () => window.R1K && R1K.updates && R1K.updates.check();
-    const btn = document.getElementById("dspico-btn-setup");
-    if (btn) {
-      btn.onclick = async () => {
-        if (
-          !confirm(
-            "Escrever o pacote oficial DSPico neste microSD?\n\n" +
-              "Serão atualizados _picoboot.nds e a pasta _pico/."
-          )
-        ) {
-          return;
-        }
-        await runMountOp({ method: "setup_dspico" });
-      };
-    }
   }
 
   function destroyGamesListVlist() {
@@ -412,9 +460,13 @@ const Dspico = (() => {
 
   function organizePanelHtml() {
     return `
-        <section class="panel p-5 space-y-3" id="dspico-organize-panel">
+        <details class="fold panel" id="dspico-organize-panel">
+          <summary class="fold-head">
+            <span class="fold-title">Organizar pastas</span>
+            <span class="fold-sub">Arruma os jogos por franquia ou plataforma e apaga pastas de outros sistemas</span>
+          </summary>
+          <div class="fold-body space-y-3">
           <div>
-            <h3 class="section-label">Organizar pastas</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Remove conteúdo de outros sistemas (TWiLight, GEi, R4, hiya, …) e deixa
               só o necessário para o DSPico. Jogos NDS e ROMs retro seguem o mesmo layout;
@@ -461,24 +513,23 @@ const Dspico = (() => {
             (GB, GBA, NES, Genesis, Atari, Coleco, …) segue o mesmo layout —
             sem pasta <code>ROMs/</code> para jogos (<code>ROMs/BIOS</code> preservada).
           </p>
-        </section>`;
+          </div>
+        </details>`;
   }
 
   function gamesChromeHtml() {
     return `
         <section class="panel p-5 space-y-3 relative" id="dspico-games-panel">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="text-[12px]" id="dspico-games-crumb">
-              <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" disabled>↑</button>
-              <code>SD/</code> <span class="text-fg-mute">biblioteca</span>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-batch-art">Buscar capas e ícones</button>
-              <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-add">Adicionar jogos</button>
-              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-dupes">Apagar duplicatas</button>
-              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-mkdir">Nova pasta</button>
-              <button type="button" class="btn-ghost !text-[11px] text-danger" id="dspico-games-del" disabled>Remover</button>
-            </div>
+          <div class="games-toolbar">
+            <button type="button" class="btn-primary" id="dspico-games-add">Adicionar jogos</button>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-batch-art">Buscar capas e ícones</button>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-mkdir">Nova pasta</button>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-dupes">Apagar duplicatas</button>
+            <button type="button" class="btn-ghost btn-sm text-danger" id="dspico-games-del" disabled>Remover</button>
+          </div>
+          <div class="games-crumb text-[12px]" id="dspico-games-crumb">
+            <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" disabled aria-label="Pasta acima">↑</button>
+            <code>SD/</code> <span class="text-fg-mute">biblioteca</span>
           </div>
           <div id="dspico-games-drop" class="dspico-games-drop rounded-md border border-dashed border-line p-2">
             <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">Listando…</p>
@@ -791,7 +842,7 @@ const Dspico = (() => {
     }
     if (!gamesShellBuilt || gamesShellMount !== m || !document.getElementById("dspico-games-list")) {
       destroyGamesListVlist();
-      el.innerHTML = organizePanelHtml() + gamesChromeHtml();
+      el.innerHTML = gamesChromeHtml() + organizePanelHtml();
       gamesShellBuilt = true;
       gamesShellMount = m;
       bindGamesShellHandlers(m);
@@ -1968,7 +2019,8 @@ const Dspico = (() => {
               ? catBlocks
               : `<div class="note note--warn">Nenhum emulador com pin disponível neste build.</div>`
           }
-          <div class="flex flex-wrap gap-2">
+          <div class="sticky-actions">
+            <span class="sticky-actions-note" id="dspico-emu-count">Nenhum selecionado</span>
             <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-popular">Selecionar populares</button>
             <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-clear">Limpar</button>
             <button type="button" class="btn-primary" id="dspico-emu-install" ${
@@ -1981,12 +2033,20 @@ const Dspico = (() => {
       const popularBtn = document.getElementById("dspico-emu-popular");
       const clearBtn = document.getElementById("dspico-emu-clear");
       const installBtn = document.getElementById("dspico-emu-install");
+      const countEl = document.getElementById("dspico-emu-count");
+      const syncCount = () => {
+        const n = el.querySelectorAll(".dspico-emu-cb:checked").length;
+        if (countEl) countEl.textContent = n ? `${n} selecionado${n === 1 ? "" : "s"}` : "Nenhum selecionado";
+      };
+      el.querySelectorAll(".dspico-emu-cb").forEach((cb) => cb.addEventListener("change", syncCount));
+      syncCount();
 
       if (popularBtn) {
         popularBtn.onclick = () => {
           el.querySelectorAll(".dspico-emu-cb").forEach((cb) => {
             cb.checked = cb.getAttribute("data-popular") === "1";
           });
+          syncCount();
         };
       }
       if (clearBtn) {
@@ -1994,6 +2054,7 @@ const Dspico = (() => {
           el.querySelectorAll(".dspico-emu-cb").forEach((cb) => {
             cb.checked = false;
           });
+          syncCount();
         };
       }
       if (installBtn) {

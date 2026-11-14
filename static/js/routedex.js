@@ -4,13 +4,16 @@
  * Depende de getApi / waitForApi / escapeHtml / setBusy / isHardBusy / appendLog (app.js).
  */
 const RouteDex = (() => {
-  const TABS = [
+  const ALL_TABS = [
     ["library", "Biblioteca"],
     ["health", "Saúde do cartão"],
     ["shots", "Capturas"],
     ["folders", "Pastas"],
     ["cheats", "Cheats"],
   ];
+  // Cada tela mostra só as abas dela: a saúde do cartão vive na tela Cartão.
+  let TABS = ALL_TABS;
+  let view = { title: "RouteDex", intro: "A sua biblioteca do Pico Launcher, lida e escrita direto no microSD." };
   let tab = "library";
   let filter = "all";
   let query = "";
@@ -104,14 +107,18 @@ const RouteDex = (() => {
     ).join("");
     host.innerHTML = `
       <section class="panel p-5 space-y-4">
-        <div class="flex items-start justify-between gap-3 flex-wrap">
+        ${
+          view.bare
+            ? `<div class="flex justify-end"><button type="button" class="btn-ghost !text-[11px]" id="routedex-reload">Ler de novo</button></div>`
+            : `<div class="flex items-start justify-between gap-3 flex-wrap">
           <div>
-            <h3 class="section-label">RouteDex</h3>
-            <p class="text-[12px] text-fg-mute mt-1">A sua biblioteca do Pico Launcher, lida e escrita direto no microSD.</p>
+            <h3 class="section-label">${esc(view.title)}</h3>
+            <p class="text-[12px] text-fg-mute mt-1">${esc(view.intro)}</p>
           </div>
           <button type="button" class="btn-ghost !text-[11px]" id="routedex-reload">Atualizar</button>
-        </div>
-        <div class="routedex-tabs" role="tablist">${tabs}</div>
+        </div>`
+        }
+        ${TABS.length > 1 ? `<div class="routedex-tabs" role="tablist">${tabs}</div>` : ""}
         <div id="routedex-body"></div>
         ${creditHtml()}
       </section>`;
@@ -425,12 +432,13 @@ const RouteDex = (() => {
       return;
     }
     health = h;
-    healthSel = new Set([...healthSel].filter((r) => h.junk.includes(r) || h.orphan_saves.includes(r) || h.orphan_art.includes(r)));
+    // O lixo do macOS tem um dono só: Manutenção → Limpar metadados (vale para qualquer cartão).
+    healthSel = new Set([...healthSel].filter((r) => h.orphan_saves.includes(r) || h.orphan_art.includes(r)));
     const problems = (h.problems || []).map((p) => `<li>${esc(p)}</li>`).join("");
     const dups = (h.duplicate_saves || [])
       .map((d) => `<li><code>${esc(d.beside)}</code> e <code>${esc(d.in_folder)}</code></li>`)
       .join("");
-    const removable = h.junk.length + h.orphan_saves.length + h.orphan_art.length;
+    const removable = h.orphan_saves.length + h.orphan_art.length;
     b.innerHTML = `
       <div class="routedex-kv">
         <div><span class="stat-label">Launcher</span><span>${launcherLine(h.launcher)}</span></div>
@@ -448,7 +456,11 @@ const RouteDex = (() => {
           ? `<div class="note"><strong>Saves duplicados</strong> (ao lado da ROM e em <code>saves/</code>). Com <code>"saveLocation": "saves"</code> o launcher usa o da pasta <code>saves/</code>; confira qual é o mais recente antes de apagar o outro.<ul class="routedex-ul">${dups}</ul></div>`
           : ""
       }
-      ${checkList("Lixo do macOS", h.junk, "junk")}
+      ${
+        h.junk.length
+          ? `<div class="note flex flex-wrap items-center justify-between gap-2"><span>${h.junk.length} arquivo(s) de lixo do macOS (<code>._*</code>, <code>.DS_Store</code>).</span><button type="button" class="btn-ghost btn-sm" data-goto="tools:card">Limpar em Manutenção</button></div>`
+          : ""
+      }
       ${checkList("Saves sem jogo", h.orphan_saves, "saves")}
       ${checkList("Capas/ícones sem jogo", h.orphan_art, "art")}
       ${
@@ -464,6 +476,12 @@ const RouteDex = (() => {
         const rel = cb.getAttribute("data-rel");
         if (cb.checked) healthSel.add(rel);
         else healthSel.delete(rel);
+      };
+    });
+    b.querySelectorAll("[data-goto]").forEach((btn) => {
+      btn.onclick = () => {
+        const [v, sec] = btn.getAttribute("data-goto").split(":");
+        if (window.R1K && R1K.shell) R1K.shell.go(v, sec);
       };
     });
     b.querySelectorAll("[data-selall]").forEach((btn) => {
@@ -780,7 +798,18 @@ const RouteDex = (() => {
 
   // ------------------------------------------------------------------ API pública
 
-  async function render(_gen, m, el) {
+  /**
+   * opts.only: ids das abas desta tela (padrão: todas); opts.title / opts.intro: cabeçalho.
+   */
+  async function render(_gen, m, el, opts) {
+    const o = opts || {};
+    TABS = Array.isArray(o.only) && o.only.length ? ALL_TABS.filter(([id]) => o.only.includes(id)) : ALL_TABS;
+    view = {
+      bare: !!o.bare,
+      title: o.title || "RouteDex",
+      intro: o.intro || "A sua biblioteca do Pico Launcher, lida e escrita direto no microSD.",
+    };
+    if (!TABS.some(([id]) => id === tab)) tab = TABS[0][0];
     host = el;
     if (m !== mountPath) {
       overview = null;

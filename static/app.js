@@ -859,13 +859,13 @@ async function runAction(endpoint) {
 }
 
 function toggleIdGuide() {
+  // O guia é uma seção recolhível (<details>) na tela Softmod DSi.
   const panel = document.getElementById("id-guide-panel");
   const chevron = document.getElementById("id-guide-chevron");
   if (!panel) return;
-  const opening = panel.classList.contains("hidden");
-  panel.classList.toggle("hidden", !opening);
-  if (chevron) chevron.classList.toggle("rotate-180", opening);
-  if (opening) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  panel.open = !panel.open;
+  if (chevron) chevron.classList.toggle("rotate-180", panel.open);
+  if (panel.open) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function confirmFormat() {
@@ -1058,7 +1058,7 @@ function renderHomebrewCatalog() {
         sourcesHtml +
         `</div>` +
         `<div class="hb-card-actions">` +
-        `<button type="button" class="btn-primary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
+        `<button type="button" class="btn-secondary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
         `data-app-id="${appId}" data-warn-nand="${a.warn_nand ? "1" : "0"}" ` +
         `data-title="${escapeHtml(a.title || "")}" ` +
         `onclick="installHomebrewApp(this)">Instalar no SD</button>` +
@@ -1197,7 +1197,7 @@ function renderAboutPage(data) {
   root.innerHTML = `
     <section class="panel p-5">
       <div class="about-hero">
-        <img src="assets/logo.svg" alt="" width="48" height="48" class="brand-mark">
+        <img src="assets/logo.svg?v=h1" alt="" width="48" height="48" class="brand-mark">
         <div class="min-w-0">
           <h2 class="text-[15px] font-semibold text-fg leading-none">${escapeHtml(
             data.app_name || "Route Pico"

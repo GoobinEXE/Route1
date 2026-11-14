@@ -33,45 +33,45 @@ colors:
   tile-7: "#8a4fd6"
 typography:
   display:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "40px"
     fontWeight: 800
     letterSpacing: "0.02em"
   headline:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "24px"
     fontWeight: 800
     lineHeight: 1.15
     letterSpacing: "-0.015em"
   title:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "21px"
     fontWeight: 800
     letterSpacing: "-0.015em"
   title-sm:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "17.5px"
     fontWeight: 800
     letterSpacing: "-0.01em"
   item:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "15px"
     fontWeight: 800
   body:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "14px"
     fontWeight: 400
     lineHeight: 1.5
   label:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "13px"
     fontWeight: 800
   hint:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "12px"
     fontWeight: 700
   key:
-    fontFamily: "Nunito, ui-rounded, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontFamily: "Geist, system-ui, -apple-system, Segoe UI, sans-serif"
     fontSize: "11px"
     fontWeight: 800
     lineHeight: 1
@@ -167,17 +167,18 @@ components:
 
 **Creative North Star: "O Menu Inicial do Seu Console"**
 
-O Route Pico abre como o menu inicial de um console portátil ou de mesa: uma barra de status em cima com o cartão e a hora, as tarefas organizadas em blocos no meio, uma barra de ícones embaixo e, por último, uma barra de dicas de tecla. Os sete temas tomaram como referência menus iniciais de consoles reais e reproduzem a gramática de cada um (arranjo dos blocos, moldura, gesto de seleção, desenho das barras), sem copiar logotipos, ícones, fontes, sons ou nomes de marca. A navegação, o conteúdo e os controles são idênticos em todos os temas; muda o mundo material em volta deles.
+O Route Pico abre como o menu inicial de um console portátil ou de mesa: uma barra de status em cima com o cartão e a hora, as tarefas organizadas em blocos no meio, e uma barra de ícones embaixo. Os sete temas tomaram como referência menus iniciais de consoles reais e reproduzem a gramática de cada um (arranjo dos blocos, moldura, gesto de seleção, desenho das barras), sem copiar logotipos, ícones, fontes, sons ou nomes de marca. A navegação, o conteúdo e os controles são idênticos em todos os temas; muda o mundo material em volta deles.
 
-A densidade é a de um menu de console: poucos itens grandes, um item selecionado por vez, legenda do item escolhido e dicas de teclado sempre à vista. As telas internas trocam o Início por um cabeçalho com Voltar, o ícone colorido da tarefa e o título, e as abas irmãs aparecem como uma prateleira de ícones. Todo o trabalho real (formatar, instalar, organizar jogos) acontece em painéis sóbrios dentro dessas telas, porque a ferramenta escreve num cartão do usuário e o tom lúdico para no limite da operação destrutiva.
+A densidade é a de um menu de console: poucos itens grandes, um item selecionado por vez, legenda do item escolhido e atalhos de teclado (setas, Enter, Esc). As telas internas trocam o Início por um cabeçalho com Voltar, o ícone colorido da tarefa e o título, e as abas irmãs aparecem como uma prateleira de ícones. Todo o trabalho real (formatar, instalar, organizar jogos) acontece em painéis sóbrios dentro dessas telas, porque a ferramenta escreve num cartão do usuário e o tom lúdico para no limite da operação destrutiva.
 
 O sistema recusa a barra lateral de dashboard do mundo anterior e recusa também o tema que só troca a cor de um mesmo layout. Cada tema tem paleta original e variantes clara (Catppuccin Latte) e noturna (Catppuccin Mocha), todas verificadas contra WCAG AA pelo gerador.
 
 **Key Characteristics:**
-- Quatro faixas fixas: barra de status, área do Início ou da tela, barra de ícones, barra de dicas.
-- Doze blocos no Início (seis DSPico, cinco Mais ferramentas, Configurações), cada um com ícone SVG próprio colorido por tarefa.
+- Três faixas fixas: barra de status, área do Início ou da tela, barra de ícones.
+- Dez blocos no Início (seis DSPico, quatro Mais ferramentas), cada um com ícone SVG sólido próprio, de cantos retos, colorido por tarefa, mais o próximo passo do cartão com um botão.
+- Telas de trabalho com uma ação principal no topo e o que é raro em seções recolhíveis (`details.fold`), que herdam a pele de painel do tema.
 - Uma seleção-assinatura por tema, aplicada ao bloco atual, à aba ativa, ao item de tema escolhido e ao botão ativo da barra de ícones.
-- Tipografia única em Nunito arredondada, pesos 700 e 800 para tudo o que é rótulo.
+- Tipografia única em Geist, grotesca de cantos retos, com pesos 700 e 800 para tudo o que é rótulo.
 - Teclado completo: setas movem a seleção espacialmente no Início, Enter abre, Esc ou Backspace voltam, com histórico por hash.
 
 ## Colors
@@ -193,14 +194,14 @@ As cores vêm de um único gerador (`tools/build_themes.py`), que escreve 21 com
 - **Azul de Seleção** (select): a cor da seleção-assinatura (cantos, anéis, molduras, barra dourada no Cubo). Mantém a cor de marca do tema mesmo quando não serviria para texto; só o preenchimento com texto usa a versão ajustada (select-fill, com on-select por cima). Por tema, a seleção original é azul na Dupla Tela e na Câmera Dupla, ciano em Canais, Tablet de Sala e Híbrido, dourada no Cubo e menta no Estéreo 3D.
 
 ### Tertiary
-- **Sete Cores de Tarefa** (tile-1 a tile-7: laranja, verde, azul, turquesa, vermelho, amarelo, roxo): pintam o ícone de cada bloco, o ícone do cabeçalho de tela e alguns ícones da barra de ícones. Cada bloco declara a cor pelo atributo `data-hue` (0 usa fg-soft, para Configurações). O gerador as ajusta a 3:1 contra o painel; nos modos claro e noturno elas vêm da paleta Catppuccin.
+- **Sete Cores de Tarefa** (tile-1 a tile-7: laranja, verde, azul, turquesa, vermelho, amarelo, roxo): pintam o ícone de cada bloco, o ícone do cabeçalho de tela e alguns ícones da barra de ícones. Cada bloco declara a cor pelo atributo `data-hue` (0 usa fg-soft, para ícones neutros). O gerador as ajusta a 3:1 contra o painel; nos modos claro e noturno elas vêm da paleta Catppuccin.
 
 ### Neutral
 - **Chão** (bg): fundo da janela, sob a textura do tema (quadriculado, riscas, cubos).
 - **Painel** (surface) e **Painel Recuado** (surface-2): painéis, blocos e o fim dos degradês de blocos e botões.
 - **Linha** (line) e **Linha Firme** (line-strong): bordas; a linha firme é forçada a 3:1 contra o painel porque contorna controles.
 - **Tinta** (fg, 7:1), **Tinta Suave** (fg-soft, 4,5:1) e **Tinta Discreta** (fg-mute, 4,5:1): os três níveis de texto, todos com contraste garantido sobre painel, painel recuado e chão.
-- **Moldura** (chrome) e **Texto da Moldura** (chrome-fg): fundo e texto das barras de status, ícones e dicas.
+- **Moldura** (chrome) e **Texto da Moldura** (chrome-fg): fundo e texto das barras de status e de ícones.
 - **Tela de Destaque** (hero) e **Texto da Tela de Destaque** (hero-fg): a tela de cima menta da Câmera Dupla, o fim do degradê violeta do Cubo e o fundo lavanda do Estéreo 3D.
 - **Estados** (ok, warn, danger): verde, âmbar e vermelho, a 4,5:1 sobre o painel.
 
@@ -213,11 +214,11 @@ As cores vêm de um único gerador (`tools/build_themes.py`), que escreve 21 com
 
 ## Typography
 
-**Display Font:** Nunito (com ui-rounded, system-ui, -apple-system, Segoe UI)
-**Body Font:** Nunito (mesma família, arquivo variável 400–800 embutido)
+**Display Font:** Geist (com system-ui, -apple-system, Segoe UI)
+**Body Font:** Geist (mesma família, arquivo variável 100–900 embutido em `static/assets/fonts/geist-latin-var.woff2`, licença OFL)
 **Label/Mono Font:** IBM Plex Mono para caminhos, hashes e logs
 
-**Character:** Uma só família arredondada carrega o sistema inteiro, com o peso fazendo o papel que outra fonte faria. Os rótulos ficam em 800, o que dá a leitura gorda e amigável dos menus de console sem recorrer a uma fonte de exibição.
+**Character:** Uma só família grotesca, de cantos retos e desenho atual, carrega o sistema inteiro, com o peso fazendo o papel que outra fonte faria. Os rótulos ficam em 800, o que dá a leitura firme e amigável dos menus de console sem recorrer a uma fonte de exibição.
 
 ### Hierarchy
 - **Display** (800, 40px, espaçamento 0,02em): relógio grande da tela de cima na Dupla Tela. Outros temas têm seu próprio relógio ou status grande (Canais 34px peso 300 na barra curva; Estéreo 3D 30px na barra de status).
@@ -226,23 +227,21 @@ As cores vêm de um único gerador (`tools/build_themes.py`), que escreve 21 com
 - **Item** (800, 14–15px): rótulo de bloco do Início, nome do cartão, títulos de painel (section-label, 15px).
 - **Body** (400, 14px, altura de linha 1,5): subtítulo de tela e texto de painel; descrições secundárias em 13px.
 - **Label** (800, 13px): botões, abas da prateleira, botões da barra de ícones, Voltar.
-- **Hint** (700, 12px): barra de dicas e contexto do item selecionado.
-- **Key** (800, 11px, altura de linha 1): teclas desenhadas na barra de dicas.
 
 ### Named Rules
-**The Piso de 11px Rule.** Nada funcional fica abaixo de 11px. A Nunito tem altura-x menor que a fonte anterior, por isso os tamanhos pequenos herdados do Tailwind sobem 1px no `skins.css`.
+**The Piso de 11px Rule.** Nada funcional fica abaixo de 11px. Os tamanhos pequenos herdados do Tailwind sobem 1px no `skins.css`.
 
 **The Peso Faz a Hierarquia Rule.** Dentro de um mesmo tamanho, a hierarquia vem do peso (400 para texto, 700 para dica, 800 para rótulo) e da tinta (fg, fg-soft, fg-mute). Espaçamento largo entre letras é exclusivo do Cubo, onde os títulos azuis espaçados fazem parte do mundo.
 
 ## Layout
 
-O shell é uma grade de três linhas que ocupa a janela inteira sem rolagem do corpo: barra de status (52px), área principal com rolagem própria e o conjunto barra de ícones (64px) mais barra de dicas (30px). A área principal tem respiro de 22px em cima, 24px nas laterais e 28px embaixo, e o conteúdo das telas internas fica limitado a 1080px. A janela mínima do app é 960 × 640; abaixo de 1120px de largura a data some da barra de status, abaixo de 1040px some o rótulo de onde o usuário está, e abaixo de 720px de altura a barra de dicas cai para 26px e os arranjos altos se compactam.
+O shell é uma grade de três linhas que ocupa a janela inteira sem rolagem do corpo: barra de status (52px), área principal com rolagem própria e a barra de ícones (64px). A área principal tem respiro de 22px em cima, 24px nas laterais e 28px embaixo, e o conteúdo das telas internas fica limitado a 1080px. A janela mínima do app é 960 × 640; abaixo de 1120px de largura a data some da barra de status, abaixo de 1040px some o rótulo de onde o usuário está, e abaixo de 720px de altura a barra de dicas cai para 26px e os arranjos altos se compactam.
 
-O Início muda de arranjo por tema, sempre com os mesmos doze blocos na mesma ordem de DOM:
+O Início muda de arranjo por tema, sempre com os mesmos dez blocos na mesma ordem de DOM:
 
 - **Dupla Tela:** duas telas empilhadas. Em cima, relógio (170px) e cartão em caixas brancas; uma dobradiça de borda dupla de 6px separa a tela de baixo, com os blocos em três colunas, cada bloco de 72px de altura com ícone à esquerda.
 - **Câmera Dupla:** tela de cima menta com o cartão centralizado, balão de legenda com bico apontando para a fileira, uma só fileira de ícones quadrados (112px) com rolagem lateral e uma barra de rolagem própria com setas embaixo.
-- **Canais:** grade de quatro colunas com o cartão ocupando dois canais; blocos 16:9 e dois canais vazios no fim para completar a grade.
+- **Canais:** grade de quatro colunas com o cartão ocupando dois canais e os dez blocos 16:9 completando três fileiras.
 - **Tablet de Sala:** coluna de 150px com o cartão e grade de cinco quadrados de vidro ao lado.
 - **Cubo:** painel do cartão em cima, dois painéis em colunas com as listas DSPico e Mais ferramentas, e uma caixa de descrição embaixo.
 - **Estéreo 3D:** estado grande na metade de cima, nome do bloco escolhido em 26px e uma bandeja de seis colunas com os blocos.
@@ -253,7 +252,7 @@ O ritmo de espaçamento observado gira em torno de 8, 14, 18 e 24px; gaps entre 
 ### Named Rules
 **The Mesma Ordem Rule.** Todos os arranjos usam o mesmo HTML; o tema muda grade, tamanhos e visibilidade, nunca a ordem de leitura nem o conjunto de blocos. A navegação por setas é espacial e calcula o vizinho pela posição real na tela.
 
-**The Quatro Faixas Rule.** Status, conteúdo, ícones e dicas existem em todo tema e em toda tela. Um tema pode tornar uma faixa transparente ou curvá-la, mas não pode removê-la.
+**The Três Faixas Rule.** Status, conteúdo e ícones existem em todo tema e em toda tela; os atalhos de teclado funcionam sem faixa própria. Um tema pode tornar uma faixa transparente ou curvá-la, mas não pode removê-la.
 
 ## Elevation & Depth
 
@@ -299,8 +298,7 @@ Botões firmes e arredondados, com o primário reservado para a ação que execu
 
 ### Navigation
 - **Barra de status:** marca, onde o usuário está, papel do volume, seletor do microSD com botão de atualizar, progresso da operação, data, hora em 800 com números tabulares e o medidor de espaço em forma de bateria (vermelho quando cheio). No Estéreo 3D a barra cresce para 72px, com hora em 30px e bateria de 58 × 28px.
-- **Barra de ícones:** Início, Atividade, Tema e Configurações. O botão ativo recebe a seleção do tema; Atividade mostra um ponto quando há registro novo. Em Canais os botões são círculos de 58–70px sobre a barra curva com o relógio no centro; no Tablet de Sala e no Estéreo 3D os ícones ganham cores de tarefa.
-- **Barra de dicas:** contexto do item à esquerda e, à direita, «Setas Mover», «Enter Abrir» e «Esc Voltar» com teclas desenhadas (11px, borda de 1,5px, raio 6px). No Início o «Voltar» fica a 45% de opacidade. O Cubo usa teclas coloridas por função; o Híbrido troca «Abrir» por «OK».
+- **Barra de ícones:** Início, Atividade e Configurações. O botão ativo recebe a seleção do tema; Atividade mostra um ponto quando há registro novo. Em Canais os botões são círculos de 58–70px sobre a barra curva com o relógio no centro; no Tablet de Sala e no Estéreo 3D os ícones ganham cores de tarefa.
 - **Cabeçalho de tela:** Voltar em pílula com seta, ícone da tarefa num quadrado de 46px com a cor da tarefa a 14% e o título de 24px.
 - **Prateleira de abas:** abas irmãs como botões com ícone de 18px, raio médio, borda line; a ativa ganha a seleção-assinatura e o ícone em select. Setas esquerda e direita percorrem as abas.
 
@@ -326,7 +324,8 @@ Painel flutuante de até 560px ancorado acima da barra de ícones, com cabeçalh
 - **Do** gerar toda cor de tema por `tools/build_themes.py` e rodar `--check`; o gerador bloqueia combinações abaixo de WCAG AA.
 - **Do** usar as variáveis `--c-*` em `rgb(var(--c-x) / alfa)` para qualquer cor nova, em `console.css` ou `skins.css`.
 - **Do** colocar cada nova assinatura de tema dentro do bloco `html[data-family="…"]` correspondente e manter layout, navegação e controles iguais entre temas.
-- **Do** dar a toda tarefa nova um ícone SVG próprio no sprite de `index.html` (traço de 2px, pontas arredondadas, viewBox 24) e uma cor de tarefa por `data-hue`.
+- **Do** dar a toda tarefa nova um ícone SVG próprio no sprite de `index.html` (forma sólida em `fill`, cantos retos, recortes por `fill-rule: evenodd`, viewBox 24; só a linha de Atividade usa traço, com pontas retas) e uma cor de tarefa por `data-hue`.
+- **Do** gerar o ícone do programa a partir de `static/assets/logo.svg` e `logo-small.svg` com `tools/build_icons.py`. O desenho é a framboesa do logo do DSPico (LNH team, CC BY-SA 4.0, crédito em `docs/licenses/`) com a seta de rota branca sobre verde-escuro, e os arquivos derivados seguem a mesma licença.
 - **Do** aplicar a seleção do tema ao elemento atual em vez de inventar um estado novo; bloco, aba, item de tema e botão da barra compartilham o mesmo gesto.
 - **Do** manter a escala de cabeçalhos do assistente em 21 / 17,5 / 15px.
 - **Do** respeitar `prefers-reduced-motion`: sem animação de entrada de tela e sem ampliação do bloco selecionado.

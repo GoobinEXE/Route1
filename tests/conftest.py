@@ -8,6 +8,18 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 
+@pytest.fixture(autouse=True)
+def _isolated_user_prefs(tmp_path_factory, monkeypatch):
+    """Nenhum teste lê as preferências reais do usuário nem a chave SteamGridDB do ambiente.
+
+    Sem isto, uma chave salva no app (prefs.json) ou exportada no shell faz os testes
+    de capas chamarem a API real e o resultado passa a depender da rede.
+    """
+    prefs_dir = tmp_path_factory.mktemp("user_data")
+    monkeypatch.setattr("core.prefs.user_data_dir", lambda: str(prefs_dir))
+    monkeypatch.delenv("STEAMGRIDDB_API_KEY", raising=False)
+
+
 @pytest.fixture
 def fake_cache(tmp_path, monkeypatch):
     cache = tmp_path / "cache"

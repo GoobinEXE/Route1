@@ -9,7 +9,6 @@
 :root {
   --status-h: 52px;
   --dock-h: 64px;
-  --hints-h: 30px;
   --content-max: 1080px;
 }
 
@@ -144,7 +143,7 @@ body { margin: 0; overflow: hidden; min-height: 0; }
 .screen-title { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.015em; color: rgb(var(--c-fg)); line-height: 1.15; }
 .screen-sub { margin: 2px 0 0; font-size: 14px; color: rgb(var(--c-fg-soft)); }
 
-/* ---------- barra de ícones e dicas ---------- */
+/* ---------- barra de ícones ---------- */
 
 .app-dock { position: relative; z-index: 20; }
 .dock-bar {
@@ -182,45 +181,14 @@ body { margin: 0; overflow: hidden; min-height: 0; }
 .dock-badge { position: absolute; top: 4px; right: 6px; width: 9px; height: 9px; border-radius: 999px; background: rgb(var(--c-select)); box-shadow: 0 0 0 2px rgb(var(--c-chrome)); }
 .dock-badge.hidden { display: none; }
 .dock-clock { display: none; }
-.dock-theme { position: relative; }
-.dock-theme .theme-menu { top: auto; bottom: calc(100% + 12px); right: 50%; transform-origin: bottom center; translate: 50% 0; }
 
-.app-hints {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 18px;
-  min-height: var(--hints-h);
-  padding: 5px 20px;
-  box-sizing: border-box;
-  background: rgb(var(--c-chrome));
-  color: rgb(var(--c-chrome-fg));
-  font-size: 12px;
-  font-weight: 700;
-}
-.hint-context { margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hint { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.key {
-  display: inline-grid;
-  place-items: center;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 6px;
-  border: 1.5px solid currentColor;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 800;
-  line-height: 1;
-}
-html[data-screen="home"] .hint--back { opacity: 0.45; }
 
 /* ---------- atividade (painel sobre a barra de ícones) ---------- */
 
 .activity-drawer {
   position: fixed;
   right: 18px;
-  bottom: calc(var(--dock-h) + var(--hints-h) + 14px);
+  bottom: calc(var(--dock-h) + 14px);
   width: min(560px, calc(100vw - 36px));
   max-height: 0;
   overflow: hidden;
@@ -301,9 +269,7 @@ html[data-screen="home"] .hint--back { opacity: 0.45; }
 .tile:focus-visible { outline: 2px solid rgb(var(--c-fg)); outline-offset: 10px; }
 /* Com foco, o bloco já mostra a seleção do tema (que segue o foco): sem anel duplo. */
 .tile.tile--current:focus-visible { outline: none; }
-.tile-slot { display: none; }
 .home-scrub { display: none; }
-.hint-okword { display: none; }
 .tile-art { display: grid; place-items: center; color: rgb(var(--hue)); }
 .tile-art .ico { width: 36px; height: 36px; }
 .tile-label { font-size: 14px; font-weight: 800; line-height: 1.2; color: rgb(var(--c-fg)); }
@@ -322,12 +288,9 @@ html[data-family="dupla"] body {
   background-size: 16px 16px;
 }
 html[data-family="dupla"] .app-status { border-bottom: 2px solid rgb(var(--c-line)); }
-html[data-family="dupla"] .app-hints { border-top: 1px solid rgb(var(--c-line)); }
 html[data-family="dupla"] .dock-bar { border-top: 2px solid rgb(var(--c-line)); justify-content: space-between; }
 html[data-family="dupla"] .dock-btn { border-radius: 6px; border: 2px solid rgb(var(--c-line)); background: linear-gradient(180deg, rgb(var(--c-surface)) 55%, rgb(var(--c-surface-2))); color: rgb(var(--c-fg-soft)); }
 html[data-family="dupla"] .dock-btn--active { border-color: rgb(var(--c-select)); box-shadow: none; color: rgb(var(--c-fg)); }
-html[data-family="dupla"] .dock-btn--home { margin-right: auto; }
-html[data-family="dupla"] .dock-theme { margin-left: auto; }
 
 html[data-family="dupla"] #view-home { max-width: 900px; }
 /* Tela de cima: relógio e cartão em caixas brancas. */
@@ -383,7 +346,6 @@ html[data-family="camera"] .dock-btn { color: rgb(var(--c-fg-soft)); }
 html[data-family="camera"] .dock-btn .ico { color: rgb(var(--c-select)); }
 html[data-family="camera"] .dock-btn:hover { background: rgb(var(--c-surface)); }
 html[data-family="camera"] .dock-btn--active { box-shadow: inset 0 0 0 2px rgb(var(--c-select)); background: rgb(var(--c-surface)); color: rgb(var(--c-fg)); }
-html[data-family="camera"] .app-hints { background: rgb(var(--c-chrome)); }
 
 html[data-family="camera"] .home-top {
   display: grid; gap: 16px; justify-items: center; text-align: center;
@@ -447,7 +409,7 @@ html[data-family="camera"] .scrub-arrow {
   display: grid; place-items: center; width: 34px; height: 26px; border-radius: 8px; padding: 0;
   border: 0; background: rgb(var(--c-select-fill)); color: rgb(var(--c-on-select)); cursor: pointer;
 }
-html[data-family="camera"] .scrub-arrow .ico { width: 18px; height: 18px; stroke-width: 2.6; }
+html[data-family="camera"] .scrub-arrow .ico { width: 18px; height: 18px; }
 html[data-family="camera"] .scrub-track {
   position: relative; flex: 1; height: 14px; border-radius: 999px; cursor: pointer;
   background: rgb(var(--c-surface)); border: 2px solid rgb(var(--c-line-strong));
@@ -482,10 +444,6 @@ html[data-family="canais"] :is(.home-top, .tile) {
 html[data-family="canais"] .home-top { grid-column: span 2; display: grid; align-content: center; gap: 12px; padding: 14px 22px; }
 html[data-family="canais"] .home-steps { grid-template-columns: 1fr; gap: 8px; }
 html[data-family="canais"] .tile { aspect-ratio: 16 / 9; gap: 8px; }
-html[data-family="canais"] .tile-slot {
-  display: block; border-radius: 22px; border: 3px solid rgb(var(--c-line) / 0.6);
-  background: linear-gradient(180deg, rgb(var(--c-surface) / 0.55), rgb(var(--c-surface-2) / 0.55));
-}
 html[data-family="canais"] .tile-art .ico { width: 42px; height: 42px; }
 html[data-family="canais"] .tile-label { font-size: 16px; color: rgb(var(--c-fg-soft)); }
 html[data-family="canais"] .tile--current {
@@ -533,10 +491,8 @@ html[data-family="canais"] :is(.dock-btn--home, .dock-btn--activity) { width: 70
 html[data-family="canais"] .dock-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 html[data-family="canais"] .dock-btn--active { box-shadow: 0 0 0 3px rgb(var(--c-select)), 0 0 14px rgb(var(--c-select) / 0.5); }
 html[data-family="canais"] .dock-btn--home { order: 0; }
-html[data-family="canais"] .dock-theme { order: 1; margin-right: auto; }
-html[data-family="canais"] .dock-btn--settings { order: 2; margin-left: auto; }
+html[data-family="canais"] .dock-btn--settings { order: 1; margin-right: auto; }
 html[data-family="canais"] .dock-btn--activity { order: 3; }
-html[data-family="canais"] .app-hints { background: rgb(var(--c-surface-2)); }
 
 /* ==========================================================================
    Tablet de Sala — grade de quadrados de vidro, bloco ciano com "Abrir"
@@ -588,14 +544,12 @@ html[data-family="tablet"] .tile--current .tile-start {
 /* Fileira de ícones coloridos, sem moldura. */
 html[data-family="tablet"] .dock-bar { background: transparent; justify-content: space-evenly; padding: 6px 60px 10px; }
 html[data-family="tablet"] .dock-btn { flex-direction: column; gap: 3px; padding: 6px 12px; border-radius: 14px; font-size: 12px; color: rgb(var(--c-fg-soft)); }
-html[data-family="tablet"] .dock-ico .ico { width: 32px; height: 32px; stroke-width: 2.4; }
+html[data-family="tablet"] .dock-ico .ico { width: 32px; height: 32px; }
 html[data-family="tablet"] .dock-btn--home .dock-ico { color: rgb(var(--c-tile-4)); }
 html[data-family="tablet"] .dock-btn--activity .dock-ico { color: rgb(var(--c-tile-1)); }
-html[data-family="tablet"] .dock-btn--theme .dock-ico { color: rgb(var(--c-tile-2)); }
 html[data-family="tablet"] .dock-btn--settings .dock-ico { color: rgb(var(--c-tile-3)); }
 html[data-family="tablet"] .dock-btn:hover { background: rgb(var(--c-surface)); }
 html[data-family="tablet"] .dock-btn--active { box-shadow: 0 0 0 3px rgb(var(--c-select)); background: rgb(var(--c-surface)); }
-html[data-family="tablet"] .app-hints { background: transparent; border-top: 1px solid rgb(var(--c-line)); }
 
 /* ==========================================================================
    Cubo — preto quadriculado, painéis violeta, barra dourada, dicas coloridas
@@ -649,7 +603,8 @@ html[data-family="cubo"] .tile--current {
   border-color: rgb(255 240 170);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 0 0 1px rgb(0 0 0 / 0.5), 0 2px 8px rgb(0 0 0 / 0.5);
 }
-html[data-family="cubo"] .tile--current :is(.tile-label, .tile-art) { color: rgb(var(--c-on-select)); }
+html[data-family="cubo"] .tile.tile--current .tile-label,
+html[data-family="cubo"] .tile.tile--current .tile-art { color: rgb(var(--c-on-select)); }
 /* Caixa de descrição embaixo, como a ajuda dos menus de rede. */
 html[data-family="cubo"] .home-caption { display: grid; gap: 4px; padding: 14px 20px; background: linear-gradient(180deg, rgb(var(--c-hero)), rgb(var(--c-surface-2))); }
 html[data-family="cubo"] .home-caption-title { font-size: 14px; font-weight: 800; letter-spacing: 0.08em; color: rgb(var(--c-tile-3)); }
@@ -662,13 +617,6 @@ html[data-family="cubo"] .dock-btn {
 }
 html[data-family="cubo"] .dock-btn--active { border-color: rgb(var(--c-select)); box-shadow: inset 0 0 0 1px rgb(var(--c-select)); }
 /* Dicas com teclas coloridas. */
-html[data-family="cubo"] .app-hints { justify-content: center; gap: 32px; letter-spacing: 0.06em; }
-html[data-family="cubo"] .hint-context { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
-html[data-family="cubo"] .key { border: 0; border-radius: 999px; min-width: 22px; color: #0b0b16; }
-html[data-family="cubo"] .key--move { background: rgb(var(--c-tile-3)); }
-html[data-family="cubo"] .key--ok { background: rgb(var(--c-tile-2)); }
-html[data-family="cubo"] .key--back { background: rgb(var(--c-tile-5)); }
-html[data-scheme="light"][data-family="cubo"] .key { color: #ffffff; }
 
 /* ==========================================================================
    Estéreo 3D — cubos lavanda em cima, bandeja com blocos e cantos menta
@@ -720,7 +668,7 @@ html[data-family="cubos3d"] .tile {
   box-shadow: 0 5px 0 rgb(var(--c-line-strong) / 0.55), 0 10px 18px rgb(0 0 0 / 0.08);
   --corner-r: 26px;
 }
-html[data-family="cubos3d"] .tile-art .ico { width: 46px; height: 46px; stroke-width: 2.4; }
+html[data-family="cubos3d"] .tile-art .ico { width: 46px; height: 46px; }
 html[data-family="cubos3d"] .tile-label { font-size: 12px; color: rgb(var(--c-fg-soft)); }
 html[data-family="cubos3d"] .tile:active { transform: translateY(3px); box-shadow: 0 2px 0 rgb(var(--c-line-strong) / 0.55); }
 html[data-family="cubos3d"] .dock-bar {
@@ -731,12 +679,9 @@ html[data-family="cubos3d"] .dock-bar {
 html[data-family="cubos3d"] .dock-btn { color: rgb(var(--c-fg-soft)); border-radius: 16px; }
 html[data-family="cubos3d"] .dock-btn--home .dock-ico { color: rgb(var(--c-tile-3)); }
 html[data-family="cubos3d"] .dock-btn--activity .dock-ico { color: rgb(var(--c-tile-2)); }
-html[data-family="cubos3d"] .dock-btn--theme .dock-ico { color: rgb(var(--c-tile-1)); }
 html[data-family="cubos3d"] .dock-btn--settings .dock-ico { color: rgb(var(--c-tile-4)); }
 html[data-family="cubos3d"] .dock-btn:hover { background: rgb(var(--c-surface-2)); }
 html[data-family="cubos3d"] .dock-btn--active { box-shadow: inset 0 0 0 3px rgb(var(--c-select)); }
-html[data-family="cubos3d"] .app-hints { background: rgb(var(--c-surface)); width: min(980px, calc(100% - 48px)); margin: 0 auto; box-sizing: border-box; color: rgb(var(--c-fg-soft)); border-top: 1px solid rgb(var(--c-line)); }
-html[data-family="cubos3d"] .key { border-radius: 4px; border-width: 2px; }
 
 /* ==========================================================================
    Híbrido — fileira de blocos grandes, doca redonda numa pílula
@@ -767,7 +712,7 @@ html[data-family="hibrido"] .home-group--dspico .tile {
   justify-content: space-between;
 }
 html[data-family="hibrido"] .home-group--dspico .tile-art { flex: 1; }
-html[data-family="hibrido"] .home-group--dspico .tile-art .ico { width: 58px; height: 58px; stroke-width: 1.8; }
+html[data-family="hibrido"] .home-group--dspico .tile-art .ico { width: 58px; height: 58px; }
 html[data-family="hibrido"] .home-group--dspico .tile-label { font-size: 13px; color: rgb(var(--c-fg-soft)); }
 /* Doca: pílula com botões redondos. */
 html[data-family="hibrido"] .home-group--tools .home-tiles {
@@ -787,8 +732,6 @@ html[data-family="hibrido"] .home-group .tile.tile--current {
 html[data-family="hibrido"] .dock-bar { background: transparent; justify-content: flex-start; padding: 4px 22px; border-top: 1px solid rgb(var(--c-line-strong) / 0.6); min-height: 52px; }
 html[data-family="hibrido"] .dock-btn { color: rgb(var(--c-fg-soft)); padding: 6px 12px; }
 html[data-family="hibrido"] .dock-btn--active { box-shadow: 0 0 0 2px rgb(var(--c-select)); }
-html[data-family="hibrido"] .app-hints { background: transparent; }
-html[data-family="hibrido"] .key { border-radius: 999px; min-width: 20px; }
 
 /* ==========================================================================
    Janelas estreitas (mínimo do app: 960 × 640)
@@ -805,7 +748,6 @@ html[data-family="hibrido"] .key { border-radius: 999px; min-width: 20px; }
   .home-steps { grid-template-columns: 1fr; }
 }
 @media (max-height: 720px) {
-  :root { --hints-h: 26px; }
   .app-content { padding-top: 16px; }
   html[data-family="canais"] { --dock-h: 92px; }
 }
@@ -821,8 +763,6 @@ html[data-family="camera"] #view-home:not(.hidden) { grid-template-rows: minmax(
 html[data-family="cubos3d"] #view-home:not(.hidden) { grid-template-rows: 1fr auto auto; }
 html[data-family="cubos3d"] .home-top { align-content: end; }
 html[data-family="hibrido"] #view-home:not(.hidden) { grid-template-rows: auto auto auto 1fr; padding-top: 4vh; }
-html[data-family="hibrido"] .hint-open { display: none; }
-html[data-family="hibrido"] .hint-okword { display: inline; }
 html[data-family="hibrido"] .home-group--tools .home-tiles { padding-bottom: 34px; }
 html[data-family="hibrido"] .home-group--tools .tile.tile--current .tile-label {
   position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%);
@@ -855,3 +795,33 @@ html[data-family="hibrido"] .home-caption { align-self: end; }
   html[data-family="cubos3d"] .tile { aspect-ratio: auto; height: 104px; }
   html[data-family="cubos3d"] .tile-art .ico { width: 38px; height: 38px; }
 }
+
+/* Próximo passo no cartão do Início e selos nos blocos. */
+.home-next { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.home-next.hidden { display: none; }
+.home-next-text { margin: 0; font-size: 14px; font-weight: 700; color: rgb(var(--c-fg)); }
+html[data-family="camera"] .home-next { justify-content: center; }
+html[data-family="camera"] .home-next-text { color: rgb(var(--c-hero-fg)); }
+html[data-family="cubos3d"] .home-next-text { color: rgb(var(--c-hero-fg)); font-size: 15px; }
+html[data-family="tablet"] .home-next { flex-direction: column; gap: 6px; }
+html[data-family="tablet"] .home-next-text { font-size: 12px; }
+html[data-family="tablet"] .home-next .btn-primary { padding: 0.4rem 0.8rem; font-size: 12px; }
+.tile-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-align: center;
+  background: rgb(var(--c-select-fill));
+  color: rgb(var(--c-on-select));
+  pointer-events: none;
+}
+html:is([data-family="dupla"], [data-family="cubo"]) .tile-badge { top: 50%; right: 12px; transform: translateY(-50%); }
+html[data-family="camera"] .tile-badge { top: -8px; right: -8px; }
+html[data-family="hibrido"] .home-group--tools .tile-badge { top: -4px; right: -4px; }

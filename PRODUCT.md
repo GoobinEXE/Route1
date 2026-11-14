@@ -28,7 +28,7 @@ Desktop macOS, Windows e Linux; janela nativa com UI HTML/CSS/JS offline (sem CD
 
 ## Capabilities and Constraints
 
-- Navegação: menu de console (Início em blocos, telas com Voltar, barra de ícones e dicas); Início, DSPico (Cartão, Jogos, RouteDex, Launcher, Emuladores e apps, Avançado), Mais ferramentas (Softmod DSi, Flashcards R4/GEi, Biblioteca TWiLight, Apps homebrew, Manutenção), Configurações (confirmado).
+- Navegação: menu de console (Início em blocos, telas com Voltar, barra de ícones); Início, DSPico (Cartão, Jogos, RouteDex, Launcher, Emuladores e apps USB, Avançado), Mais ferramentas (Softmod DSi, Flashcards R4/GEi, Biblioteca TWiLight, Apps homebrew, Manutenção), Configurações (confirmado).
 - UI 100% offline; fontes embutidas; nada de pedidos remotos a partir da UI (confirmado, AGENTS.md).
 - Idioma da UI: português (confirmado).
 - Temas: sete temas com nomes genéricos inspirados em menus de consoles (DS Lite é o padrão; DSi, Wii, Wii U, GameCube, 3DS, Switch), cada um com paleta original e modos claro (Catppuccin Latte) e noturno (Catppuccin Mocha) (confirmado).

@@ -10,11 +10,13 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-11-14
+
 ### Alterado
 
 - **Novo nome: Route Pico** (antes Route 1 Kit). O app passa a focar o cartucho DSPico; Softmod DSi e Outros flashcards ficam em **Mais ferramentas**
 
-- **Navegação de console**: o app abre num Início com blocos para cada tarefa, como o menu de um console; cada bloco abre uma tela com Voltar, e embaixo ficam a barra de ícones (Início, Atividade, Tema, Configurações) e as dicas de tecla. Setas movem a seleção, Enter abre, Esc volta. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima e a gaveta Atividade abre sozinha durante operações
+- **Navegação de console**: o app abre num Início com blocos para cada tarefa, como o menu de um console; cada bloco abre uma tela com Voltar, e embaixo ficam a barra de ícones (Início, Atividade, Configurações). Setas movem a seleção, Enter abre, Esc volta. Utilidades deixa de existir (cada função foi para o lugar dela), o cartão é escolhido só na barra de cima e a gaveta Atividade abre sozinha durante operações
 
 - **Regras da PicoDex primeiro**: capas escolhidas no catálogo libretro-thumbnails como na PicoDex (antes de SteamGridDB e GameTDB), cada capa/ícone gravado em um só destino, pastas `Games/` por sistema iguais às da PicoDex (GB e GBC em `gb/`, Mega Drive em `gen/`, `.dsi` em `nds/`) e versão do Pico Loader identificada pelo manifesto da PicoDex
 - **Pico Loader 1.7.1** no pacote oficial; a atualização do loader passa a copiar também `patchlist.bin`
@@ -22,7 +24,11 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 ### Adicionado
 
 - **Temas novos**: Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D e Híbrido, inspirados em menus de consoles, cada um com paleta original e modos Claro (Catppuccin Latte), Noturno (Catppuccin Mocha) ou Sistema. Cada tema arruma o Início do seu jeito: duas telas com cantos azuis, fileira de ícones com balão, grade de canais com barra curva e relógio, grade de vidro com bloco ciano, painéis violeta com barra dourada, bandeja de blocos com cantos menta, ou fileira de blocos com doca redonda
-- **Início** com o estado do microSD, doze blocos com ícones coloridos, hora e medidor de espaço na barra de cima
+- **Início** com o estado do microSD, o próximo passo (preparar, adicionar jogos, ver jogos) com um botão, dez blocos com ícones coloridos e selos, hora e medidor de espaço na barra de cima
+- **Funções reunidas**: a saúde do cartão foi para a tela Cartão; as Apps homebrew entraram na Biblioteca TWiLight; o assistente se dividiu entre Softmod DSi (SD lateral) e Flashcards R4/GEi (cartucho); o pacote DSPico ficou só no Cartão, com o caminho «Começar do zero»; Configurações fica só na barra de baixo
+- **Telas mais curtas**: cada tela abre com uma ação principal, e o que é raro (atualizações, reinstalação, manuais, organizar pastas, Sobre) fica em seções recolhíveis; Jogos abre pela biblioteca; Emuladores tem a barra «Instalar selecionados» fixa embaixo
+- **Fonte Geist** em toda a interface (cantos retos, no lugar da Nunito arredondada) e **ícones sólidos** de cantos retos nos blocos, abas e barras
+- **Ícone novo do programa**: a framboesa do DSPico (logo do LNH team, CC BY-SA 4.0) com a seta de rota, no lugar do antigo "1" do Route 1 Kit
 - Interface mais limpa: títulos de seção em frase normal, ícones desenhados em vez de emojis no estado do microSD e no RouteDex, objetivos do assistente em lista, grafia atual (atualizar, selecionar, ativo)
 - Textos em português do Brasil em todo o app e no app do console: arquivo, console, tela, Configurações, Baixar, Salvar
 - **Fontes oficiais**: PicoDex, Pico Launcher, Pico Loader e as duas variantes Enhanced em um registro único, com versões fixadas, verificação semanal e PR automático; os dados da PicoDex podem ser atualizados em Verificar atualizações
@@ -32,12 +38,23 @@ Aparecem na aba **Sobre**. Build, CI, código, README e docs do Git ficam em **D
 - **Banners e capas de pasta**, **fundos noturnos** dos temas e **importar cheats** (`usrcheat.dat`)
 - **Pico Launcher Enhanced / Pico Loader Enhanced** como opção recomendada em Verificar Atualizações, com aviso de versão não oficial e «Voltar ao oficial»
 
+### Corrigido
+
+- O app no macOS passa a ser assinado e notarizado pela Apple: abre sem o aviso de desenvolvedor não identificado
+- A tela Cartão não mostra mais «Outra operação já está em andamento» ao abrir enquanto o Início ainda verifica o cartão
+- A gaveta Atividade não abre mais por cima da lista de atualizações, e as colunas da lista ficaram alinhadas
+- A Biblioteca TWiLight acompanha o cartão escolhido na barra de cima
+- No macOS, imagens de disco montadas (como o DMG do instalador) não aparecem mais na lista de cartões
+
 ### Desenvolvimento
 
 - RouteDex baseado no PicoDex de rasalopa (MIT); licenças em `docs/licenses/`
 - `tools/gen_pico_manifest.py` gera `core/data/pico_manifest.json`; pins `pico_launcher_enhanced` / `pico_loader_enhanced_dspico`
 - Repositório Route1-DSi integrado: app do console em `nds/`, spec R1USB unificada em `protocol/R1USB.md`, plano e manuais em `docs/console/`; testes C e de conformidade do protocolo rodam no `pytest`
 - Artefatos de build renomeados para `RoutePico` (AppId Windows e bundle id macOS mantidos para atualizar instalações existentes)
+- Versão única em `core/__init__.py`: o Info.plist do macOS e o instalador Windows leem dali
+- macOS: assinatura Developer ID com hardened runtime, notarização e staple no `tools/build_macos_release.sh` e no workflow de release (ver `docs/MACOS_SIGNING.md`)
+- Testes isolados das preferências reais do usuário e da chave SteamGridDB do ambiente
 
 ## [1.1.0] — 2026-10-11
 

@@ -4,11 +4,10 @@
 
 | Versão | Suportada |
 |--------|-----------|
-| 1.0.x  | Sim |
-| 0.9.x  | Sim (até fim de suporte da linha 1.0) |
-| anteriores a 0.9 | Não |
+| 1.2.x  | Sim |
+| 1.0.x e anteriores | Não (atualize para a 1.2) |
 
-Correções de segurança serão aplicadas na linha suportada atual (`1.0.x`).
+Correções de segurança serão aplicadas na linha suportada atual (`1.2.x`). A versão 1.1 não chegou a ser publicada.
 
 ## Como reportar uma vulnerabilidade
 
@@ -16,7 +15,7 @@ Correções de segurança serão aplicadas na linha suportada atual (`1.0.x`).
 
 1. Se o repositório tiver **GitHub Security Advisories** ativados, use *Report a vulnerability*.
 2. Caso contrário, contacte o maintainer em privado (canal indicado no perfil do repositório quando existir remote) e inclua:
-   - versão do app (`Route Pico x.y.z` no arranque / `core.__version__`);
+   - versão do app (`Route Pico x.y.z` na inicialização / `core.__version__`);
    - SO e como reproduzir;
    - impacto esperado (ex.: formatar volume não removível, ler paths fora do SD).
 

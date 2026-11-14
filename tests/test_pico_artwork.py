@@ -19,6 +19,7 @@ FAKE_CATALOGS = {
     ],
     "Nintendo_-_Game_Boy_Advance": ["Metroid Fusion (USA).png", "Metroid Fusion (Europe) (En,Fr,De,Es,It).png"],
     "Sega_-_Mega_Drive_-_Genesis": ["Sonic The Hedgehog (USA, Europe).png"],
+    "Nintendo_-_Game_Boy": ["Tetris (World) (Rev 1).png"],
 }
 
 

@@ -14,7 +14,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Nunito", "ui-rounded", "system-ui", "sans-serif"],
+        sans: ["Geist", "system-ui", "-apple-system", "Segoe UI", "sans-serif"],
         mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
       },
       colors: {

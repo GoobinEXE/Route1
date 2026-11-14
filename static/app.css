@@ -158,7 +158,8 @@
 
 .updates-row {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr auto;
+  /* Coluna de ações com largura fixa: cada linha é uma grade e todas precisam alinhar. */
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1.1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) 300px;
   gap: 8px;
   align-items: center;
   font-size: 12px;
@@ -256,6 +257,3 @@
 .routedex-shot figcaption .btn-ghost { white-space: nowrap; }
 .routedex-form .routedex-input { flex: none; }
 .theme-list { display: grid; gap: 2px; max-width: 360px; }
-.manual-steps > summary { list-style: none; display: flex; align-items: center; gap: 8px; }
-.manual-steps > summary::before { content: "▸"; color: rgb(var(--c-fg-mute)); transition: transform 0.15s ease; }
-.manual-steps[open] > summary::before { transform: rotate(90deg); }

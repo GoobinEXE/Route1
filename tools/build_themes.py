@@ -267,7 +267,7 @@ def build() -> tuple[str, str, list[str]]:
         ":root {",
         "  --ease: cubic-bezier(0.22, 1, 0.36, 1);",
         "  --dur: 180ms;",
-        '  --font-sans: "Nunito", ui-rounded, system-ui, -apple-system, "Segoe UI", sans-serif;',
+        '  --font-sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;',
         '  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;',
         "}",
         "",

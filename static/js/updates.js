@@ -26,8 +26,8 @@
     const el = panel();
     if (!el) return;
     el.classList.remove("hidden");
+    // O progresso aparece aqui mesmo; a gaveta Atividade fica para as escritas no cartão.
     el.innerHTML = '<p class="text-[12px] text-fg-mute">Verificando versões (cartão, pins do app, GitHub LNH)…</p>';
-    R1K.shell && R1K.shell.toggleActivity(true);
 
     try {
       const api = typeof waitForApi === "function" ? await waitForApi() : window.pywebview && pywebview.api;
@@ -75,7 +75,7 @@
         }
         if (c.can_install_latest) {
           actions.push(
-            `<button type="button" class="btn-primary !text-[11px] !px-2 !py-1" onclick="R1K.updates.install('${id}','latest')">Mais recente</button>`
+            `<button type="button" class="btn-primary !text-[11px] !px-2 !py-1" onclick="R1K.updates.install('${id}','latest')">Instalar mais recente</button>`
           );
         }
         if (c.release_url) {

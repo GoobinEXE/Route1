@@ -28,7 +28,8 @@ body {
 input, select, textarea { caret-color: rgb(var(--c-accent-fg)); }
 input::placeholder, textarea::placeholder { color: rgb(var(--c-fg-mute)); opacity: 1; }
 
-.ico { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+/* Ícones sólidos (formas cheias com recortes, cantos retos), como nos menus de console. */
+.ico { width: 1em; height: 1em; fill: currentColor; stroke: none; flex-shrink: 0; }
 .icon-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
 .vh { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -305,7 +306,7 @@ html[data-family="hibrido"] .panel { border: 0; box-shadow: 0 1px 3px rgb(0 0 0 
 html[data-scheme="dark"][data-family="hibrido"] .panel { border: 1px solid rgb(var(--c-line)); }
 html[data-family="hibrido"] .adv-tab { border: 0; box-shadow: 0 1px 3px rgb(0 0 0 / 0.08); }
 
-/* Escala pequena +1px: a Nunito tem altura-x menor e nada funcional fica
+/* Escala pequena +1px: os tamanhos herdados do Tailwind ficam legíveis e nada funcional fica
    abaixo de 11px. */
 .text-\[10px\] { font-size: 11px; }
 .text-\[11px\], .\!text-\[11px\] { font-size: 12px !important; }
@@ -315,8 +316,6 @@ html[data-family="hibrido"] .adv-tab { border: 0; box-shadow: 0 1px 3px rgb(0 0 
 
 /* Guia de identificação: passos planos dentro do painel. */
 .guide-step { padding: 4px 0 4px 16px; border-left: 1px solid rgb(var(--c-line)); }
-.manual-steps { border-top: 1px solid rgb(var(--c-line)); padding-top: 14px; }
-.manual-steps > summary { font-size: 14px; font-weight: 800; color: rgb(var(--c-fg)); padding: 6px 0; }
 .manual-extra { padding-top: 8px; border-top: 1px solid rgb(var(--c-line)); }
 
 /* Ícones de estado e marcas do RouteDex (SVG, traço 2px). */
@@ -347,3 +346,82 @@ html[data-family="hibrido"] .adv-tab { border: 0; box-shadow: 0 1px 3px rgb(0 0 
 @media (prefers-reduced-motion: reduce) {
   .tile--current, .adv-tab--active { transition: none; transform: none !important; }
 }
+
+/* ==========================================================================
+   Seções recolhíveis (telas de trabalho): o que é raro fica fechado.
+   Herdam a pele de painel do tema; o conteúdo interno não vira cartão dentro
+   de cartão.
+   ========================================================================== */
+.fold { padding: 0; overflow: hidden; }
+.fold > .fold-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 15px 20px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.fold > .fold-head::-webkit-details-marker { display: none; }
+.fold > .fold-head::after {
+  content: "";
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  width: 9px;
+  height: 9px;
+  margin-right: 4px;
+  border-right: 2.5px solid rgb(var(--c-fg-mute));
+  border-bottom: 2.5px solid rgb(var(--c-fg-mute));
+  transform: rotate(45deg) translateY(-3px);
+  transition: transform var(--dur) var(--ease);
+}
+.fold[open] > .fold-head::after { transform: rotate(225deg) translate(-2px, -2px); }
+.fold > .fold-head:hover { background: rgb(var(--c-fg) / 0.03); }
+.fold > .fold-head:focus-visible { outline: 2px solid rgb(var(--c-fg)); outline-offset: -4px; }
+.fold-title { font-size: 15px; font-weight: 800; color: rgb(var(--c-fg)); }
+.fold-sub { font-size: 13px; color: rgb(var(--c-fg-mute)); }
+.fold-body { padding: 0 20px 20px; }
+.fold[open] > .fold-body { border-top: 1px solid rgb(var(--c-line) / 0.7); padding-top: 16px; }
+.fold > .fold-body .panel { border: 0; box-shadow: none; background: none; padding: 0; border-radius: 0; }
+html[data-family="cubo"] .fold-title { color: rgb(var(--c-tile-3)); letter-spacing: 0.06em; }
+
+/* Barra de ação fixa no fim de listas longas (ex.: emuladores). */
+.sticky-actions {
+  position: sticky;
+  bottom: -22px; /* encosta na borda de baixo da área com rolagem */
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -20px -20px;
+  padding: 12px 20px;
+  background: rgb(var(--c-surface));
+  border-top: 1px solid rgb(var(--c-line));
+  box-shadow: 0 -6px 14px rgb(0 0 0 / 0.06);
+}
+.sticky-actions-note { margin-right: auto; font-size: 13px; font-weight: 700; color: rgb(var(--c-fg-soft)); }
+html[data-family="cubo"] .sticky-actions { background: rgb(var(--c-surface-2)); }
+
+/* Abas irmãs mais discretas: trocam de tela sem disputar com o conteúdo. */
+.adv-tabs { gap: 8px; margin-bottom: 18px; }
+.adv-tab { padding: 0.4rem 0.8rem; font-size: 13px; gap: 7px; }
+.adv-tab .ico { width: 16px; height: 16px; }
+
+/* Biblioteca TWiLight: explorador mais baixo para as seções logo abaixo ficarem à vista. */
+#tools-pane-twilight .rom-x-shell { height: 19rem; max-height: 19rem; min-height: 15rem; }
+/* Jogos (DSPico): ação principal à esquerda, caminho da pasta na linha de baixo. */
+.games-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.games-crumb { display: flex; align-items: center; gap: 8px; padding-top: 4px; border-top: 1px solid rgb(var(--c-line) / 0.7); }
+.fold-split { padding-top: 16px; border-top: 1px solid rgb(var(--c-line) / 0.7); }
+.fold-subtitle { margin: 0 0 10px; font-size: 14px; font-weight: 800; color: rgb(var(--c-fg)); }
+
+/* Seções recolhíveis lado a lado: as duas ficam à vista; a aberta ocupa a linha inteira. */
+.fold-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.fold-row > details[open] { grid-column: 1 / -1; }
+#tools-pane-twilight .rom-x-shell { height: 17rem; max-height: 17rem; }
+/* A barra fixa pinta também a faixa abaixo dela, até a borda da área com rolagem. */
+.sticky-actions::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 32px; background: inherit; }
+#dspico-btn-setup { width: auto; align-self: flex-start; }

@@ -137,8 +137,12 @@ _MAC_SAFE_BUS = {
 
 
 def _macos_volume_allowed(data):
-    removable = bool(data.get("Removable") or data.get("RemovableMedia"))
     bus = (data.get("BusProtocol") or "").strip()
+    # Imagens de disco montadas (.dmg, como o próprio instalador do app) dizem-se
+    # removíveis e ejetáveis, mas nunca são o cartão no leitor.
+    if bus.lower() == "disk image" or (data.get("VirtualOrPhysical") or "").lower() == "virtual":
+        return False
+    removable = bool(data.get("Removable") or data.get("RemovableMedia"))
     bus_ok = bus in _MAC_SAFE_BUS or bus.upper() == "USB"
     internal = bool(data.get("Internal"))
     ejectable = bool(data.get("Ejectable"))

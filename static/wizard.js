@@ -16,6 +16,11 @@ const Wizard = (() => {
   };
 
   let steps = [];
+  // Cada tela monta o assistente no seu host: Softmod (SD do DSi) ou Flashcards (cartucho).
+  let hostId = "wizard-root";
+  let scope = "dsi";
+  // dspico: só «começar do zero» do DSPico, montado dentro da tela Cartão.
+  const SCOPE_GOALS = { dsi: ["sd-new", "sd-update"], flash: ["flash-update", "flash-new"], dspico: ["flash-new"] };
   /** Incrementado a cada render(); async helpers abandonam resultados stale. */
   let renderGen = 0;
 
@@ -38,7 +43,7 @@ const Wizard = (() => {
 
   function onBusyChange() {
     // Re-render só se estamos em um CTA que muda estado visual
-    const root = document.getElementById("wizard-root");
+    const root = document.getElementById(hostId);
     if (root && !root.classList.contains("hidden")) {
       // botões já são desabilitados por setBusy
     }
@@ -176,7 +181,7 @@ const Wizard = (() => {
             "Ejete o MicroSD com segurança no sistema operativo.",
             "Insira-o no cartucho DSPico e o cartucho no DSi/DS.",
             "O microSD já tem Pico Launcher + Loader oficiais LNH.",
-            "Para firmware UF2, emunand e mais jogos, use a aba <strong>DSPico</strong> no app.",
+            "Depois, copie os jogos na tela <strong>Jogos</strong>; firmware e emunand ficam em <strong>Avançado</strong>.",
           ]
         : [
             "Ejete o MicroSD com segurança no sistema operativo.",
@@ -357,9 +362,27 @@ const Wizard = (() => {
 
   /* ---------- navigation ---------- */
 
+  function mount(id, sc) {
+    if (hostId !== id) {
+      const old = document.getElementById(hostId);
+      if (old) old.innerHTML = "";
+    }
+    hostId = id;
+    scope = SCOPE_GOALS[sc] ? sc : "dsi";
+    if (state.goal && !SCOPE_GOALS[scope].includes(state.goal)) resetFlow();
+    render();
+  }
+
   function startGoal(goal) {
     resetFlow();
     state.goal = goal;
+    if (scope === "dspico" && goal === "flash-new") {
+      state.brand = "dspico";
+      steps = buildSteps();
+      state.stepIndex = 1; // sem a escolha de marca
+      render();
+      return;
+    }
     if (goal === "flash-update" || goal === "flash-new") {
       steps = [{ id: "brand", title: "Qual é o seu flashcard?", where: "PC", render: renderBrandPick }];
       // brand pick rebuilds full steps when chosen
@@ -383,6 +406,10 @@ const Wizard = (() => {
   }
 
   function goBack() {
+    if (scope === "dspico" && state.stepIndex <= 1) {
+      goHome();
+      return;
+    }
     if (state.stepIndex <= 0) {
       goHome();
       return;
@@ -447,7 +474,7 @@ const Wizard = (() => {
   /* ---------- chrome / render ---------- */
 
   function render() {
-    const root = document.getElementById("wizard-root");
+    const root = document.getElementById(hostId);
     if (!root) return;
     renderGen += 1;
 
@@ -490,7 +517,7 @@ const Wizard = (() => {
         ${state.lastError ? `<div class="note note--warn"><strong>Erro:</strong> ${escapeHtml(state.lastError)}</div>` : ""}
         <div id="wizard-step-body" class="space-y-4"></div>
         <div class="flex flex-wrap gap-2 pt-1">
-          <button type="button" class="btn-ghost" onclick="Wizard.goBack()">Voltar</button>
+          <button type="button" class="btn-ghost" onclick="Wizard.goBack()">Etapa anterior</button>
         </div>
       </div>
     `;
@@ -500,62 +527,70 @@ const Wizard = (() => {
   }
 
   function renderGoalPicker() {
-    return `
-      <div class="space-y-6">
+    if (scope === "dspico") {
+      return `
+      <div class="space-y-3">
+        <p class="text-[13px] text-fg-soft leading-relaxed max-w-2xl">
+          Formata o microSD em FAT32 e instala o pacote oficial do DSPico, passo a passo.
+          <strong>Apaga tudo</strong> no cartão; use quando o cartão estiver vazio, corrompido ou cheio de outros sistemas.
+        </p>
+        <button type="button" class="btn-ghost" onclick="Wizard.startGoal('flash-new')">Começar do zero</button>
+      </div>`;
+    }
+    if (scope === "flash") {
+      return `
+      <div class="space-y-5">
         <div>
-          <h2 class="wizard-title">O que você quer fazer?</h2>
+          <h2 class="wizard-title">O que você quer fazer no flashcard?</h2>
           <p class="text-[12px] text-fg-mute mt-1.5 leading-relaxed max-w-2xl">
-            Escolha o <strong>tipo de cartão</strong> primeiro. O assistente guia cada etapa no PC e no DSi.
+            Cartucho Slot-1 GEi ou R4. O microSD fica <em>dentro</em> do cartucho, não é o SD lateral do DSi.
+            O assistente pergunta a marca e guia cada etapa.
           </p>
         </div>
-
-        <section class="goal-section">
-          <div class="goal-section-head">
-            <h3 class="goal-section-title">MicroSD do cartucho (flashcard)</h3>
-            <p class="goal-section-sub">
-              Cartucho Slot-1 (GEi, R4 ou DSPico). O microSD fica <em>dentro</em> do cartucho — não é o SD lateral do DSi.
-            </p>
-          </div>
-          <div class="wizard-goal-list">
-            ${goalCard(
-              "flash-update",
-              "Atualizar kernel ou pacote",
-              "O microSD já tem kernel/pacote e quer atualizar GEi, R4 ou DSPico.",
-              "Não formata o cartão."
-            )}
-            ${goalCard(
-              "flash-new",
-              "Criar flashcard do zero",
-              "MicroSD vazio ou para limpar: formata em FAT32 e instala o kernel/pacote do cartucho.",
-              "Formata o cartão (apaga tudo)."
-            )}
-          </div>
-        </section>
-
-        <section class="goal-section">
-          <div class="goal-section-head">
-            <h3 class="goal-section-title">SD do DSi (slot lateral)</h3>
-            <p class="goal-section-sub">
-              Softmod no cartão do slot lateral: exploit da Câmera, backup, menu TWiLight e Unlaunch.
-              DS / DS Lite / 3DS não usam este caminho.
-            </p>
-          </div>
-          <div class="wizard-goal-list">
-            ${goalCard(
-              "sd-new",
-              "Instalar softmod completo",
-              "Primeira vez: Memory Pit → cópia da memória interna → Unlaunch → hiyaCFW (opcional) → TWiLight.",
-              "Inclui escrita na memória interna do console (Unlaunch)."
-            )}
-            ${goalCard(
-              "sd-update",
-              "Atualizar menu / hiyaCFW",
-              "Já tem Unlaunch e TWiLight: atualizar o menu, hiyaCFW ou organizar jogos.",
-              "Não reinstala o Unlaunch."
-            )}
-          </div>
-        </section>
-
+        <div class="wizard-goal-list">
+          ${goalCard(
+            "flash-update",
+            "Atualizar kernel ou pacote",
+            "O microSD já tem o kernel e quer atualizar o GEi ou o R4.",
+            "Não formata o cartão."
+          )}
+          ${goalCard(
+            "flash-new",
+            "Criar flashcard do zero",
+            "MicroSD vazio ou para limpar: formata em FAT32 e instala o kernel/pacote do cartucho.",
+            "Formata o cartão (apaga tudo)."
+          )}
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <p class="text-[12px] text-fg-mute leading-relaxed">Cartucho DSPico? Ele tem a sua própria tela.</p>
+          <button type="button" class="btn-ghost btn-sm" onclick="R1K.shell.go('dspico','cartao')">Abrir Cartão do DSPico</button>
+        </div>
+      </div>
+    `;
+    }
+    return `
+      <div class="space-y-5">
+        <div>
+          <h2 class="wizard-title">O que você quer fazer no DSi?</h2>
+          <p class="text-[12px] text-fg-mute mt-1.5 leading-relaxed max-w-2xl">
+            Softmod no cartão do slot lateral: exploit da Câmera, backup, menu TWiLight e Unlaunch.
+            DS / DS Lite / 3DS não usam este caminho; para cartuchos, use Flashcards R4/GEi.
+          </p>
+        </div>
+        <div class="wizard-goal-list">
+          ${goalCard(
+            "sd-new",
+            "Instalar softmod completo",
+            "Primeira vez: Memory Pit → cópia da memória interna → Unlaunch → hiyaCFW (opcional) → TWiLight.",
+            "Inclui escrita na memória interna do console (Unlaunch)."
+          )}
+          ${goalCard(
+            "sd-update",
+            "Atualizar menu / hiyaCFW",
+            "Já tem Unlaunch e TWiLight: atualizar o menu, hiyaCFW ou organizar jogos.",
+            "Não reinstala o Unlaunch."
+          )}
+        </div>
         <p class="text-[11px] text-fg-mute leading-relaxed">
           Se já souber exatamente o que gravar, use os
           <button type="button" class="text-accent-fg font-medium" onclick="Wizard.openManualSteps()">passos manuais</button>
@@ -603,7 +638,7 @@ const Wizard = (() => {
           <p class="opt-does">Copia o firmware do modelo exato a partir de uma pasta em Downloads.</p>
           <p class="opt-when">Quando usar: R4, R4i, etc. Extraia o zip oficial do clone para Downloads.</p>
         </button>
-        <button type="button" class="wizard-goal sm:col-span-2" onclick="Wizard.chooseBrand('dspico')">
+        <button type="button" class="wizard-goal sm:col-span-2${scope === "flash" ? " hidden" : ""}" onclick="Wizard.chooseBrand('dspico')">
           <h3 class="text-[14px] font-semibold">DSPico</h3>
           <p class="opt-does">Pico Launcher + Loader oficiais no microSD (<code>_picoboot.nds</code>, <code>_pico/</code>).</p>
           <p class="opt-when">Quando usar: cartucho RP2040 (LNH Team). O <code>.uf2</code> do cartucho deve <strong>já</strong> estar gravado fora deste app.</p>
@@ -1065,12 +1100,12 @@ const Wizard = (() => {
         O Pico Launcher navega o cartão como browser de arquivos. O kit usa a pasta
         <code>Games/</code> na raiz do microSD (recomendado pelo GUIDE LNH).
       </p>
-      <p class="opt-when">Opcional — pode pular e usar a aba <strong>DSPico</strong> depois.</p>
+      <p class="opt-when">Opcional: pode pular e adicionar os jogos depois na tela <strong>Jogos</strong>.</p>
       ${drivePanelHtml()}
       <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
         <button type="button" class="btn-primary wizard-cta" id="wiz-dspico-games">Adicionar jogos a Games/</button>
         <button type="button" class="btn-secondary wizard-cta" id="wiz-roms-skip">Pular</button>
-        <button type="button" class="btn-ghost wizard-cta" id="wiz-open-dspico">Abrir área DSPico</button>
+        <button type="button" class="btn-ghost wizard-cta" id="wiz-open-dspico">Abrir Jogos</button>
       </div>
     `;
     bindDrivePanel();
@@ -1108,7 +1143,7 @@ const Wizard = (() => {
     };
     document.getElementById("wiz-roms-skip").onclick = () => goNext();
     document.getElementById("wiz-open-dspico").onclick = () => {
-      if (window.R1K && R1K.shell) R1K.shell.go("dspico", "cartao");
+      if (window.R1K && R1K.shell) R1K.shell.go("dspico", "games");
     };
   }
 
@@ -1533,6 +1568,7 @@ const Wizard = (() => {
 
   return {
     init,
+    mount,
     render,
     startGoal,
     chooseBrand,

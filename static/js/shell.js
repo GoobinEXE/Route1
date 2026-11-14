@@ -10,7 +10,9 @@
 (function () {
   const STORAGE_KEY = "route_pico_view_v4";
   const VIEWS = ["home", "dspico", "tools", "settings"];
-  const TOOLS_SECTIONS = ["softmod", "flashcards", "twilight", "homebrew", "card"];
+  const TOOLS_SECTIONS = ["softmod", "flashcards", "twilight", "card"];
+  // Seções que deixaram de ser telas próprias → tela que as contém (+ seção recolhível a abrir).
+  const MERGED = { homebrew: ["twilight", "fold-homebrew"] };
   const DSPICO_SECTIONS = ["cartao", "games", "routedex", "launcher", "extras", "avancado"];
   // Vistas e modos antigos (sessão anterior) → vista/aba atual.
   const LEGACY_VIEWS = {
@@ -22,18 +24,17 @@
 
   /** Título, texto e ícone de cada tela (o mesmo texto dos blocos do Início). */
   const SCREENS = {
-    "dspico:cartao": ["Cartão", "Estado do microSD, pacote oficial e atualizações", "i-card", 3],
+    "dspico:cartao": ["Cartão", "Estado, saúde, pacote oficial e atualizações do microSD", "i-card", 3],
     "dspico:games": ["Jogos", "Importar jogos, organizar pastas e capas", "i-games", 1],
-    "dspico:routedex": ["RouteDex", "Favoritos, tempo de jogo e saúde do cartão", "i-dex", 5],
+    "dspico:routedex": ["RouteDex", "Favoritos, tempo de jogo, capturas, pastas e cheats", "i-dex", 5],
     "dspico:launcher": ["Launcher", "settings.json, temas e fundos noturnos", "i-launcher", 7],
-    "dspico:extras": ["Emuladores e apps", "Emuladores do Pico Launcher e apps USB", "i-extras", 2],
+    "dspico:extras": ["Emuladores e apps USB", "Emuladores do Pico Launcher e apps USB oficiais do LNH team", "i-extras", 2],
     "dspico:avancado": ["Avançado", "Emunand, BIOS e firmware do cartucho", "i-chip", 4],
-    "tools:softmod": ["Softmod DSi", "Assistente: exploit, backup da NAND e Unlaunch", "i-handheld", 3],
-    "tools:flashcards": ["Flashcards R4/GEi", "Kernel e TWiLight para cartuchos R4 e GEi", "i-flash", 6],
-    "tools:twilight": ["Biblioteca TWiLight", "ROMs em /roms/, capas e cheats", "i-moon", 7],
-    "tools:homebrew": ["Apps homebrew", "Catálogo de apps para instalar no cartão", "i-flask", 2],
-    "tools:card": ["Manutenção", "Formatar, backup, limpeza e relatório do cartão", "i-wrench", 4],
-    settings: ["Configurações", "SteamGridDB, aparência e sobre o app", "i-gear", 0],
+    "tools:softmod": ["Softmod DSi", "SD lateral do DSi: exploit, backup da NAND e Unlaunch", "i-handheld", 3],
+    "tools:flashcards": ["Flashcards R4/GEi", "Preparar ou atualizar cartuchos R4 e GEi do zero", "i-flash", 6],
+    "tools:twilight": ["Biblioteca TWiLight", "ROMs em /roms/, capas, cheats e apps homebrew", "i-moon", 7],
+    "tools:card": ["Manutenção", "Relatório, backup, limpeza e formatação de qualquer cartão", "i-wrench", 4],
+    settings: ["Configurações", "Aparência, SteamGridDB e sobre o app", "i-gear", 0],
   };
 
   let current = "home";
@@ -41,7 +42,8 @@
   let dspicoSection = "cartao";
   let activityOpen = false;
   let lastTile = null;
-  let depth = 0; // entradas empilhadas desde o Início (Voltar usa o histórico)
+  let depth = 0;
+  let explorerMount = null; // cartão que o explorador TWiLight mostrou por último // entradas empilhadas desde o Início (Voltar usa o histórico)
   const mounted = Object.create(null);
   const toolsMounted = Object.create(null);
 
@@ -89,7 +91,6 @@
         else btn.removeAttribute("aria-current");
       }
     });
-    setHint(current === "home" ? captionText() : meta ? meta[0] : "");
   }
 
   function showPane(view) {
@@ -101,16 +102,29 @@
   /* ------------------------------------------------------------ vistas */
 
   function mountToolsSection(name) {
-    if (name === "softmod" && typeof Wizard !== "undefined" && Wizard.render && !toolsMounted.softmod) {
-      Wizard.render();
-    }
-    if (name === "twilight" && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
-      RomExplorer.refresh();
-    }
-    if (name === "homebrew" && typeof loadHomebrewCatalog === "function") {
-      loadHomebrewCatalog();
+    if (name === "softmod" && typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root", "dsi");
+    if (name === "flashcards" && typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root-flash", "flash");
+    if (name === "twilight") {
+      explorerMount = typeof selectedDrive !== "undefined" && selectedDrive ? selectedDrive.mount_path : null;
+      if (typeof RomExplorer !== "undefined" && RomExplorer.refresh) RomExplorer.refresh();
+      const fold = $("fold-homebrew");
+      if (fold && !fold.dataset.bound) {
+        fold.dataset.bound = "1";
+        fold.addEventListener("toggle", () => {
+          if (fold.open && typeof loadHomebrewCatalog === "function") loadHomebrewCatalog();
+        });
+      }
+      if (fold && fold.open && typeof loadHomebrewCatalog === "function") loadHomebrewCatalog();
     }
     toolsMounted[name] = true;
+  }
+
+  /** Abre uma seção recolhível e a traz para a vista. */
+  function openFold(id) {
+    const d = $(id);
+    if (!d) return;
+    d.open = true;
+    requestAnimationFrame(() => d.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }));
   }
 
   function setToolsSection(name, { silent } = {}) {
@@ -118,6 +132,8 @@
       alert("Aguarde a operação em andamento terminar antes de mudar de seção.");
       return;
     }
+    let fold = null;
+    if (MERGED[name]) [name, fold] = MERGED[name];
     if (!TOOLS_SECTIONS.includes(name)) name = "softmod";
     toolsSection = name;
     for (const key of TOOLS_SECTIONS) {
@@ -136,6 +152,7 @@
       syncScreen();
       pushRoute(false);
     }
+    if (fold) openFold(fold);
     persist();
   }
 
@@ -189,6 +206,8 @@
     const homeEl = $("view-home");
     if (homeEl) homeEl.classList.toggle("home--nodrive", !info);
     updateStatusMeter(info);
+    // Só lê o cartão com o Início visível: as telas fazem as suas próprias leituras.
+    if (current === "home") refreshNextStep(false);
     if (!el) return;
     if (!info) {
       el.textContent = "Nenhum microSD escolhido. Conecte o cartão e escolha-o na barra de cima.";
@@ -208,6 +227,100 @@
     if (meter) meter.setAttribute("aria-valuenow", String(info.used));
     const text = $("home-usage-text");
     if (text) text.textContent = `${info.free.toFixed(1)} GB livres de ${info.total.toFixed(1)} GB · ${info.used}% usado`;
+  }
+
+  /* ------------------------------------------------------------ próximo passo */
+
+  let nextFor = null;
+  let nextData = null;
+  let nextLoading = false;
+
+  /** Lê o estado do cartão (só leitura) e diz no Início o que fazer a seguir. */
+  async function refreshNextStep(force) {
+    const box = $("home-next");
+    if (!box) return;
+    const d = typeof selectedDrive !== "undefined" ? selectedDrive : null;
+    if (!d || !d.mount_path) {
+      box.classList.add("hidden");
+      nextFor = null;
+      nextData = null;
+      setBadge("dspico:cartao", "");
+      setBadge("dspico:games", "");
+      return;
+    }
+    if (!force && nextFor === d.mount_path && nextData) {
+      paintNextStep(nextData);
+      return;
+    }
+    if (nextLoading) return;
+    nextLoading = true;
+    let data = null;
+    try {
+      const api = typeof getApi === "function" ? getApi() || (typeof waitForApi === "function" ? await waitForApi() : null) : null;
+      if (api && typeof api.inspect_dspico === "function") data = await api.inspect_dspico(d.mount_path);
+    } catch (e) {
+      data = null;
+    }
+    nextLoading = false;
+    nextFor = d.mount_path;
+    nextData = data && data.success ? data : { success: false };
+    paintNextStep(nextData);
+  }
+
+  function setBadge(target, text) {
+    const tile = document.querySelector(`.tile[data-go="${target}"]`);
+    if (!tile) return;
+    let b = tile.querySelector(".tile-badge");
+    if (!text) {
+      if (b) b.remove();
+      return;
+    }
+    if (!b) {
+      b = document.createElement("span");
+      b.className = "tile-badge";
+      tile.appendChild(b);
+    }
+    b.textContent = text;
+  }
+
+  function paintNextStep(data) {
+    const box = $("home-next");
+    const textEl = $("home-next-text");
+    const btn = $("home-next-btn");
+    if (!box || !textEl || !btn) return;
+    const role = driveRoleLabel();
+    const ready = !!(data && data.success && data.markers_ok);
+    const games = ready ? Number(data.games_count || 0) : 0;
+    let text;
+    let label;
+    let target;
+    if (role === "RPI-RP2") {
+      text = "O cartucho está no modo de gravação do firmware.";
+      label = "Gravar firmware";
+      target = ["dspico", "avancado"];
+    } else if (ready && games === 0) {
+      text = "Cartão pronto. Agora copie os seus jogos.";
+      label = "Adicionar jogos";
+      target = ["dspico", "games"];
+    } else if (ready) {
+      text = `Cartão pronto, com ${games} ${games === 1 ? "jogo" : "jogos"} em Games/.`;
+      label = "Ver jogos";
+      target = ["dspico", "games"];
+    } else if (role === "GEi-R4") {
+      text = "Parece o microSD de um flashcard R4 ou GEi.";
+      label = "Abrir Flashcards";
+      target = ["tools", "flashcards"];
+    } else {
+      text = "Este microSD ainda não tem o pacote do DSPico.";
+      label = "Preparar cartão";
+      target = ["dspico", "cartao"];
+    }
+    textEl.textContent = text;
+    btn.textContent = label;
+    btn.onclick = () => go(target[0], target[1]);
+    box.classList.remove("hidden");
+    setBadge("dspico:cartao", ready || role === "RPI-RP2" ? "" : "Preparar");
+    setBadge("dspico:games", ready ? String(games) : "");
   }
 
   function updateStatusMeter(info) {
@@ -246,6 +359,12 @@
     badge.textContent = driveRoleLabel();
     badge.className = "chip " + (selectedDrive ? "chip--ok" : "chip--idle");
     updateHomeDrive();
+    // O explorador TWiLight acompanha o cartão escolhido na barra de cima.
+    const m = selectedDrive ? selectedDrive.mount_path : null;
+    if (current === "tools" && toolsSection === "twilight" && m !== explorerMount && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
+      explorerMount = m;
+      RomExplorer.refresh();
+    }
   }
 
   /* ------------------------------------------------------------ rotas */
@@ -332,10 +451,13 @@
 
   /** Atalho: vista + aba (DSPico ou Mais ferramentas). */
   function go(view, section, opts) {
+    let fold = null;
+    if (view === "tools" && section && MERGED[section]) [section, fold] = MERGED[section];
     if (view === "tools" && section) {
       toolsSection = TOOLS_SECTIONS.includes(section) ? section : toolsSection;
       setToolsSection(toolsSection, { silent: true });
     }
+    if (fold) setTimeout(() => openFold(fold), 0);
     if (view === "dspico" && section) {
       if (DSPICO_SECTIONS.includes(section)) dspicoSection = section;
       if (typeof Dspico !== "undefined" && Dspico.selectSection) Dspico.selectSection(section);
@@ -374,13 +496,6 @@
 
   /* ------------------------------------------------------------ menu */
 
-  function captionText() {
-    const t = lastTile || document.querySelector(".tile");
-    if (!t) return "";
-    const label = t.querySelector(".tile-label");
-    return label ? label.textContent : "";
-  }
-
   function setCaption(tile) {
     if (!tile) return;
     lastTile = tile;
@@ -392,7 +507,6 @@
     if ($("home-caption-text")) $("home-caption-text").textContent = desc ? desc.textContent : "";
     const cap = $("home-caption");
     if (cap) cap.setAttribute("data-hue", tile.getAttribute("data-hue") || "0");
-    if (current === "home") setHint(label ? label.textContent : "");
     // Fileiras horizontais (Câmera Dupla, Híbrido): manter o bloco à vista.
     const row = [tile.closest(".home-tiles"), tile.closest(".home-menu")].find(
       (el) => el && el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).display !== "contents"
@@ -405,11 +519,6 @@
         row.scrollTo({ left: target, behavior: reducedMotion() ? "auto" : "smooth" });
       }
     }
-  }
-
-  function setHint(text) {
-    const el = $("hint-context");
-    if (el) el.textContent = text || "Pronto";
   }
 
   function reducedMotion() {
@@ -727,6 +836,11 @@
         const badge = $("activity-badge");
         if (badge) badge.classList.toggle("hidden", !(p && p.busy));
         if (p && p.busy) toggleActivity(true);
+        // Depois de uma escrita no cartão, o próximo passo pode ter mudado.
+        if (p && !p.busy && nextFor) {
+          nextData = null;
+          if (current === "home") setTimeout(() => refreshNextStep(true), 300);
+        }
       });
     }
   }
