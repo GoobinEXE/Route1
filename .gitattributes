@@ -1,0 +1,3 @@
+# Dados fixados por SHA-256 (lock das fontes oficiais, manifesto da PicoDex):
+# nunca converter fim de linha, senão o checkout no Windows (CRLF) muda o hash.
+core/data/** -text

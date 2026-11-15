@@ -37,7 +37,7 @@ DSPICO_CACHE_KEYS = frozenset(
     }
 )
 # Variantes Enhanced (rasalopa/pico-launcher-enhanced, Zlib): fork não oficial,
-# instalado só quando o utilizador escolhe. Allowlist própria para nunca se
+# instalado só quando o usuário escolhe. Allowlist própria para nunca se
 # misturar com o pacote LNH oficial (DSPICO_CACHE_KEYS).
 DSPICO_ENHANCED_CACHE_KEYS = frozenset(
     {
@@ -127,7 +127,7 @@ def urls_for(key: str) -> List[str]:
 def dspico_firmware_uf2_ready() -> bool:
     """
     True só quando existir pin + URL HTTPS em github.com/LNH-team/ para o UF2.
-    Releases actuais do firmware não publicam asset .uf2 (compilar via GUIDE).
+    Releases atuais do firmware não publicam asset .uf2 (compilar via GUIDE).
     """
     pins = _pins()
     pin = pins.PINNED_SHA256.get("dspico_firmware_uf2")
@@ -258,7 +258,7 @@ def _is_valid_cached(key: str, path: str) -> bool:
     if digest != pinned_l:
         return False
 
-    # Sidecar antigo/stale: reescrever; se digest diverge do ficheiro, inválido.
+    # Sidecar antigo/stale: reescrever; se digest diverge do arquivo, inválido.
     if rec and rec[0] != digest:
         return False
     _write_sidecar(path, digest)
@@ -278,7 +278,7 @@ def download_url(url: str, target_path: str, log_callback=None) -> None:
     tmp_path = f"{target_path}.partial"
     from core.progress import ProgressTracker
 
-    tracker = ProgressTracker("cache_download", label="A descarregar…")
+    tracker = ProgressTracker("cache_download", label="Baixando…")
     try:
         # URLs vêm exclusivamente de URLS (constantes); não há input do usuário.
         with urllib.request.urlopen(req, timeout=120) as resp, open(tmp_path, "wb") as out:  # nosec B310  # nosemgrep: dynamic-urllib-use-detected
@@ -299,7 +299,7 @@ def download_url(url: str, target_path: str, log_callback=None) -> None:
             out.flush()
             os.fsync(out.fileno())
         os.replace(tmp_path, target_path)
-        tracker.finish("Descarregamento concluído")
+        tracker.finish("Download concluído")
     except Exception:
         if os.path.exists(tmp_path):
             try:

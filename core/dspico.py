@@ -52,7 +52,7 @@ from core.twilight import _cleanup_baks, _is_safe_archive_member, _stage_dir_cop
 LNH_ORG = "LNH-team"
 LNH_GITHUB_PREFIX = f"https://github.com/{LNH_ORG}/"
 
-# Manual de utilizador ChiScart (quick start / FAQ) — referência junto ao GUIDE LNH.
+# Manual de usuário ChiScart (quick start / FAQ) — referência junto ao GUIDE LNH.
 DSPICO_USER_MANUAL_URL = (
     "https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf"
 )
@@ -137,9 +137,9 @@ def _dest_dir_for_import(
         return games_dest_dir, "retro"
     return None, None
 
-# Layouts de organização DSPico (escolha do utilizador)
+# Layouts de organização DSPico (escolha do usuário)
 LAYOUT_FRANCHISE = "franchise"  # Games/<franquia>/
-LAYOUT_PLATFORM = "platform"  # Games/nds/ ou Games/dsi/
+LAYOUT_PLATFORM = "platform"  # Games/<sistema>/ com as pastas da PicoDex (nds, gba, gb, gen…)
 LAYOUT_GAMES = "games"  # soltos em Games/
 LAYOUT_ROOT = "root"  # soltos na raiz ao lado do launcher
 LAYOUT_MODES = frozenset(
@@ -157,7 +157,7 @@ LAYOUT_ALIASES = {
     "launcher": LAYOUT_ROOT,
 }
 
-# Pastas/ficheiros essenciais do pacote DSPico (+ emunand + emuladores Pico)
+# Pastas/arquivos essenciais do pacote DSPico (+ emunand + emuladores Pico)
 _KEEP_DIR_NAMES = frozenset(
     {
         "_pico",
@@ -572,7 +572,7 @@ def _extract_zip_safe(archive_path: str, extract_dir: str, log_callback=None) ->
 
 
 def _find_file(root: str, names: tuple[str, ...]) -> Optional[str]:
-    """Procura ficheiro por nome (case-insensitive) sob root."""
+    """Procura arquivo por nome (case-insensitive) sob root."""
     wanted = {n.lower() for n in names}
     for walk_root, _dirs, files in os.walk(root):
         for f in files:
@@ -659,10 +659,10 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
     log("=== Instalando pacote DSPico (Pico Launcher + Loader oficiais LNH) ===")
     tracker = ProgressTracker(
         "setup_dspico",
-        label="A preparar…",
+        label="Preparando…",
         total_items=5,
     )
-    tracker.set_phase("download", label="A obter pacotes oficiais…")
+    tracker.set_phase("download", label="Obtendo pacotes oficiais…")
 
     try:
         assert_dspico_cache_key("pico_launcher")
@@ -671,7 +671,7 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
         tracker.advance_item(label="Launcher obtido", written=True)
         loader_zip = ensure_cached("pico_loader_dspico", log_callback)
         tracker.advance_item(label="Loader obtido", written=True)
-        tracker.set_phase("extract", label="A extrair pacotes…")
+        tracker.set_phase("extract", label="Extraindo pacotes…")
         launcher_dir = _extract_zip_safe(
             launcher_zip, os.path.join(CACHE_DIR, "Pico_Launcher"), log_callback
         )
@@ -685,7 +685,7 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
 
     assembled = os.path.join(CACHE_DIR, "DSPico_SD_ready")
     try:
-        tracker.set_phase("assemble", label="A montar árvore DSPico…")
+        tracker.set_phase("assemble", label="Montando árvore DSPico…")
         _assemble_dspico_staging(launcher_dir, loader_dir, assembled)
         tracker.advance_item(label="Árvore montada", written=True)
     except Exception as e:
@@ -699,7 +699,7 @@ def install_dspico_package(mount_path: str, log_callback=None) -> tuple[bool, st
     undo = UndoStack()
     baks: list[Optional[str]] = []
     try:
-        tracker.set_phase("copy", label="A gravar no cartão…")
+        tracker.set_phase("copy", label="Gravando no cartão…")
         bak = _stage_file_copy(
             undo,
             os.path.join(assembled, "_picoboot.nds"),
@@ -1194,7 +1194,7 @@ def find_duplicate_dspico_games(mount_path: str) -> dict[str, Any]:
 
 
 def _import_src_dup_info(src: str, ext: str) -> tuple[Optional[str], Optional[str], str]:
-    """Devolve (dup_key, game_code, display_name) para um ficheiro a importar."""
+    """Devolve (dup_key, game_code, display_name) para um arquivo a importar."""
     name = os.path.basename(src)
     if ext in GAME_EXTS:
         raw_title, game_code, _uc, maker = get_nds_header_info(src)
@@ -1287,7 +1287,7 @@ def check_dspico_import_conflicts(
     from core.archive_roms import cleanup_expand_staging, expand_rom_sources
 
     if not isinstance(source_paths, list) or not source_paths:
-        return {"success": False, "error": "Nenhum ficheiro seleccionado.", "conflicts": []}
+        return {"success": False, "error": "Nenhum arquivo selecionado.", "conflicts": []}
     dest_norm = _normalize_rel_dir(dest_rel_dir)
     if dest_norm is None:
         return {"success": False, "error": "Pasta de destino inválida.", "conflicts": []}
@@ -1308,7 +1308,7 @@ def check_dspico_import_conflicts(
             source_paths, IMPORT_EXTS
         )
     except Exception as e:
-        return {"success": False, "error": f"Falha ao preparar ficheiros: {e}", "conflicts": []}
+        return {"success": False, "error": f"Falha ao preparar arquivos: {e}", "conflicts": []}
 
     try:
         if not rom_paths:
@@ -1362,17 +1362,21 @@ def import_dspico_games(
     dest_rel_dir: str = "",
     log_callback=None,
     conflict_resolutions=None,
+    by_system: bool = False,
 ) -> tuple[bool, str, dict]:
     """
     Copia ROMs do host para Games/ (NDS, apps em Games/Apps/, retro).
     Aceita arquivos zip/7z/rar. Emite progresso para a UI.
     conflict_resolutions: mapa conflict_id → replace|keep_both|skip.
+    by_system: como a PicoDex, cada jogo vai para Games/<pasta do sistema>/
+    (nds, gba, gb…), ignorando ``dest_rel_dir``. ``stats["items"]`` traz o
+    resultado de cada arquivo (added | duplicate | unknown-type | skipped | failed).
     """
     from core.archive_roms import cleanup_expand_staging, expand_rom_sources
 
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(source_paths, list) or not source_paths:
-        return False, "Nenhum ficheiro seleccionado.", {}
+        return False, "Nenhum arquivo selecionado.", {}
 
     resolutions = normalize_conflict_resolutions(conflict_resolutions)
     if resolutions is None:
@@ -1401,6 +1405,7 @@ def import_dspico_games(
     apps_n = 0
     retro_n = 0
     replaced = 0
+    items: list[dict[str, Any]] = []
 
     log(f"=== Importar {len(source_paths)} item(ns) para Games/ ===")
     try:
@@ -1408,7 +1413,7 @@ def import_dspico_games(
             source_paths, IMPORT_EXTS
         )
     except Exception as e:
-        return False, f"Falha ao preparar ficheiros: {e}", {}
+        return False, f"Falha ao preparar arquivos: {e}", {}
     errors.extend(expand_errors)
     if expand_stats.get("archives"):
         log(
@@ -1458,6 +1463,7 @@ def import_dspico_games(
                 )
                 if nds_kind == "system":
                     log(f"⏭️ Ignorado (sistema): {base_name}")
+                    items.append({"name": base_name, "status": "skipped"})
                     skipped += 1
                     tracker.advance_item(
                         bytes_delta=src_size, label=base_name, skipped=True
@@ -1466,10 +1472,17 @@ def import_dspico_games(
             dest_dir, bucket = _dest_dir_for_import(
                 mount_path, ext, games_dest, nds_kind=nds_kind
             )
+            if by_system and bucket in ("games", "retro"):
+                from core.picodex_rules import system_for_extension as _sys_for
+
+                _system = _sys_for(base_name)
+                if _system is not None:
+                    dest_dir = os.path.join(games_root, _system.games_dir)
             tracker.set_label(base_name)
             tracker.tick(force=True)
             if not dest_dir or not bucket:
                 errors.append(f"Extensão não suportada: {base_name}")
+                items.append({"name": base_name, "status": "unknown-type"})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1484,6 +1497,7 @@ def import_dspico_games(
                 resolution = resolutions.get(cid, "keep_both")
             if resolution == "skip":
                 log(f"⏭️ Ignorado (duplicata): {base_name}")
+                items.append({"name": base_name, "status": "duplicate"})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1494,6 +1508,7 @@ def import_dspico_games(
                 os.makedirs(dest_dir, exist_ok=True)
             except OSError as e:
                 errors.append(f"{base_name}: pasta destino — {e}")
+                items.append({"name": base_name, "status": "failed", "error": redact_path(str(e))})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, skipped=True
@@ -1560,6 +1575,7 @@ def import_dspico_games(
                     games_n += 1
                 rel = os.path.relpath(dest, games_root).replace("\\", "/")
                 log(f"📥 {base_name} → Games/{rel}")
+                items.append({"name": base_name, "status": "added", "rel": f"{GAMES_DIRNAME}/{rel}", "bucket": bucket})
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, written=True
                 )
@@ -1589,6 +1605,7 @@ def import_dspico_games(
                             break
             except Exception as e:
                 errors.append(f"{base_name}: {e}")
+                items.append({"name": base_name, "status": "failed", "error": redact_path(str(e))})
                 skipped += 1
                 tracker.advance_item(
                     bytes_delta=src_size, label=base_name, failed=True
@@ -1606,6 +1623,7 @@ def import_dspico_games(
             "apps": apps_n,
             "retro": retro_n,
             "replaced": replaced,
+            "items": items[:1000],
         }
         tracker.written = copied
         tracker.skipped = skipped
@@ -1623,7 +1641,7 @@ def import_dspico_games(
             parts.append(f"{apps_n} app(s)")
         if retro_n:
             parts.append(f"{retro_n} retro")
-        msg = f"{copied} ficheiro(s) importado(s) para Games/"
+        msg = f"{copied} arquivo(s) importado(s) para Games/"
         if parts:
             msg += " (" + ", ".join(parts) + ")"
         msg += "."
@@ -1664,7 +1682,7 @@ def delete_dspico_games(
 ) -> tuple[bool, str, dict]:
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
 
     removed = 0
     errors: list[str] = []
@@ -1700,7 +1718,7 @@ def delete_dspico_games(
     stats = {"removed": removed, "errors": len(errors)}
     if removed == 0:
         return False, (errors[0] if errors else "Nada removido."), stats
-    return True, f"{removed} ficheiro(s) removido(s).", stats
+    return True, f"{removed} arquivo(s) removido(s).", stats
 
 
 def delete_dspico_retro_roms(
@@ -1709,7 +1727,7 @@ def delete_dspico_retro_roms(
     """Apaga ROMs retro sob /ROMs/ (paths relativos ao mount ou a ROMs/)."""
     log = lambda msg: emit_log(log_callback, msg)
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
     removed = 0
     errors: list[str] = []
     for rel in rel_paths:
@@ -1748,7 +1766,7 @@ def move_dspico_games(
     if dest_norm is None:
         return False, "Destino inválido.", {}
     if not isinstance(rel_paths, list) or not rel_paths:
-        return False, "Nada seleccionado.", {}
+        return False, "Nada selecionado.", {}
 
     games_root = _games_root(mount_path)
     if dest_norm:
@@ -1831,19 +1849,15 @@ def _dspico_platform(ext: str, unitcode=None) -> str:
     low = (ext or "").lower()
     if low in RETRO_EXTS:
         return _RETRO_PLATFORM.get(low, "retro")
-    try:
-        uc = int(unitcode) if unitcode is not None else 0
-    except (TypeError, ValueError):
-        uc = 0
-    if low == ".dsi" or low == ".app" or uc == 2:
-        return "dsi"
+    # PicoDex (systems.ts): .nds/.dsi/.srl são todos do sistema "nds" → Games/nds/.
+    _ = unitcode
     return "nds"
 
 
 def _dspico_dest_dir(
     mount_path: str, platform: str, franchise: Optional[str], layout: str
 ) -> str:
-    """Directório de destino absoluto conforme o layout DSPico (jogos + retro)."""
+    """Diretório de destino absoluto conforme o layout DSPico (jogos + retro)."""
     if layout == LAYOUT_ROOT:
         return mount_path
     games = _games_root(mount_path)
@@ -1863,7 +1877,7 @@ def _is_picoboot(name: str) -> bool:
 def _should_skip_collect_dir(name: str) -> bool:
     """Só pastas de sistema DSPico — entra em _nds/MOONSHL/ROMs para migrar jogos.
 
-    ROMs/BIOS fica intacta (BIOS proprietária / dumps do utilizador).
+    ROMs/BIOS fica intacta (BIOS proprietária / dumps do usuário).
     """
     if not name or name.startswith("."):
         return True
@@ -2063,7 +2077,7 @@ def organize_dspico_sd(
         except OSError:
             pass
     tracker.set_totals(items=len(candidates), bytes=total_bytes)
-    tracker.set_phase("move", label="A organizar jogos…")
+    tracker.set_phase("move", label="Organizando jogos…")
 
     companions_by_stem: dict[str, list] = {}
     for comp_name, comp_path in companion_candidates:
@@ -2189,7 +2203,7 @@ def organize_dspico_sd(
                     log(f"⚠️ Falha ao mover {comp_name}: {e}")
 
     # --- Remover conteúdo de outros sistemas (sem segundo walk de resgate) ---
-    tracker.set_phase("clean", label="A limpar outros sistemas…")
+    tracker.set_phase("clean", label="Limpando outros sistemas…")
     removed_foreign = 0
     foreign_errors = 0
     try:
@@ -2283,7 +2297,7 @@ def organize_dspico_sd(
     detail = ", ".join(f"{n} {p}" for p, n in sorted(counts.items())) or "0"
     where = labels.get(mode, mode)
     msg = (
-        f"{organized} ficheiro(s) ({detail}); "
+        f"{organized} arquivo(s) ({detail}); "
         f"{apps_moved} app(s) em Games/{APPS_DIRNAME}/; "
         f"{companions_moved} save(s); "
         f"{removed_foreign} item(ns) de outros sistemas removido(s). "
@@ -2356,7 +2370,7 @@ def import_biosnds7(
 def import_twl_font(
     mount_path: str, source_path: str, log_callback=None
 ) -> tuple[bool, str]:
-    """Copia TWLFontTable.dat para /sys/ (dump próprio do utilizador)."""
+    """Copia TWLFontTable.dat para /sys/ (dump próprio do usuário)."""
     sys_dir = os.path.join(mount_path, "sys")
     os.makedirs(sys_dir, exist_ok=True)
     return _import_named_file(
@@ -2381,7 +2395,7 @@ def _import_named_file(
         return False, f"Caminho de {label} inválido."
     src = os.path.realpath(os.path.expanduser(source_path.strip()))
     if not os.path.isfile(src):
-        return False, f"Ficheiro não encontrado: {redact_path(src)}"
+        return False, f"Arquivo não encontrado: {redact_path(src)}"
     try:
         size = os.path.getsize(src)
     except OSError as e:
@@ -2428,6 +2442,37 @@ def _import_named_file(
 # --- Settings ---------------------------------------------------------------
 
 
+_SETTINGS_KEEP_ADVICE = (
+    "Não abra o Pico Launcher antes de corrigir: se ele também não conseguir ler o arquivo, "
+    "troca por um padrão e as associações de arquivo se perdem."
+)
+
+
+def settings_file_problem(mount_path: str) -> Optional[dict[str, str]]:
+    """Por que um settings.json EXISTENTE não pode ser lido (PicoDex 0.10.1), ou None.
+
+    ``kind``: ``bom`` | ``invalid`` | ``not-object`` | ``unreadable``. Um arquivo
+    ausente não é problema (o launcher cria um ao abrir).
+    """
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    if not os.path.isfile(path):
+        return None
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError as e:
+        return {"kind": "unreadable", "message": f"O Route Pico encontrou o settings.json mas não conseguiu abrir: outro programa pode estar usando o arquivo ou o cartão tem um problema. {_SETTINGS_KEEP_ADVICE}", "detail": str(e)}
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return {"kind": "bom", "message": f"O settings.json começa com uma marca invisível (BOM) que alguns editores colocam ao salvar. O launcher não lê um arquivo assim. Salve-o de novo sem BOM (UTF-8 simples). {_SETTINGS_KEEP_ADVICE}", "detail": ""}
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as e:
+        return {"kind": "invalid", "message": f"O settings.json não é um JSON válido. {_SETTINGS_KEEP_ADVICE}", "detail": str(e)}
+    if not isinstance(obj, dict):
+        return {"kind": "not-object", "message": "O settings.json não guarda configurações (o conteúdo não é um objeto JSON). Troque o conteúdo por {} ou apague o arquivo.", "detail": ""}
+    return None
+
+
 def get_dspico_settings(mount_path: str) -> dict[str, Any]:
     path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
     if not os.path.isfile(path):
@@ -2446,7 +2491,7 @@ def get_dspico_settings(mount_path: str) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError) as e:
         return {"success": False, "error": f"settings.json inválido: {e}"}
     if not isinstance(data, dict):
-        return {"success": False, "error": "settings.json: raíz deve ser objecto."}
+        return {"success": False, "error": "settings.json: raíz deve ser objeto."}
     return {
         "success": True,
         "settings": data,
@@ -2488,15 +2533,16 @@ def set_dspico_settings(
     os.makedirs(pico, exist_ok=True)
     path = os.path.join(pico, SETTINGS_FILENAME)
 
+    # Nunca gravar por cima de um settings.json que não deu para ler: isso
+    # apagaria as associações e o resto do arquivo do usuário.
+    problem = settings_file_problem(mount_path)
+    if problem:
+        return False, "Nada foi salvo. " + problem["message"]
     current: dict[str, Any] = {}
     if os.path.isfile(path):
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                loaded = json.load(f)
-            if isinstance(loaded, dict):
-                current = loaded
-        except (OSError, json.JSONDecodeError):
-            current = {}
+        with open(path, "r", encoding="utf-8") as f:
+            loaded = json.load(f)
+        current = loaded if isinstance(loaded, dict) else {}
 
     current.update(clean)
     partial = path + ".partial"
@@ -2521,8 +2567,8 @@ def set_dspico_settings(
                 os.remove(bak)
             except OSError:
                 pass
-        log("✅ settings.json actualizado.")
-        return True, "Definições Pico Launcher guardadas."
+        log("✅ settings.json atualizado.")
+        return True, "Configurações Pico Launcher salvas."
     except Exception as e:
         try:
             if os.path.exists(partial):
@@ -2576,7 +2622,7 @@ def list_rp2_volumes() -> list[dict[str, str]]:
                         children = os.listdir(p1)
                     except OSError:
                         children = []
-                    # Se parece volume directo
+                    # Se parece volume direto
                     if _looks_like_rp2(p1):
                         candidates.append(p1)
                         continue
@@ -2631,7 +2677,7 @@ def flash_dspico_firmware(
     rp2_mount_path: str, log_callback=None
 ) -> tuple[bool, str]:
     """
-    Descarrega DSpico.uf2 oficial pinado (LNH) e copia para o volume RPI-RP2.
+    Baixa DSpico.uf2 oficial pinado (LNH) e copia para o volume RPI-RP2.
     Sem path de UF2 da UI — só cache pinado.
     """
     log = lambda msg: emit_log(log_callback, msg)
@@ -2660,7 +2706,7 @@ def flash_dspico_firmware(
 
     log("=== Gravando firmware DSPico oficial no RPI-RP2 ===")
     try:
-        # Cópia directa — o RP2040 ejeta ao aceitar o UF2
+        # Cópia direta — o RP2040 ejeta ao aceitar o UF2
         with open(uf2_path, "rb") as src, open(dest, "wb") as out:
             shutil.copyfileobj(src, out, length=1024 * 1024)
             out.flush()
@@ -2677,3 +2723,99 @@ def flash_dspico_firmware(
             log("ℹ️ Volume RPI-RP2 desapareceu (normal após flash).")
             return True, "Firmware enviado (volume RPI-RP2 ejectou)."
         return False, f"Falha ao gravar UF2: {e}"
+
+
+# --------------------------------------------------------------------------- #
+# Associações de arquivo (PicoDex AssociationsView)
+# --------------------------------------------------------------------------- #
+
+# Exemplos do guia de emuladores do Pico Launcher (os mesmos da PicoDex).
+ASSOCIATION_EXAMPLES = (
+    "/_pico/emulators/nesDS.nds",
+    "/_pico/emulators/GBARunner3.nds",
+    "/_pico/emulators/gameyob.nds",
+    "/_pico/emulators/PicoDriveTWL.nds",
+    "/_pico/emulators/S8DS.nds",
+)
+_EXT_RE = re.compile(r"^[a-z0-9]{1,8}$")
+
+
+def normalize_extension(ext: Any) -> Optional[str]:
+    if not isinstance(ext, str):
+        return None
+    e = ext.strip().lower().lstrip(".")
+    return e if _EXT_RE.match(e) else None
+
+
+def get_file_associations(mount_path: str) -> dict[str, Any]:
+    """Associações extensão → app do settings.json, mais exemplos do que já está no cartão."""
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    problem = settings_file_problem(mount_path)
+    items: list[dict[str, str]] = []
+    exists = os.path.isfile(path)
+    if exists and not problem:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        raw = data.get("fileAssociations") if isinstance(data, dict) else None
+        if isinstance(raw, dict):
+            for ext, val in raw.items():
+                n = normalize_extension(ext)
+                app = val.get("appPath") if isinstance(val, dict) else None
+                if n and isinstance(app, str):
+                    items.append({"ext": n, "app_path": app})
+    examples: list[str] = []
+    for folder in ("_pico/emulators", "Emulators"):
+        d = os.path.join(mount_path, *folder.split("/"))
+        try:
+            for n in sorted(os.listdir(d), key=str.lower):
+                if n.lower().endswith(".nds") and not n.startswith("."):
+                    examples.append(f"/{folder}/{n}")
+        except OSError:
+            pass
+    for ex in ASSOCIATION_EXAMPLES:
+        if ex not in examples:
+            examples.append(ex)
+    return {
+        "success": True,
+        "exists": exists,
+        "problem": problem,
+        "associations": sorted(items, key=lambda i: i["ext"]),
+        "examples": examples,
+        "path": f"/_pico/{SETTINGS_FILENAME}",
+    }
+
+
+def set_file_associations(mount_path: str, items: Any, log_callback=None) -> tuple[bool, str]:
+    """Troca a lista inteira de associações, preservando o resto do settings.json."""
+    if not isinstance(items, list):
+        return False, "Lista de associações inválida."
+    if settings_file_problem(mount_path) is None and not os.path.isfile(os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)):
+        return False, "Não há settings.json no cartão. Abra o Pico Launcher uma vez no console para ele criar o arquivo."
+    current = get_file_associations(mount_path)
+    if current.get("problem"):
+        return False, "Nada foi salvo. " + current["problem"]["message"]
+    # Campos extras de cada entrada (se existirem) são mantidos.
+    path = os.path.join(_pico_dir(mount_path), SETTINGS_FILENAME)
+    with open(path, "r", encoding="utf-8") as f:
+        old_raw = (json.load(f) or {}).get("fileAssociations")
+    old = old_raw if isinstance(old_raw, dict) else {}
+    out: dict[str, Any] = {}
+    for it in items[:200]:
+        if not isinstance(it, dict):
+            return False, "Associação inválida."
+        ext = normalize_extension(it.get("ext"))
+        app = it.get("app_path")
+        if not ext:
+            return False, "Digite as letras da extensão, por exemplo nes."
+        if not isinstance(app, str) or not app.strip():
+            return False, f"O caminho do aplicativo de .{ext} está vazio. Preencha ou remova a linha."
+        app = app.strip().replace("\\", "/")
+        if not app.startswith("/") or ".." in app.split("/") or "\x00" in app:
+            return False, f"Caminho inválido para .{ext}: use um caminho do cartão começando por /."
+        if ext in out:
+            return False, f"A extensão .{ext} aparece duas vezes."
+        prev = old.get(ext)
+        entry = dict(prev) if isinstance(prev, dict) else {}
+        entry["appPath"] = app
+        out[ext] = entry
+    return set_dspico_settings(mount_path, {"fileAssociations": out}, log_callback=log_callback)

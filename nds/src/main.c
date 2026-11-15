@@ -1,5 +1,5 @@
 /*
- * Route Pico (console) — entrada (Fase 1: gestor de ficheiros).
+ * Route Pico (console) — entrada (Fase 1: gerenciador de arquivos).
  *
  * Host:  ./build/routepico_host --sd <pasta>
  * NDS:   fatInit via r1_fs_init(NULL)
@@ -18,7 +18,7 @@ static void usage(const char *argv0)
 {
     fprintf(stderr,
             "Uso: %s --sd <pasta_simulada>\n"
-            "  Simula o microSD numa pasta do PC (Fase 1 host-sim).\n",
+            "  Simula o microSD em uma pasta do PC (Fase 1 host-sim).\n",
             argv0 ? argv0 : "routepico_host");
 }
 
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 
     r1_ui_show_message(
         R1_APP_NAME,
-        "Gestor de ficheiros (Fase 1).\n"
+        "Gerenciador de arquivos (Fase 1).\n"
         "Não apagues _picoboot.nds nem _pico\n"
         "sem teres a certeza.");
 

@@ -1,4 +1,4 @@
-"""Diálogos nativos de ficheiro/pasta via pywebview (FileDialog)."""
+"""Diálogos nativos de arquivo/pasta via pywebview (FileDialog)."""
 
 from __future__ import annotations
 
@@ -30,12 +30,12 @@ def qt_filters_to_webview(filters: Sequence[str]) -> Tuple[str, ...]:
             continue
         out.append(f"{label} ({';'.join(parts)})")
     if not out:
-        return ("Todos os ficheiros (*.*)",)
+        return ("Todos os arquivos (*.*)",)
     return tuple(out)
 
 
 class FilePickerPort:
-    """Porta injectável na Api para escolha de ficheiros no host (pywebview)."""
+    """Porta injectável na Api para escolha de arquivos no host (pywebview)."""
 
     def __init__(self, window: Optional[object] = None):
         self._window = window

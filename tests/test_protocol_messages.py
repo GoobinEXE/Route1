@@ -1,4 +1,4 @@
-"""Conformidade de protocol/messages.json (R1USB, partilhado entre o app do console e o desktop)."""
+"""Conformidade de protocol/messages.json (R1USB, compartilhado entre o app do console e o desktop)."""
 
 from __future__ import annotations
 

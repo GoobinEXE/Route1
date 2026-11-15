@@ -3,16 +3,14 @@ let selectedDrive = null;
 let lastLogIndex = 0;
 let apiReady = false;
 let busy = false;
-/** Soft busy: spinner/CTA sem bloquear tabs nem Actualizar (leituras / UI leve). */
+/** Soft busy: spinner/CTA sem bloquear tabs nem Atualizar (leituras / UI leve). */
 let softBusy = false;
 let logPollTimer = null;
 let logPollInFlight = false;
 let fetchDrivesInFlight = false;
 let activeActionBtn = null;
 let activeActionLabel = null;
-let appMode = "wizard"; // wizard | advanced | about | dspico
 let aboutLoadInFlight = false;
-let advancedSection = "prepare"; // prepare | card | apps
 let homebrewCatalog = null;
 let homebrewCatalogLoadInFlight = false;
 let homebrewCategory = "all";
@@ -38,8 +36,10 @@ const ACTION_MAP = {
   "copy-nand": "copy_nand_backup",
 };
 
-const MODE_STORAGE_KEY = "route_1_kit_mode";
-const ADV_SECTION_KEY = "route_1_kit_adv_section";
+/** Vista atual da shell (home | dspico | tools | settings). */
+function currentView() {
+  return window.R1K && R1K.shell && R1K.shell.current ? R1K.shell.current() : "home";
+}
 
 /** Só considera pronta quando a bridge tem métodos (api começa como {}). */
 function getApi() {
@@ -84,25 +84,6 @@ function waitForApi(timeoutMs = 10000) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  const saved = sessionStorage.getItem(MODE_STORAGE_KEY);
-  if (
-    saved === "advanced" ||
-    saved === "wizard" ||
-    saved === "about" ||
-    saved === "dspico"
-  ) {
-    appMode = saved;
-  }
-  const savedAdv = sessionStorage.getItem(ADV_SECTION_KEY);
-  if (savedAdv === "prepare" || savedAdv === "card" || savedAdv === "apps") {
-    advancedSection = savedAdv;
-  }
-  // Shell v2 gere a navegação; applyAppMode fica como compatibilidade.
-  if (!(window.R1K && R1K.shell)) {
-    applyAppMode(appMode, { silent: true });
-    applyAdvancedSection(advancedSection);
-  }
-
   if (window.R1K && R1K.events) {
     R1K.events.on("log", (p) => {
       if (p && p.message) appendLog(p.message, p.level || "info");
@@ -147,11 +128,7 @@ function stripLogDecorators(msg) {
 }
 
 function appendLog(msg, type = "info") {
-  const containers = [
-    document.getElementById("log-container"),
-    document.getElementById("wizard-log"),
-    document.getElementById("dspico-log-container"),
-  ].filter(Boolean);
+  const containers = [document.getElementById("log-container")].filter(Boolean);
 
   const clean = stripLogDecorators(msg);
   const time = new Date().toLocaleTimeString();
@@ -182,18 +159,8 @@ function escapeHtml(text) {
 }
 
 async function clearLogs() {
-  const advanced = document.getElementById("log-container");
-  const wizardLog = document.getElementById("wizard-log");
-  const dspicoLog = document.getElementById("dspico-log-container");
-  if (advanced) {
-    advanced.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
-  }
-  if (wizardLog) {
-    wizardLog.innerHTML = '<div class="text-fg-mute">Atividade do assistente.</div>';
-  }
-  if (dspicoLog) {
-    dspicoLog.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
-  }
+  const log = document.getElementById("log-container");
+  if (log) log.innerHTML = '<div class="text-fg-mute">Atividade limpa.</div>';
   lastLogIndex = 0;
   try {
     const api = getApi();
@@ -202,7 +169,7 @@ async function clearLogs() {
 }
 
 function setDriveStatus(hasDrive) {
-  document.querySelectorAll("#drive-status-dot, #wizard-drive-status-dot").forEach((dot) => {
+  document.querySelectorAll("#drive-status-dot").forEach((dot) => {
     dot.classList.toggle("status-dot--live", !!hasDrive);
     dot.classList.toggle("status-dot--idle", !hasDrive);
   });
@@ -246,7 +213,7 @@ function setBusy(isBusy, sourceBtn, options) {
       btn.classList.remove("opacity-50", "pointer-events-none");
       return;
     }
-    // Soft busy: tabs + Actualizar continuam usáveis (USB MSC / listagens).
+    // Soft busy: tabs + Atualizar continuam usáveis (USB MSC / listagens).
     if (softBusy && (isNavTab || isRefresh)) {
       btn.disabled = false;
       btn.classList.remove("opacity-50", "pointer-events-none");
@@ -309,8 +276,8 @@ const _OP_LABELS_PT = {
   backup_sd: "Backup do cartão",
   backup_drive: "Backup do cartão",
   backup: "Backup do cartão",
-  download: "Descarregar",
-  cache_download: "Descarregar",
+  download: "Baixar",
+  cache_download: "Baixar",
 };
 
 function opLabelPt(op, fallback) {
@@ -471,7 +438,7 @@ function updateOpProgress(payload) {
   const metricsText = parts.join(" · ");
   if (metricsEl) metricsEl.textContent = metricsText;
   if (countEl) countEl.textContent = metricsText || (payload.done ? "Concluído" : "…");
-  labelEl.textContent = String(payload.label || (payload.done ? "Concluído" : "A processar…"));
+  labelEl.textContent = String(payload.label || (payload.done ? "Concluído" : "Processando…"));
 
   const determinate = pct != null;
   bar.classList.toggle("r1k-op-progress-bar--indeterminate", !determinate && !payload.done);
@@ -534,11 +501,7 @@ function scheduleProgressPolling() {
 }
 
 function syncDriveSelects() {
-  const selects = [
-    document.getElementById("drive-select"),
-    document.getElementById("wizard-drive-select"),
-    document.getElementById("dspico-drive-select"),
-  ].filter(Boolean);
+  const selects = [document.getElementById("drive-select")].filter(Boolean);
 
   selects.forEach((select) => {
     const previous = select.value || (selectedDrive ? selectedDrive.mount_path : null);
@@ -581,29 +544,25 @@ async function fetchDrives(options) {
       selectedDrive = null;
       setDriveStatus(false);
       document.getElementById("drive-info-badge")?.classList.add("hidden");
-      document.getElementById("wizard-drive-badge")?.classList.add("hidden");
     } else {
       const keep = currentDrives.find((d) => d.mount_path === previous);
-      let pick = keep || null;
-      if (!pick && typeof appMode !== "undefined" && appMode === "dspico") {
-        pick =
-          currentDrives.find((d) => d && d.dspico_likely) ||
-          currentDrives[0];
-      }
-      selectedDrive = pick || currentDrives[0];
+      // Sem escolha nesta sessão: o último cartão aberto (como a PicoDex), depois
+      // um microSD com marcadores do DSPico.
+      const last = lastDriveName();
+      const remembered = last ? currentDrives.find((d) => d && d.name === last) : null;
+      selectedDrive = keep || remembered || currentDrives.find((d) => d && d.dspico_likely) || currentDrives[0];
       setDriveStatus(true);
       updateDriveBadge();
     }
     syncDriveSelects();
+    if (window.R1K && R1K.shell) {
+      R1K.shell.refreshRoleBadge();
+      R1K.shell.updateHomeDrive();
+    }
     if (typeof Wizard !== "undefined" && Wizard.onDrivesUpdated) {
       Wizard.onDrivesUpdated();
     }
-    if (
-      typeof appMode !== "undefined" &&
-      appMode === "dspico" &&
-      typeof Dspico !== "undefined" &&
-      Dspico.onDrivesUpdated
-    ) {
+    if (currentView() === "dspico" && typeof Dspico !== "undefined" && Dspico.onDrivesUpdated) {
       Dspico.onDrivesUpdated();
     }
   } catch (err) {
@@ -618,17 +577,27 @@ async function fetchDrives(options) {
   }
 }
 
-function onDriveSelected(fromWizard) {
-  let selectId = "drive-select";
-  if (fromWizard === true || fromWizard === "wizard") {
-    selectId = "wizard-drive-select";
-  } else if (fromWizard === "dspico") {
-    selectId = "dspico-drive-select";
+const LAST_DRIVE_KEY = "routepico.lastDrive";
+function lastDriveName() {
+  try {
+    return localStorage.getItem(LAST_DRIVE_KEY) || "";
+  } catch (_e) {
+    return "";
   }
-  const select = document.getElementById(selectId);
+}
+
+function onDriveSelected() {
+  const select = document.getElementById("drive-select");
   if (!select) return;
   const path = select.value;
   selectedDrive = currentDrives.find((d) => d.mount_path === path) || null;
+  if (selectedDrive && selectedDrive.name) {
+    try {
+      localStorage.setItem(LAST_DRIVE_KEY, String(selectedDrive.name).slice(0, 64));
+    } catch (_e) {
+      /* só nesta sessão */
+    }
+  }
   syncDriveSelects();
   updateDriveBadge();
   setDriveStatus(!!selectedDrive);
@@ -636,20 +605,13 @@ function onDriveSelected(fromWizard) {
     R1K.shell.refreshRoleBadge();
     R1K.shell.updateHomeDrive();
   }
-  const view = window.R1K && R1K.shell ? R1K.shell.current() : null;
-  if (
-    (advancedSection === "card" && appMode === "advanced") ||
-    view === "card"
-  ) {
+  const view = currentView();
+  if (view === "tools") {
     if (typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
       RomExplorer.refresh();
     }
   }
-  if (
-    (appMode === "dspico" || view === "dspico") &&
-    typeof Dspico !== "undefined" &&
-    Dspico.refresh
-  ) {
+  if (view === "dspico" && typeof Dspico !== "undefined" && Dspico.refresh) {
     Dspico.refresh();
   }
   if (typeof Wizard !== "undefined" && Wizard.onDriveSelected) {
@@ -665,20 +627,7 @@ function updateDriveBadge() {
       size: "info-size",
       free: "info-free",
     },
-    {
-      badge: document.getElementById("wizard-drive-badge"),
-      fs: "wizard-info-fs",
-      size: "wizard-info-size",
-      free: "wizard-info-free",
-    },
   ];
-
-  badges.push({
-    badge: document.getElementById("dspico-drive-badge"),
-    fs: "dspico-info-fs",
-    size: "dspico-info-size",
-    free: "dspico-info-free",
-  });
 
   badges.forEach(({ badge, fs, size, free }) => {
     if (!badge) return;
@@ -714,13 +663,13 @@ function findActionButton(endpoint) {
   };
   const needle = map[endpoint];
   if (!needle) return null;
-  return Array.from(document.querySelectorAll("#view-advanced button")).find((b) =>
+  return Array.from(document.querySelectorAll("main button")).find((b) =>
     (b.getAttribute("onclick") || "").includes(needle)
   );
 }
 
 /**
- * Operação partilhada pelo painel avançado e pelo assistente.
+ * Operação compartilhada pelo painel avançado e pelo assistente.
  * options: {
  *   method: 'setup_nand_dump' | ...,
  *   hasFacebook?: boolean,
@@ -759,14 +708,14 @@ async function runMountOp(options = {}) {
       layoutLine = "• mover jogos para /roms/<franquia>/ (ex. Pokemon, Mario)\n";
     } else if (layout === "both") {
       layoutLine =
-        "• mover jogos para /roms/<consola>/<franquia>/ (ex. /roms/nds/Pokemon/)\n";
+        "• mover jogos para /roms/<console>/<franquia>/ (ex. /roms/nds/Pokemon/)\n";
     } else {
-      layoutLine = "• mover jogos para /roms/<consola>/ (ex. /roms/nds/)\n";
+      layoutLine = "• mover jogos para /roms/<console>/ (ex. /roms/nds/)\n";
     }
     const conf = confirm(
       "Organizar jogos e apps irá:\n" +
         layoutLine +
-        "• criar as pastas de destino em falta\n" +
+        "• criar as pastas de destino ausentes\n" +
         "• mover homebrew/apps para /roms/apps/\n" +
         "• sincronizar saves e estados de emuladores (GameYob .sav/.yss, …)\n" +
         "• remover pastas vazias sobrantes\n" +
@@ -796,10 +745,10 @@ async function runMountOp(options = {}) {
         layoutLine +
         "• apps/homebrew em Games/Apps/\n" +
         "• sincronizar saves junto de cada jogo\n" +
-        "• REMOVER pastas/ficheiros de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
+        "• REMOVER pastas/arquivos de outros sistemas (_nds, MoonShell, hiya, kernels R4/GEi, …)\n" +
         "• manter: _picoboot.nds, _pico/, Games/, Emulators/, _gba/, data/, emunand e snemul.cfg\n" +
         "  (ROMs/ só se tiver BIOS — jogos retro migram para Games/)\n\n" +
-        "Esta acção é destrutiva para conteúdo que não seja DSPico.\n\n" +
+        "Esta ação é destrutiva para conteúdo que não seja DSPico.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };
@@ -817,11 +766,11 @@ async function runMountOp(options = {}) {
   if (methodName === "install_boxarts") {
     const conf = confirm(
       "Instalar capas e ícones irá:\n" +
-        "• descarregar capas GameTDB para jogos NDS (por game code)\n" +
-        "• descarregar capas e ecrãs de título Libretro para outras consolas\n" +
+        "• baixar capas GameTDB para jogos NDS (por game code)\n" +
+        "• baixar capas e telas de título Libretro para outros consoles\n" +
         "• e/ou importar packs PNG/zip de Downloads/Desktop\n" +
         "• gravar em /_nds/TWiLightMenu/boxart/ e icons/\n\n" +
-        "No TWiLight, ative capas/ícones personalizados nas definições.\n\n" +
+        "No TWiLight, ative capas/ícones personalizados nas configurações.\n\n" +
         "Continuar?"
     );
     if (!conf) return { success: false, error: "cancelled" };
@@ -830,7 +779,7 @@ async function runMountOp(options = {}) {
   if (methodName === "copy_nand_backup") {
     const conf = confirm(
       "Copiar dump(s) NAND (DT*/nand.bin) para uma pasta no Desktop?\n" +
-        "O ficheiro no cartão NÃO será apagado."
+        "O arquivo no cartão NÃO será apagado."
     );
     if (!conf) return { success: false, error: "cancelled" };
   }
@@ -929,13 +878,13 @@ async function runAction(endpoint) {
 }
 
 function toggleIdGuide() {
+  // O guia é uma seção recolhível (<details>) na tela Softmod DSi.
   const panel = document.getElementById("id-guide-panel");
   const chevron = document.getElementById("id-guide-chevron");
   if (!panel) return;
-  const opening = panel.classList.contains("hidden");
-  panel.classList.toggle("hidden", !opening);
-  if (chevron) chevron.classList.toggle("rotate-180", opening);
-  if (opening) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  panel.open = !panel.open;
+  if (chevron) chevron.classList.toggle("rotate-180", panel.open);
+  if (panel.open) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function confirmFormat() {
@@ -968,110 +917,6 @@ async function confirmFormat() {
     method: "format_sd",
     sourceBtn: findActionButton("format-sd"),
   });
-}
-
-function applyAppMode(mode, { silent } = {}) {
-  // Shell v2: mapear modos legados → vistas.
-  if (window.R1K && R1K.shell && typeof R1K.shell.navigate === "function") {
-    const map = {
-      wizard: "softmod",
-      dspico: "dspico",
-      about: "settings",
-      advanced: "card",
-    };
-    const view = map[mode] || "home";
-    if (mode === "advanced") appMode = "advanced";
-    else if (mode === "about") appMode = "about";
-    else if (mode === "dspico") appMode = "dspico";
-    else appMode = "wizard";
-    try {
-      sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
-    } catch (e) {
-      /* ignore */
-    }
-    R1K.shell.navigate(view, { silent });
-    return;
-  }
-
-  if (busy && !silent) {
-    alert("Aguarde a operação em andamento terminar antes de mudar de modo.");
-    return;
-  }
-  if (mode === "advanced") appMode = "advanced";
-  else if (mode === "about") appMode = "about";
-  else if (mode === "dspico") appMode = "dspico";
-  else appMode = "wizard";
-  sessionStorage.setItem(MODE_STORAGE_KEY, appMode);
-
-  const wizard = document.getElementById("view-wizard");
-  const advanced = document.getElementById("view-advanced");
-  const dspico = document.getElementById("view-dspico");
-  const about = document.getElementById("view-about");
-  if (wizard) wizard.classList.toggle("hidden", appMode !== "wizard");
-  if (advanced) advanced.classList.toggle("hidden", appMode !== "advanced");
-  if (dspico) dspico.classList.toggle("hidden", appMode !== "dspico");
-  if (about) about.classList.toggle("hidden", appMode !== "about");
-
-  if (appMode === "wizard" && typeof Wizard !== "undefined" && Wizard.render) {
-    Wizard.render();
-  }
-  if (appMode === "about") {
-    loadAboutPage();
-  }
-  if (appMode === "advanced") {
-    applyAdvancedSection(advancedSection);
-    if (advancedSection === "apps") {
-      loadHomebrewCatalog();
-    }
-  }
-  if (appMode === "dspico" && typeof Dspico !== "undefined" && Dspico.enter) {
-    Dspico.enter();
-  }
-}
-
-function setAppMode(mode) {
-  applyAppMode(mode);
-}
-
-function applyAdvancedSection(section) {
-  if (section === "card" || section === "apps") advancedSection = section;
-  else advancedSection = "prepare";
-  sessionStorage.setItem(ADV_SECTION_KEY, advancedSection);
-
-  const sections = {
-    prepare: document.getElementById("adv-section-prepare"),
-    card: document.getElementById("adv-section-card"),
-    apps: document.getElementById("adv-section-apps"),
-  };
-  const tabs = {
-    prepare: document.getElementById("adv-tab-prepare"),
-    card: document.getElementById("adv-tab-card"),
-    apps: document.getElementById("adv-tab-apps"),
-  };
-  for (const key of Object.keys(sections)) {
-    const el = sections[key];
-    if (el) el.classList.toggle("hidden", advancedSection !== key);
-    const tab = tabs[key];
-    if (tab) {
-      const on = advancedSection === key;
-      tab.classList.toggle("adv-tab--active", on);
-      tab.setAttribute("aria-selected", on ? "true" : "false");
-    }
-  }
-}
-
-function setAdvancedSection(section) {
-  if (busy) {
-    alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
-    return;
-  }
-  applyAdvancedSection(section);
-  if (advancedSection === "apps") {
-    loadHomebrewCatalog();
-  }
-  if (advancedSection === "card") {
-    RomExplorer.refresh();
-  }
 }
 
 async function loadHomebrewCatalog() {
@@ -1232,7 +1077,7 @@ function renderHomebrewCatalog() {
         sourcesHtml +
         `</div>` +
         `<div class="hb-card-actions">` +
-        `<button type="button" class="btn-primary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
+        `<button type="button" class="btn-secondary hb-install-btn !py-1.5 !px-3 text-[11px]" ` +
         `data-app-id="${appId}" data-warn-nand="${a.warn_nand ? "1" : "0"}" ` +
         `data-title="${escapeHtml(a.title || "")}" ` +
         `onclick="installHomebrewApp(this)">Instalar no SD</button>` +
@@ -1258,7 +1103,7 @@ async function installHomebrewApp(btn) {
 
   let msg =
     `Instalar ${title} no cartão?\n` +
-    "Será descarregado (SHA-256), copiado para /roms/apps/ e aplicada a configuração da guia GameBrew (pastas/ficheiros).";
+    "Será baixado (SHA-256), copiado para /roms/apps/ e aplicada a configuração do guia GameBrew (pastas/arquivos).";
   if (warnNand) {
     msg +=
       "\n\nAVISO: esta ferramenta pode alterar a NAND do DSi. " +
@@ -1371,7 +1216,7 @@ function renderAboutPage(data) {
   root.innerHTML = `
     <section class="panel p-5">
       <div class="about-hero">
-        <img src="assets/logo.svg" alt="" width="48" height="48" class="brand-mark">
+        <img src="assets/logo.svg?v=h1" alt="" width="48" height="48" class="brand-mark">
         <div class="min-w-0">
           <h2 class="text-[15px] font-semibold text-fg leading-none">${escapeHtml(
             data.app_name || "Route Pico"

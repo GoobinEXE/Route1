@@ -2,8 +2,8 @@
 
 Emit throttled via web_events — não abranda I/O no hot path.
 
-Cancelamento cooperativo: o utilizador pede via Api.cancel_op; as ops
-param em fronteiras seguras (entre ficheiros / chunks .partial) sem
+Cancelamento cooperativo: o usuário pede via Api.cancel_op; as ops
+param em fronteiras seguras (entre arquivos / chunks .partial) sem
 deixar destinos a meio.
 """
 
@@ -27,9 +27,9 @@ _CANCEL_LOCK = threading.Lock()
 
 
 class OperationCancelled(Exception):
-    """Pedido de cancelamento honrado num ponto seguro (sem corrupção)."""
+    """Pedido de cancelamento honrado em um ponto seguro (sem corrupção)."""
 
-    def __init__(self, message: str = "Operação cancelada pelo utilizador.") -> None:
+    def __init__(self, message: str = "Operação cancelada pelo usuário.") -> None:
         super().__init__(message)
 
 
@@ -76,7 +76,7 @@ def is_cancelled() -> bool:
 
 
 def check_cancelled() -> None:
-    """Levanta OperationCancelled se o utilizador pediu cancelar."""
+    """Levanta OperationCancelled se o usuário pediu cancelar."""
     if _CANCEL_EVENT.is_set():
         raise OperationCancelled()
 
@@ -282,7 +282,7 @@ class ProgressTracker:
     def build_payload(self, *, done: bool = False) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "op": self.op,
-            "label": self.label or ("Concluído" if done else "A processar…"),
+            "label": self.label or ("Concluído" if done else "Processando…"),
             "done": bool(done),
         }
         if self.phase:
@@ -369,8 +369,8 @@ OP_LABELS_PT: dict[str, str] = {
     "backup_sd": "Backup do cartão",
     "backup_drive": "Backup do cartão",
     "backup": "Backup do cartão",
-    "download": "Descarregar",
-    "cache_download": "Descarregar",
+    "download": "Baixar",
+    "cache_download": "Baixar",
 }
 
 

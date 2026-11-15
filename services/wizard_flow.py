@@ -62,7 +62,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
                 "title": "Formatar em FAT32",
                 "where": "PC",
                 "bodyKind": "format",
-                "warning": "Apaga todos os dados do MicroSD seleccionado.",
+                "warning": "Apaga todos os dados do MicroSD selecionado.",
             }
         )
         steps.append(
@@ -72,7 +72,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
                 "where": "PC",
                 "bodyKind": "reinsert",
                 "warning": (
-                    "Após formatar, actualize a lista e seleccione o MicroSD de novo."
+                    "Após formatar, atualize a lista e selecione o MicroSD de novo."
                 ),
             }
         )
@@ -139,7 +139,7 @@ def _flash_steps(*, from_scratch: bool, brand: str) -> List[Step]:
         done = [
             "Ejete o MicroSD com segurança no sistema operativo.",
             f"Coloque-o no cartucho {brand_label} e ligue o DSi/DS.",
-            "Se o menu não abrir, confirme que o kernel é do clone exacto.",
+            "Se o menu não abrir, confirme que o kernel é do clone exato.",
         ]
     steps.append(
         {
@@ -163,7 +163,7 @@ def _sd_new_steps() -> List[Step]:
         },
         {
             "id": "camera",
-            "title": "Qual versão da app Câmera?",
+            "title": "Qual versão do app Câmera?",
             "where": "PC",
             "bodyKind": "camera",
         },
@@ -197,7 +197,7 @@ def _sd_new_steps() -> List[Step]:
         },
         {
             "id": "nand-dump",
-            "title": "No DSi — guardar cópia da memória interna",
+            "title": "No DSi — salvar cópia da memória interna",
             "where": "DSi",
             "bodyKind": "nand_dump_dsi",
         },
@@ -221,7 +221,7 @@ def _sd_new_steps() -> List[Step]:
         },
         {
             "id": "unlaunch-opts",
-            "title": "No DSi — arranque automático no menu",
+            "title": "No DSi — inicialização automática no menu",
             "where": "DSi",
             "bodyKind": "unlaunch_opts",
         },
@@ -244,9 +244,9 @@ def _sd_new_steps() -> List[Step]:
             "bodyKind": "done",
             "doneLines": [
                 "Ejete o SD com segurança.",
-                "Insira-o no slot lateral do DSi e ligue a console.",
+                "Insira-o no slot lateral do DSi e ligue o console.",
                 "Se instalou hiyaCFW: Unlaunch A+B → OPTIONS → NO BUTTON → hiyaCFW.",
-                "Sem hiya: deve arrancar no TWiLight (NO BUTTON → BOOT.NDS).",
+                "Sem hiya: deve iniciar no TWiLight (NO BUTTON → BOOT.NDS).",
             ],
         },
     ]
@@ -292,7 +292,7 @@ def _sd_update_steps() -> List[Step]:
             "bodyKind": "done",
             "doneLines": [
                 "Ejete o SD com segurança e volte a colocá-lo no DSi.",
-                "Não é necessário reinstalar o Unlaunch se a console já arranca no menu.",
+                "Não é necessário reinstalar o Unlaunch se o console já inicia no menu.",
             ],
         },
     ]
@@ -326,7 +326,7 @@ def _dspico_sd_steps() -> List[Step]:
             "bodyKind": "done",
             "doneLines": [
                 "Ejete o MicroSD e coloque-o no DSPico.",
-                "Firmware UF2 grava-se em modo BOOTSEL (hub → Instalar DSPico).",
+                "O firmware UF2 é gravado em modo BOOTSEL (hub → Instalar DSPico).",
             ],
         },
     ]

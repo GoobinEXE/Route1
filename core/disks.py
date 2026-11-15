@@ -137,8 +137,12 @@ _MAC_SAFE_BUS = {
 
 
 def _macos_volume_allowed(data):
-    removable = bool(data.get("Removable") or data.get("RemovableMedia"))
     bus = (data.get("BusProtocol") or "").strip()
+    # Imagens de disco montadas (.dmg, como o próprio instalador do app) dizem-se
+    # removíveis e ejetáveis, mas nunca são o cartão no leitor.
+    if bus.lower() == "disk image" or (data.get("VirtualOrPhysical") or "").lower() == "virtual":
+        return False
+    removable = bool(data.get("Removable") or data.get("RemovableMedia"))
     bus_ok = bus in _MAC_SAFE_BUS or bus.upper() == "USB"
     internal = bool(data.get("Internal"))
     ejectable = bool(data.get("Ejectable"))
@@ -741,7 +745,7 @@ def _macos_admin_newfs_shell(newfs_bin, volume_name, parent_disk, part_id):
 
 
 def _macos_run_admin_shell(shell_cmd):
-    """Corre um comando allowlisted com o diálogo de administrador do macOS."""
+    """Executa um comando allowlisted com o diálogo de administrador do macOS."""
     timeout_s = int(_SUBPROC_FORMAT_TIMEOUT)
     script = (
         f"with timeout of {timeout_s} seconds\n"
@@ -777,7 +781,7 @@ def _macos_terminal_newfs(newfs_bin, volume_name, parent_disk, part_id):
             f'LOG="{log_path}"\n'
             f'OK="{ok_path}"\n'
             f'FAIL="{fail_path}"\n'
-            "echo 'Route Pico: a definir cluster 32 KB — confirma a palavra-passe do sudo.' | tee \"$LOG\"\n"
+            "echo 'Route Pico: definindo cluster 32 KB — confirme a senha do sudo.' | tee \"$LOG\"\n"
             f'{_DISKUTIL_BIN} unmountDisk force /dev/{parent_disk} 2>&1 | tee -a "$LOG"\n'
             f"sudo {newfs_bin} -F 32 -S 512 -c {spc} -v {volume_name} /dev/{part_id} 2>&1 | tee -a \"$LOG\"\n"
             'rc=${PIPESTATUS[0]}\n'
@@ -817,8 +821,8 @@ def _macos_terminal_newfs(newfs_bin, volume_name, parent_disk, part_id):
             time.sleep(0.4)
         return (
             False,
-            "tempo esgotado à espera do Terminal/sudo — "
-            "confirma a palavra-passe na janela do Terminal.",
+            "tempo esgotado aguardando o Terminal/sudo — "
+            "confirme a senha na janela do Terminal.",
         )
     finally:
         try:
@@ -865,8 +869,8 @@ def _macos_first_fat_slice(parent_disk):
 def _macos_force_cluster32(parent_disk, part_id, volume_name):
     """
     Força FAT32 com cluster 32 KB via newfs_msdos.
-    Utilizador normal: Terminal + sudo (osascript admin leva EPERM em /dev/disk*).
-    Root: tenta newfs directo; se falhar por permissão, osascript admin.
+    Usuário normal: Terminal + sudo (osascript admin leva EPERM em /dev/disk*).
+    Root: tenta newfs direto; se falhar por permissão, osascript admin.
     Retorna (ok, mensagem_de_erro).
     """
     if _macos_whole_disk_id(parent_disk) != parent_disk:
@@ -919,7 +923,7 @@ def _macos_force_cluster32(parent_disk, part_id, volume_name):
             nf.returncode, nf.stderr, nf.stdout
         ) or _macos_newfs_needs_privilege(nf2.returncode, nf2.stderr, nf2.stdout)
     else:
-        # Utilizador normal: ir directo ao Terminal+sudo.
+        # Usuário normal: ir direto ao Terminal+sudo.
         last_err = "Permission denied (euid!=0)"
 
     if not need_priv:
@@ -1182,11 +1186,11 @@ def format_sd_card(mount_path, volume_name="DSi_SD"):
 
     tracker = ProgressTracker(
         "format_sd",
-        label="A validar volume…",
+        label="Validando volume…",
         total_items=3,
     )
     tracker.cancellable = False
-    tracker.set_phase("validate", label="A validar volume…", cancellable=False)
+    tracker.set_phase("validate", label="Validando volume…", cancellable=False)
 
     if not _VOLUME_NAME_RE.match(volume_name or ""):
         tracker.finish("Nome de volume inválido")
@@ -1213,7 +1217,7 @@ def format_sd_card(mount_path, volume_name="DSi_SD"):
         return False, "Dispositivo mudou entre validação e formatação — abortado."
 
     tracker.advance_item(label="Volume validado", written=True)
-    tracker.set_phase("format", label="A formatar FAT32…")
+    tracker.set_phase("format", label="Formatando FAT32…")
 
     if sys.platform == "darwin":
         ok, msg = _format_sd_macos(

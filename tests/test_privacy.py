@@ -1,4 +1,4 @@
-"""Redação de paths com home do utilizador."""
+"""Redação de paths com home do usuário."""
 
 import os
 

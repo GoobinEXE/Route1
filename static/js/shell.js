@@ -1,161 +1,345 @@
 /**
- * Router da shell v2 — vistas por data-view, mount preguiçoso.
+ * Router da shell — menu de console.
+ *
+ * O Início é um menu de blocos; cada bloco abre uma tela (vista + aba) com
+ * Voltar. Há histórico (hash), setas para mover entre blocos, Enter para abrir
+ * e Esc / Backspace para voltar. Mount preguiçoso por vista/aba, como antes.
+ * API pública mantida: navigate, go, setToolsSection, toggleActivity, current,
+ * driveRoleLabel, refreshRoleBadge, updateHomeDrive.
  */
 (function () {
-  const STORAGE_KEY = "route_1_kit_view_v2";
-  const VIEWS = ["home", "dspico", "softmod", "utilidades", "card", "others", "settings"];
+  const STORAGE_KEY = "route_pico_view_v4";
+  const VIEWS = ["home", "dspico", "tools", "settings"];
+  const TOOLS_SECTIONS = ["softmod", "flashcards", "twilight", "card"];
+  // Seções que deixaram de ser telas próprias → tela que as contém (+ seção recolhível a abrir).
+  const MERGED = { homebrew: ["twilight", "fold-homebrew"] };
+  const DSPICO_SECTIONS = ["cartao", "games", "routedex", "launcher", "extras", "avancado"];
+  // Vistas e modos antigos (sessão anterior) → vista/aba atual.
+  const LEGACY_VIEWS = {
+    softmod: ["tools", "softmod"],
+    card: ["tools", "twilight"],
+    others: ["tools", "flashcards"],
+    utilidades: ["dspico", "extras"],
+  };
+
+  /** Título, texto e ícone de cada tela (o mesmo texto dos blocos do Início). */
+  const SCREENS = {
+    "dspico:cartao": ["Cartão", "Estado, saúde, pacote oficial e atualizações do microSD", "i-card", 3],
+    "dspico:games": ["Jogos", "Importar jogos, organizar pastas e capas", "i-games", 1],
+    "dspico:routedex": ["RouteDex", "Capas, biblioteca, estatísticas, associações e saúde (PicoDex)", "i-dex", 5],
+    "dspico:launcher": ["Launcher", "settings.json, temas e fundos noturnos", "i-launcher", 7],
+    "dspico:extras": ["Emuladores e apps USB", "Emuladores do Pico Launcher e apps USB oficiais do LNH team", "i-extras", 2],
+    "dspico:avancado": ["Avançado", "Emunand, BIOS e firmware do cartucho", "i-chip", 4],
+    "tools:softmod": ["Softmod DSi", "SD lateral do DSi: exploit, backup da NAND e Unlaunch", "i-handheld", 3],
+    "tools:flashcards": ["Flashcards R4/GEi", "Preparar ou atualizar cartuchos R4 e GEi do zero", "i-flash", 6],
+    "tools:twilight": ["Biblioteca TWiLight", "ROMs em /roms/, capas, cheats e apps homebrew", "i-moon", 7],
+    "tools:card": ["Manutenção", "Relatório, backup, limpeza e formatação de qualquer cartão", "i-wrench", 4],
+    settings: ["Configurações", "Aparência, SteamGridDB e sobre o app", "i-gear", 0],
+  };
 
   let current = "home";
+  let toolsSection = "softmod";
+  let dspicoSection = "cartao";
   let activityOpen = false;
-  let relocated = false;
+  let lastTile = null;
+  let depth = 0;
+  let explorerMount = null; // cartão que o explorador TWiLight mostrou por último // entradas empilhadas desde o Início (Voltar usa o histórico)
   const mounted = Object.create(null);
+  const toolsMounted = Object.create(null);
 
   function $(id) {
     return document.getElementById(id);
   }
 
-  function relocateLegacyPanels() {
-    if (relocated) return;
-    relocated = true;
-    const cardHost = $("card-host");
-    const othersHost = $("others-host");
-    const utilApps = $("util-apps-host");
-    const softExtras = $("softmod-extras-host");
-
-    const cardSec = $("adv-section-card");
-    if (cardHost && cardSec) {
-      cardSec.classList.remove("hidden");
-      cardHost.appendChild(cardSec);
-    }
-
-    const prep = $("adv-section-prepare");
-    if (prep && othersHost) {
-      // Move flashcard block (Slot-1) + keep softmod prepare for softmod extras
-      prep.classList.remove("hidden");
-      // Clone structure: put whole prepare in others for GEi/R4 access; softmod uses wizard
-      othersHost.appendChild(prep);
-    }
-
-    const apps = $("adv-section-apps");
-    if (apps && utilApps) {
-      apps.classList.remove("hidden");
-      utilApps.appendChild(apps);
-    }
-
-    const guide = $("id-guide-panel");
-    if (guide && softExtras) {
-      softExtras.appendChild(guide);
-    }
-
-    // Hide legacy adv tabs chrome if present
-    document.querySelectorAll("#view-advanced .adv-tabs").forEach((el) => {
-      el.classList.add("hidden");
-    });
+  function hardBusy() {
+    return typeof isHardBusy === "function" ? isHardBusy() : typeof busy !== "undefined" && busy;
   }
 
-  function syncNav() {
-    document.querySelectorAll(".nav-item[data-view]").forEach((btn) => {
-      const on = btn.getAttribute("data-view") === current;
-      btn.classList.toggle("nav-item--active", on);
-      btn.setAttribute("aria-current", on ? "page" : "false");
+  function screenKey() {
+    if (current === "dspico") return `dspico:${dspicoSection}`;
+    if (current === "tools") return `tools:${toolsSection}`;
+    return current;
+  }
+
+  /* ------------------------------------------------------------ cabeçalho */
+
+  function syncScreen() {
+    const key = screenKey();
+    const head = $("screen-head");
+    const meta = SCREENS[key];
+    document.documentElement.setAttribute("data-screen", current);
+    if (head) head.classList.toggle("hidden", current === "home" || !meta);
+    const where = $("status-where");
+    if (where) where.textContent = meta ? meta[0] : "Início";
+    if (meta) {
+      const [title, sub, icon, hue] = meta;
+      if ($("screen-title")) $("screen-title").textContent = title;
+      if ($("screen-sub")) $("screen-sub").textContent = sub;
+      const ic = $("screen-icon");
+      if (ic) {
+        ic.setAttribute("data-hue", String(hue));
+        const use = ic.querySelector("use");
+        if (use) use.setAttribute("href", `#${icon}`);
+      }
+    }
+    document.querySelectorAll(".dock-btn[data-dock]").forEach((btn) => {
+      const target = btn.getAttribute("data-dock");
+      const on = target === current;
+      btn.classList.toggle("dock-btn--active", on);
+      if (target === "home" || target === "settings") {
+        if (on) btn.setAttribute("aria-current", "page");
+        else btn.removeAttribute("aria-current");
+      }
     });
   }
 
   function showPane(view) {
     document.querySelectorAll("[data-view-pane]").forEach((pane) => {
-      const on = pane.getAttribute("data-view-pane") === view;
-      pane.classList.toggle("hidden", !on);
+      pane.classList.toggle("hidden", pane.getAttribute("data-view-pane") !== view);
     });
   }
 
-  function ensureSgdbPanel() {
-    /** Garante o painel SteamGridDB no DOM (HTML em cache / markup em falta). */
-    const pane = $("view-settings");
-    if (!pane) return false;
-    if ($("sgdb-api-key")) return false;
-    const existing = $("sgdb-settings-panel");
-    if (existing) existing.remove();
-    const section = document.createElement("section");
-    section.id = "sgdb-settings-panel";
-    section.className = "panel p-5 space-y-3 mb-5";
-    section.innerHTML =
-      '<h3 class="section-label">SteamGridDB — chave API</h3>' +
-      '<p class="text-[12px] text-fg-mute leading-relaxed">' +
-      "Necessária para capas/ícones de jogos retro (GBA, GBC, SNES, etc.). " +
-      "Crie uma chave em steamgriddb.com → Preferences → API, cole e guarde." +
-      "</p>" +
-      '<label class="block text-[12px] text-fg-mute" for="sgdb-api-key">Chave API</label>' +
-      '<input id="sgdb-api-key" type="password" autocomplete="off" spellcheck="false" ' +
-      'class="w-full max-w-xl rounded-md border border-line bg-surface-2 px-3 py-2 text-[13px] text-fg" ' +
-      'placeholder="Cole a chave aqui" />' +
-      '<p id="sgdb-api-status" class="text-[12px] text-fg-mute"></p>' +
-      '<div class="flex flex-wrap gap-2">' +
-      '<button type="button" class="btn-primary" id="sgdb-api-save">Guardar chave</button>' +
-      '<button type="button" class="btn-ghost" id="sgdb-api-clear">Remover chave</button>' +
-      "</div>";
-    const head = pane.querySelector(".page-head");
-    if (head && head.nextSibling) {
-      pane.insertBefore(section, head.nextSibling);
-    } else {
-      pane.insertBefore(section, pane.firstChild);
+  /* ------------------------------------------------------------ vistas */
+
+  function mountToolsSection(name) {
+    if (name === "softmod" && typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root", "dsi");
+    if (name === "flashcards" && typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root-flash", "flash");
+    if (name === "twilight") {
+      explorerMount = typeof selectedDrive !== "undefined" && selectedDrive ? selectedDrive.mount_path : null;
+      if (typeof RomExplorer !== "undefined" && RomExplorer.refresh) RomExplorer.refresh();
+      const fold = $("fold-homebrew");
+      if (fold && !fold.dataset.bound) {
+        fold.dataset.bound = "1";
+        fold.addEventListener("toggle", () => {
+          if (fold.open && typeof loadHomebrewCatalog === "function") loadHomebrewCatalog();
+        });
+      }
+      if (fold && fold.open && typeof loadHomebrewCatalog === "function") loadHomebrewCatalog();
     }
-    return true;
+    toolsMounted[name] = true;
+  }
+
+  /** Abre uma seção recolhível e a traz para a vista. */
+  function openFold(id) {
+    const d = $(id);
+    if (!d) return;
+    d.open = true;
+    requestAnimationFrame(() => d.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" }));
+  }
+
+  function setToolsSection(name, { silent } = {}) {
+    if (hardBusy() && !silent) {
+      alert("Aguarde a operação em andamento terminar antes de mudar de seção.");
+      return;
+    }
+    let fold = null;
+    if (MERGED[name]) [name, fold] = MERGED[name];
+    if (!TOOLS_SECTIONS.includes(name)) name = "softmod";
+    toolsSection = name;
+    for (const key of TOOLS_SECTIONS) {
+      const pane = $(`tools-pane-${key}`);
+      const tab = $(`tools-tab-${key}`);
+      const on = key === name;
+      if (pane) pane.classList.toggle("hidden", !on);
+      if (tab) {
+        tab.classList.toggle("adv-tab--active", on);
+        tab.setAttribute("aria-selected", on ? "true" : "false");
+        tab.tabIndex = on ? 0 : -1;
+      }
+    }
+    if (current === "tools") {
+      mountToolsSection(name);
+      syncScreen();
+      pushRoute(false);
+    }
+    if (fold) openFold(fold);
+    persist();
+  }
+
+  /** Chamado pelo dspico.js quando a aba DSPico muda. */
+  function onDspicoSection(name) {
+    if (!DSPICO_SECTIONS.includes(name)) return;
+    dspicoSection = name;
+    if (current === "dspico") {
+      syncScreen();
+      pushRoute(false);
+    }
+    persist();
   }
 
   function mount(view) {
-    // DSPico: re-entrar sempre (poll USB MSC + refresh) sem depender de mounted[].
+    // DSPico: re-entrar sempre (poll USB MSC + refresh).
     if (view === "dspico" && typeof Dspico !== "undefined" && Dspico.enter) {
       Dspico.enter();
-      mounted[view] = true;
       return;
     }
-    // Definições: re-montar sempre (painel SGDB + prefs).
     if (view === "settings") {
-      mounted[view] = true;
       if (typeof loadAboutPage === "function") loadAboutPage();
-      const host = $("settings-theme-host");
-      if (host && typeof Theme !== "undefined" && Theme.list && !host.dataset.themesFilled) {
-        host.dataset.themesFilled = "1";
-        host.innerHTML = "";
-        const themes = Theme.list();
-        for (const t of themes) {
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "btn-ghost";
-          b.textContent = t.label || t.id;
-          b.onclick = () => Theme.set(t.id);
-          host.appendChild(b);
-        }
-      }
-      ensureSgdbPanel();
+      if (typeof Theme !== "undefined" && Theme.renderList) Theme.renderList($("settings-theme-host"));
       loadSteamGridDbPrefs();
+      return;
+    }
+    if (view === "tools") {
+      mountToolsSection(toolsSection);
       return;
     }
     if (mounted[view]) return;
     mounted[view] = true;
-    if (view === "softmod" && typeof Wizard !== "undefined" && Wizard.render) {
-      Wizard.render();
-    }
-    if (view === "card" && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
-      RomExplorer.refresh();
-    }
-    if (view === "utilidades" && window.R1K.utilidades && R1K.utilidades.ensure) {
-      R1K.utilidades.ensure();
-    }
-    if (view === "home") {
-      updateHomeDrive();
-    }
+    if (view === "home") updateHomeDrive();
+  }
+
+  /* ------------------------------------------------------------ cartão */
+
+  function driveUsage() {
+    const d = typeof selectedDrive !== "undefined" ? selectedDrive : null;
+    if (!d) return null;
+    const total = Number(d.total_size_gb);
+    const free = Number(d.free_size_gb);
+    if (!(total > 0) || !(free >= 0)) return { d, used: null };
+    return { d, total, free, used: Math.max(0, Math.min(100, Math.round(((total - free) / total) * 100))) };
   }
 
   function updateHomeDrive() {
+    const info = driveUsage();
     const el = $("home-drive-summary");
+    const usage = $("home-drive-usage");
+    const homeEl = $("view-home");
+    if (homeEl) homeEl.classList.toggle("home--nodrive", !info);
+    updateStatusMeter(info);
+    // Só lê o cartão com o Início visível: as telas fazem as suas próprias leituras.
+    if (current === "home") refreshNextStep(false);
     if (!el) return;
-    if (typeof selectedDrive !== "undefined" && selectedDrive) {
-      const role = (window.R1K.shell && R1K.shell.driveRoleLabel()) || "Volume";
-      el.textContent = `${role}: ${selectedDrive.name || selectedDrive.mount_path} · ${selectedDrive.fs_type || "?"} · ${selectedDrive.total_size_gb != null ? selectedDrive.total_size_gb + " GB" : "?"}`;
-    } else {
-      el.textContent = "Nenhuma unidade seleccionada.";
+    if (!info) {
+      el.textContent = "Nenhum microSD escolhido. Conecte o cartão e escolha-o na barra de cima.";
+      if (usage) usage.classList.add("hidden");
+      return;
     }
+    const d = info.d;
+    el.textContent = `${driveRoleLabel()} · ${d.name || d.mount_path} · ${d.fs_type || "formato desconhecido"}`;
+    if (!usage || info.used === null) {
+      if (usage) usage.classList.add("hidden");
+      return;
+    }
+    usage.classList.remove("hidden");
+    const fill = $("home-usage-fill");
+    if (fill) fill.style.width = `${info.used}%`;
+    const meter = usage.querySelector('[role="meter"]');
+    if (meter) meter.setAttribute("aria-valuenow", String(info.used));
+    const text = $("home-usage-text");
+    if (text) text.textContent = `${info.free.toFixed(1)} GB livres de ${info.total.toFixed(1)} GB · ${info.used}% usado`;
+  }
+
+  /* ------------------------------------------------------------ próximo passo */
+
+  let nextFor = null;
+  let nextData = null;
+  let nextLoading = false;
+
+  /** Lê o estado do cartão (só leitura) e diz no Início o que fazer a seguir. */
+  async function refreshNextStep(force) {
+    const box = $("home-next");
+    if (!box) return;
+    const d = typeof selectedDrive !== "undefined" ? selectedDrive : null;
+    if (!d || !d.mount_path) {
+      box.classList.add("hidden");
+      nextFor = null;
+      nextData = null;
+      setBadge("dspico:cartao", "");
+      setBadge("dspico:games", "");
+      return;
+    }
+    if (!force && nextFor === d.mount_path && nextData) {
+      paintNextStep(nextData);
+      return;
+    }
+    if (nextLoading) return;
+    nextLoading = true;
+    let data = null;
+    try {
+      const api = typeof getApi === "function" ? getApi() || (typeof waitForApi === "function" ? await waitForApi() : null) : null;
+      if (api && typeof api.inspect_dspico === "function") data = await api.inspect_dspico(d.mount_path);
+    } catch (e) {
+      data = null;
+    }
+    nextLoading = false;
+    nextFor = d.mount_path;
+    nextData = data && data.success ? data : { success: false };
+    paintNextStep(nextData);
+  }
+
+  function setBadge(target, text) {
+    const tile = document.querySelector(`.tile[data-go="${target}"]`);
+    if (!tile) return;
+    let b = tile.querySelector(".tile-badge");
+    if (!text) {
+      if (b) b.remove();
+      return;
+    }
+    if (!b) {
+      b = document.createElement("span");
+      b.className = "tile-badge";
+      tile.appendChild(b);
+    }
+    b.textContent = text;
+  }
+
+  function paintNextStep(data) {
+    const box = $("home-next");
+    const textEl = $("home-next-text");
+    const btn = $("home-next-btn");
+    if (!box || !textEl || !btn) return;
+    const role = driveRoleLabel();
+    const ready = !!(data && data.success && data.markers_ok);
+    const games = ready ? Number(data.games_count || 0) : 0;
+    let text;
+    let label;
+    let target;
+    if (role === "RPI-RP2") {
+      text = "O cartucho está no modo de gravação do firmware.";
+      label = "Gravar firmware";
+      target = ["dspico", "avancado"];
+    } else if (ready && games === 0) {
+      text = "Cartão pronto. Agora copie os seus jogos.";
+      label = "Adicionar jogos";
+      target = ["dspico", "games"];
+    } else if (ready) {
+      text = `Cartão pronto, com ${games} ${games === 1 ? "jogo" : "jogos"} em Games/.`;
+      label = "Ver jogos";
+      target = ["dspico", "games"];
+    } else if (role === "GEi-R4") {
+      text = "Parece o microSD de um flashcard R4 ou GEi.";
+      label = "Abrir Flashcards";
+      target = ["tools", "flashcards"];
+    } else {
+      text = "Este microSD ainda não tem o pacote do DSPico.";
+      label = "Preparar cartão";
+      target = ["dspico", "cartao"];
+    }
+    textEl.textContent = text;
+    btn.textContent = label;
+    btn.onclick = () => go(target[0], target[1]);
+    box.classList.remove("hidden");
+    setBadge("dspico:cartao", ready || role === "RPI-RP2" ? "" : "Preparar");
+    setBadge("dspico:games", ready ? String(games) : "");
+  }
+
+  function updateStatusMeter(info) {
+    const meter = $("status-meter");
+    const fill = $("status-meter-fill");
+    if (!meter || !fill) return;
+    if (!info || info.used === null) {
+      fill.style.width = "0%";
+      meter.classList.add("status-meter--empty");
+      meter.setAttribute("aria-label", "Espaço usado no cartão: sem cartão");
+      meter.title = "Sem cartão escolhido";
+      return;
+    }
+    meter.classList.remove("status-meter--empty");
+    meter.classList.toggle("status-meter--full", info.used >= 90);
+    fill.style.width = `${info.used}%`;
+    const label = `${info.free.toFixed(1)} GB livres (${info.used}% usado)`;
+    meter.setAttribute("aria-label", `Espaço usado no cartão: ${label}`);
+    meter.title = label;
   }
 
   function driveRoleLabel() {
@@ -164,8 +348,7 @@
     const name = String(d.name || "").toUpperCase();
     const path = String(d.mount_path || "").toUpperCase();
     if (name.includes("RPI-RP2") || path.includes("RPI-RP2")) return "RPI-RP2";
-    if (typeof appMode !== "undefined" && appMode === "dspico") return "microSD DSPico";
-    if (current === "dspico") return "microSD DSPico";
+    if (d.dspico_likely || current === "dspico") return "microSD DSPico";
     if (name.includes("GEI") || name.includes("R4")) return "GEi-R4";
     return "SD do DSi";
   }
@@ -175,63 +358,360 @@
     if (!badge) return;
     badge.textContent = driveRoleLabel();
     badge.className = "chip " + (selectedDrive ? "chip--ok" : "chip--idle");
+    updateHomeDrive();
+    // O explorador TWiLight acompanha o cartão escolhido na barra de cima.
+    const m = selectedDrive ? selectedDrive.mount_path : null;
+    if (current === "tools" && toolsSection === "twilight" && m !== explorerMount && typeof RomExplorer !== "undefined" && RomExplorer.refresh) {
+      explorerMount = m;
+      RomExplorer.refresh();
+    }
   }
 
-  function navigate(view, { silent } = {}) {
-    const hard =
-      typeof isHardBusy === "function"
-        ? isHardBusy()
-        : typeof busy !== "undefined" && busy;
-    if (hard && !silent) {
-      alert("Aguarde a operação em andamento terminar antes de mudar de ecrã.");
-      return;
-    }
-    if (!VIEWS.includes(view)) view = "home";
-    relocateLegacyPanels();
-    const prev = current;
-    if (
-      prev === "dspico" &&
-      view !== "dspico" &&
-      typeof Dspico !== "undefined" &&
-      Dspico.leave
-    ) {
-      Dspico.leave();
-    }
-    current = view;
+  /* ------------------------------------------------------------ rotas */
+
+  function persist() {
     try {
-      sessionStorage.setItem(STORAGE_KEY, current);
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ view: current, tools: toolsSection, dspico: dspicoSection }));
     } catch (e) {
       /* ignore */
     }
+  }
 
-    // Compat com app.js / dspico / wizard
-    if (typeof appMode !== "undefined") {
-      if (view === "dspico") appMode = "dspico";
-      else if (view === "softmod") appMode = "wizard";
-      else if (view === "settings") appMode = "about";
-      else if (view === "card" || view === "others" || view === "utilidades") appMode = "advanced";
-      else appMode = "wizard";
+  function routeHash() {
+    if (current === "dspico") return `#dspico/${dspicoSection}`;
+    if (current === "tools") return `#tools/${toolsSection}`;
+    return `#${current}`;
+  }
+
+  /** Grava a tela no histórico; replace quando só muda a aba dentro da tela. */
+  function pushRoute(push) {
+    const hash = routeHash();
+    if (location.hash === hash) return;
+    try {
+      const state = { r1k: true, view: current, sec: current === "tools" ? toolsSection : dspicoSection };
+      if (push) history.pushState(state, "", hash);
+      else history.replaceState(state, "", hash);
+    } catch (e) {
+      /* file:// sem histórico: ignorar */
     }
+  }
 
+  function navigate(view, { silent, fromHistory } = {}) {
+    if (hardBusy() && !silent) {
+      alert("Aguarde a operação em andamento terminar antes de mudar de tela.");
+      if (fromHistory) pushRoute(true);
+      return;
+    }
+    if (LEGACY_VIEWS[view]) {
+      const [v, sec] = LEGACY_VIEWS[view];
+      go(v, sec, { silent });
+      return;
+    }
+    if (!VIEWS.includes(view)) view = "home";
+    const changed = view !== current;
+    if (current === "dspico" && view !== "dspico" && typeof Dspico !== "undefined" && Dspico.leave) {
+      Dspico.leave();
+    }
+    current = view;
+    persist();
     showPane(view);
-    syncNav();
     mount(view);
     refreshRoleBadge();
-    updateHomeDrive();
+    syncScreen();
+    if (fromHistory) {
+      depth = view === "home" ? 0 : Math.max(depth, 1);
+    } else if (view === "home") {
+      depth = 0;
+      pushRoute(false);
+    } else if (changed && depth === 0) {
+      depth = 1;
+      pushRoute(true);
+    } else {
+      pushRoute(false);
+    }
+    const content = $("app-content");
+    if (content && changed) content.scrollTop = 0;
+    if (changed) focusAfterNavigate(view);
   }
+
+  function focusAfterNavigate(view) {
+    // Leva o foco para onde o usuário continua: o bloco de onde veio, ou o Voltar.
+    requestAnimationFrame(() => {
+      if (view === "home") {
+        const t = lastTile && document.contains(lastTile) ? lastTile : document.querySelector(".tile");
+        if (t && document.activeElement && document.activeElement !== document.body) t.focus({ preventScroll: true });
+        return;
+      }
+      const back = document.querySelector(".screen-back");
+      if (back && document.activeElement && document.activeElement.closest && document.activeElement.closest(".home-menu, .dock-bar")) {
+        back.focus({ preventScroll: true });
+      }
+    });
+  }
+
+  /** Atalho: vista + aba (DSPico ou Mais ferramentas). */
+  function go(view, section, opts) {
+    let fold = null;
+    if (view === "tools" && section && MERGED[section]) [section, fold] = MERGED[section];
+    if (view === "tools" && section) {
+      toolsSection = TOOLS_SECTIONS.includes(section) ? section : toolsSection;
+      setToolsSection(toolsSection, { silent: true });
+    }
+    if (fold) setTimeout(() => openFold(fold), 0);
+    if (view === "dspico" && section) {
+      if (DSPICO_SECTIONS.includes(section)) dspicoSection = section;
+      if (typeof Dspico !== "undefined" && Dspico.selectSection) Dspico.selectSection(section);
+    }
+    navigate(view, opts);
+  }
+
+  function back() {
+    if (current === "home") return;
+    if (hardBusy()) {
+      alert("Aguarde a operação em andamento terminar antes de voltar.");
+      return;
+    }
+    if (depth > 0) {
+      try {
+        history.back();
+        return;
+      } catch (e) {
+        /* sem histórico: navegar direto */
+      }
+    }
+    navigate("home");
+  }
+
+  function onPopState() {
+    const raw = (location.hash || "#home").slice(1).split("/");
+    const view = VIEWS.includes(raw[0]) ? raw[0] : "home";
+    const sec = raw[1];
+    if (view === "tools" && sec && TOOLS_SECTIONS.includes(sec)) setToolsSection(sec, { silent: true });
+    if (view === "dspico" && sec && DSPICO_SECTIONS.includes(sec)) {
+      dspicoSection = sec;
+      if (typeof Dspico !== "undefined" && Dspico.selectSection) Dspico.selectSection(sec);
+    }
+    navigate(view, { fromHistory: true });
+  }
+
+  /* ------------------------------------------------------------ menu */
+
+  function setCaption(tile) {
+    if (!tile) return;
+    lastTile = tile;
+    document.querySelectorAll(".tile--current").forEach((t) => t !== tile && t.classList.remove("tile--current"));
+    tile.classList.add("tile--current");
+    const label = tile.querySelector(".tile-label");
+    const desc = tile.querySelector(".tile-desc");
+    if ($("home-caption-title")) $("home-caption-title").textContent = label ? label.textContent : "";
+    if ($("home-caption-text")) $("home-caption-text").textContent = desc ? desc.textContent : "";
+    const cap = $("home-caption");
+    if (cap) cap.setAttribute("data-hue", tile.getAttribute("data-hue") || "0");
+    // Fileiras horizontais (Câmera Dupla, Híbrido): manter o bloco à vista.
+    const row = [tile.closest(".home-tiles"), tile.closest(".home-menu")].find(
+      (el) => el && el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).display !== "contents"
+    );
+    if (row) {
+      const r = tile.getBoundingClientRect();
+      const rr = row.getBoundingClientRect();
+      if (r.left < rr.left + 24 || r.right > rr.right - 24) {
+        const target = row.scrollLeft + (r.left - rr.left) - row.clientWidth / 2 + r.width / 2;
+        row.scrollTo({ left: target, behavior: reducedMotion() ? "auto" : "smooth" });
+      }
+    }
+  }
+
+  function reducedMotion() {
+    return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  function openTile(tile) {
+    const target = tile.getAttribute("data-go") || "";
+    lastTile = tile;
+    const [view, sec] = target.split(":");
+    if (sec) go(view, sec);
+    else navigate(view);
+  }
+
+  /** Barra de rolagem da fileira (Câmera Dupla): marcador, clique e setas. */
+  function bindScrub() {
+    const menu = document.querySelector(".home-menu");
+    const track = $("scrub-track");
+    const thumb = $("scrub-thumb");
+    if (!menu || !track || !thumb) return;
+    const sync = () => {
+      const max = menu.scrollWidth - menu.clientWidth;
+      const ratio = menu.scrollWidth > 0 ? menu.clientWidth / menu.scrollWidth : 1;
+      const w = Math.max(12, Math.min(100, ratio * 100));
+      thumb.style.width = `${w}%`;
+      thumb.style.left = max > 0 ? `${(menu.scrollLeft / max) * (100 - w)}%` : "0%";
+    };
+    menu.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    track.addEventListener("click", (ev) => {
+      const r = track.getBoundingClientRect();
+      const f = Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width));
+      menu.scrollTo({ left: f * (menu.scrollWidth - menu.clientWidth), behavior: reducedMotion() ? "auto" : "smooth" });
+    });
+    document.querySelectorAll("[data-scrub]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const step = Number(btn.getAttribute("data-scrub")) * menu.clientWidth * 0.6;
+        menu.scrollBy({ left: step, behavior: reducedMotion() ? "auto" : "smooth" });
+      })
+    );
+    sync();
+    document.addEventListener("r1k-theme", sync);
+    setTimeout(sync, 300);
+  }
+
+  function bindMenu() {
+    document.querySelectorAll(".tile").forEach((tile) => {
+      tile.addEventListener("click", () => openTile(tile));
+      tile.addEventListener("focus", () => setCaption(tile));
+      tile.addEventListener("mouseenter", () => setCaption(tile));
+    });
+    const first = document.querySelector(".tile");
+    if (first) setCaption(first);
+  }
+
+  /** Setas no Início: move para o vizinho mais próximo naquela direção. */
+  function spatialMove(ev) {
+    if (current !== "home") return false;
+    const from = ev.target;
+    if (!from || !from.closest || !from.closest(".home-menu, .dock-bar")) return false;
+    const dirs = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+    const d = dirs[ev.key];
+    if (!d) return false;
+    const items = Array.from(document.querySelectorAll(".home-menu .tile, .dock-bar .dock-btn")).filter(
+      (el) => el.offsetParent !== null
+    );
+    const a = from.getBoundingClientRect();
+    const ax = a.left + a.width / 2;
+    const ay = a.top + a.height / 2;
+    let best = null;
+    let bestScore = Infinity;
+    for (const el of items) {
+      if (el === from) continue;
+      const b = el.getBoundingClientRect();
+      const dx = b.left + b.width / 2 - ax;
+      const dy = b.top + b.height / 2 - ay;
+      const along = dx * d[0] + dy * d[1];
+      if (along <= 4) continue;
+      const across = Math.abs(dx * d[1]) + Math.abs(dy * d[0]);
+      const score = along + across * 2.2;
+      if (score < bestScore) {
+        bestScore = score;
+        best = el;
+      }
+    }
+    if (!best) return false;
+    ev.preventDefault();
+    best.focus();
+    return true;
+  }
+
+  /* ------------------------------------------------------------ atividade */
 
   function toggleActivity(force) {
     activityOpen = typeof force === "boolean" ? force : !activityOpen;
     const drawer = $("activity-drawer");
-    if (drawer) drawer.classList.toggle("activity-drawer--open", activityOpen);
+    if (drawer) {
+      drawer.classList.toggle("activity-drawer--open", activityOpen);
+      drawer.setAttribute("aria-hidden", activityOpen ? "false" : "true");
+    }
+    const btn = $("btn-activity-toggle");
+    if (btn) {
+      btn.setAttribute("aria-expanded", activityOpen ? "true" : "false");
+      btn.classList.toggle("dock-btn--active", activityOpen);
+    }
   }
+
+  /* ------------------------------------------------------------ teclado */
+
+  function onTabKeys(ev) {
+    const list = ev.target.closest && ev.target.closest('[role="tablist"]');
+    if (!list || !ev.target.matches('[role="tab"]')) return;
+    const tabs = Array.from(list.querySelectorAll('[role="tab"]')).filter((t) => !t.hidden);
+    const i = tabs.indexOf(ev.target);
+    let next = -1;
+    if (ev.key === "ArrowRight") next = (i + 1) % tabs.length;
+    else if (ev.key === "ArrowLeft") next = (i - 1 + tabs.length) % tabs.length;
+    else if (ev.key === "Home") next = 0;
+    else if (ev.key === "End") next = tabs.length - 1;
+    if (next < 0) return;
+    ev.preventDefault();
+    tabs[next].focus();
+    tabs[next].click();
+  }
+
+  function typingTarget(el) {
+    if (!el) return false;
+    const tag = (el.tagName || "").toLowerCase();
+    return tag === "input" || tag === "textarea" || tag === "select" || el.isContentEditable;
+  }
+
+  function anyOverlayOpen() {
+    // Janelas da PicoDex (capa e ícone, banner, estatísticas, compatibilidade).
+    if (document.querySelector(".pdx-overlay")) return true;
+    const menu = $("theme-menu");
+    return !!(menu && !menu.classList.contains("hidden"));
+  }
+
+  function onGlobalKeys(ev) {
+    if (ev.altKey && !ev.ctrlKey && !ev.metaKey && /^[1-4]$/.test(ev.key) && !anyOverlayOpen()) {
+      ev.preventDefault();
+      const n = Number(ev.key);
+      if (n === 2) go("dspico", "cartao");
+      else if (n === 3) go("tools", toolsSection);
+      else navigate(n === 1 ? "home" : "settings");
+      return;
+    }
+    if (ev.defaultPrevented) return;
+    if (spatialMove(ev)) return;
+    if (ev.key === "Escape") {
+      if (activityOpen) {
+        toggleActivity(false);
+        const b = $("btn-activity-toggle");
+        if (b) b.focus();
+        return;
+      }
+      if (anyOverlayOpen()) return;
+      if (current !== "home" && !typingTarget(ev.target)) {
+        ev.preventDefault();
+        back();
+      }
+      return;
+    }
+    if (ev.key === "Backspace" && current !== "home" && !typingTarget(ev.target) && !anyOverlayOpen()) {
+      ev.preventDefault();
+      back();
+    }
+  }
+
+  /* ------------------------------------------------------------ relógio */
+
+  const WEEK = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  let clockTimer = null;
+
+  function tickClock() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const date = `${WEEK[now.getDay()]} ${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}`;
+    document.querySelectorAll('[data-clock="time"]').forEach((el) => (el.textContent = `${hh}:${mm}`));
+    document.querySelectorAll('[data-clock="date"]').forEach((el) => (el.textContent = date));
+    // Um disparo por minuto, alinhado à virada do minuto (sem polling do backend).
+    clearTimeout(clockTimer);
+    clockTimer = setTimeout(tickClock, 60000 - (now.getSeconds() * 1000 + now.getMilliseconds()) + 50);
+  }
+
+  /* ------------------------------------------------------------ SteamGridDB */
 
   function setSgdbStatus(text, ok) {
     const el = $("sgdb-api-status");
     if (!el) return;
     el.textContent = text || "";
-    el.className =
-      "text-[12px] " + (ok ? "text-ok" : text ? "text-fg-mute" : "text-fg-mute");
+    el.className = "text-[12px] " + (ok ? "text-ok" : "text-fg-mute");
   }
 
   async function loadSteamGridDbPrefs() {
@@ -257,19 +737,13 @@
           const res = await api.set_prefs({ steamgriddb_api_key: raw });
           if (res && res.success) {
             input.value = "";
-            input.placeholder = "Chave guardada — cole outra para substituir";
-            setSgdbStatus(
-              "Chave SteamGridDB guardada. Capas/ícones usam-na como fonte principal.",
-              true
-            );
+            input.placeholder = "Chave salva — cole outra para substituir";
+            setSgdbStatus("Chave SteamGridDB salva. Capas/ícones a usam como fonte principal.", true);
           } else {
-            setSgdbStatus(
-              (res && res.error) || "Não foi possível guardar a chave.",
-              false
-            );
+            setSgdbStatus((res && res.error) || "Não foi possível salvar a chave.", false);
           }
         } catch (e) {
-          setSgdbStatus("Falha ao guardar a chave.", false);
+          setSgdbStatus("Falha ao salvar a chave.", false);
         }
       });
       clearBtn.addEventListener("click", async () => {
@@ -283,15 +757,9 @@
           if (res && res.success) {
             input.value = "";
             input.placeholder = "Cole a chave aqui";
-            setSgdbStatus(
-              "Chave removida. Fallback: GameTDB + Libretro.",
-              true
-            );
+            setSgdbStatus("Chave removida. Fallback: GameTDB + Libretro.", true);
           } else {
-            setSgdbStatus(
-              (res && res.error) || "Não foi possível remover a chave.",
-              false
-            );
+            setSgdbStatus((res && res.error) || "Não foi possível remover a chave.", false);
           }
         } catch (e) {
           setSgdbStatus("Falha ao remover a chave.", false);
@@ -306,53 +774,73 @@
     }
     try {
       const res = await api.get_prefs();
-      const configured =
-        res &&
-        res.success &&
-        res.prefs &&
-        res.prefs.steamgriddb_configured === true;
+      const configured = res && res.success && res.prefs && res.prefs.steamgriddb_configured === true;
       if (configured) {
-        input.placeholder = "Chave guardada — cole outra para substituir";
-        setSgdbStatus("SteamGridDB activo (fonte principal de capas/ícones).", true);
+        input.placeholder = "Chave salva — cole outra para substituir";
+        setSgdbStatus("SteamGridDB ativo (fonte principal de capas/ícones).", true);
       } else {
         input.placeholder = "Cole a chave aqui";
-        setSgdbStatus(
-          "Sem chave — capas usam GameTDB (NDS) e Libretro.",
-          false
-        );
+        setSgdbStatus("Sem chave — capas usam GameTDB (NDS) e Libretro.", false);
       }
     } catch (e) {
       setSgdbStatus("Não foi possível ler as preferências.", false);
     }
   }
 
+  /* ------------------------------------------------------------ arranque */
+
   function init() {
-    relocateLegacyPanels();
     let initial = "home";
     try {
-      const saved = sessionStorage.getItem(STORAGE_KEY);
-      if (VIEWS.includes(saved)) initial = saved;
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const saved = raw ? JSON.parse(raw) : null;
+      if (saved && VIEWS.includes(saved.view)) initial = saved.view;
+      if (saved && TOOLS_SECTIONS.includes(saved.tools)) toolsSection = saved.tools;
+      if (saved && DSPICO_SECTIONS.includes(saved.dspico)) dspicoSection = saved.dspico;
     } catch (e) {
       /* ignore */
     }
-    // Migração a partir do modo antigo
-    try {
-      const old = sessionStorage.getItem("route_1_kit_mode");
-      if (old === "dspico") initial = "dspico";
-      else if (old === "wizard") initial = "softmod";
-      else if (old === "about") initial = "settings";
-      else if (old === "advanced") initial = "card";
-    } catch (e) {
-      /* ignore */
+    const fromHash = (location.hash || "").slice(1).split("/");
+    if (VIEWS.includes(fromHash[0])) {
+      initial = fromHash[0];
+      if (initial === "tools" && TOOLS_SECTIONS.includes(fromHash[1])) toolsSection = fromHash[1];
+      if (initial === "dspico" && DSPICO_SECTIONS.includes(fromHash[1])) dspicoSection = fromHash[1];
     }
-    navigate(initial, { silent: true });
+    bindMenu();
+    bindScrub();
+    setToolsSection(toolsSection, { silent: true });
+    if (typeof Dspico !== "undefined" && Dspico.selectSection) Dspico.selectSection(dspicoSection);
+    // A primeira tela substitui a entrada do histórico (Voltar leva ao Início).
+    if (initial !== "home") {
+      try {
+        history.replaceState({ r1k: true, view: "home" }, "", "#home");
+      } catch (e) {
+        /* ignore */
+      }
+      current = "home";
+      showPane("home");
+      navigate(initial, { silent: true });
+    } else {
+      current = "__boot__";
+      navigate("home", { silent: true, fromHistory: true });
+      pushRoute(false);
+    }
+    tickClock();
+
+    document.addEventListener("keydown", onTabKeys);
+    document.addEventListener("keydown", onGlobalKeys);
+    window.addEventListener("popstate", onPopState);
 
     if (window.R1K.events) {
       R1K.events.on("busy", (p) => {
+        const badge = $("activity-badge");
+        if (badge) badge.classList.toggle("hidden", !(p && p.busy));
         if (p && p.busy) toggleActivity(true);
-      });
-      R1K.events.on("log", () => {
-        /* app.js também escuta */
+        // Depois de uma escrita no cartão, o próximo passo pode ter mudado.
+        if (p && !p.busy && nextFor) {
+          nextData = null;
+          if (current === "home") setTimeout(() => refreshNextStep(true), 300);
+        }
       });
     }
   }
@@ -360,6 +848,10 @@
   window.R1K = window.R1K || {};
   window.R1K.shell = {
     navigate,
+    go,
+    back,
+    setToolsSection,
+    onDspicoSection,
     toggleActivity,
     init,
     current: () => current,
@@ -369,7 +861,7 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    // Depois do boot de app.js (mesmo tick: defer order — shell carrega antes de app.js)
+    // Depois do boot de app.js (shell carrega antes de app.js).
     setTimeout(init, 0);
   });
 })();

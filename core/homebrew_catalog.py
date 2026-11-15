@@ -1,6 +1,6 @@
 """Catálogo de homebrew DS/DSi instalável (releases oficiais pinadas).
 
-Curadoria baseada na lista GameBrew de aplicações, limitada a artefactos
+Curadoria baseada na lista GameBrew de apps, limitada a artefatos
 ``.nds``/``.dsi`` com URL HTTPS estável e SHA-256 em ``core.cache``.
 """
 
@@ -66,7 +66,7 @@ def _download_sources(install_key: str) -> List[Dict[str, str]]:
 CATEGORIES: Dict[str, str] = {
     "media": "Reprodutores",
     "system": "Sistema",
-    "files": "Ficheiros",
+    "files": "Arquivos",
     "saves": "Saves",
     "utilities": "Utilitários",
 }
@@ -76,7 +76,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "godmode9i",
         "title": "GodMode9i",
-        "description": "Explorador de ficheiros com dump de cartuchos e acesso à NAND.",
+        "description": "Explorador de arquivos com dump de cartuchos e acesso à NAND.",
         "category": "files",
         "author": "DS-Homebrew",
         "version": "3.9.0",
@@ -131,7 +131,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "fastvideo_ds",
         "title": "FastVideoDSPlayer 2",
-        "description": "Fork actualizado do FastVideoDS Player (.fv).",
+        "description": "Fork atualizado do FastVideoDS Player (.fv).",
         "category": "media",
         "author": "Mathos42",
         "version": "1.7",
@@ -142,7 +142,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "ftpd",
         "title": "ftpd",
-        "description": "Servidor FTP Wi‑Fi para transferir ficheiros com o PC.",
+        "description": "Servidor FTP Wi‑Fi para transferir arquivos com o PC.",
         "category": "utilities",
         "author": "mtheall",
         "version": "3.2.1",
@@ -153,7 +153,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "kekatsu",
         "title": "Kekatsu DS",
-        "description": "Descarregador de conteúdo no próprio console.",
+        "description": "Ferramenta de download de conteúdo no próprio console.",
         "category": "utilities",
         "author": "cavv-dev",
         "version": "1.2.0",
@@ -164,7 +164,7 @@ _APPS: List[Dict[str, Any]] = [
     {
         "id": "dsidl",
         "title": "Dsidl",
-        "description": "Descarrega ficheiros para o DSi via código QR.",
+        "description": "Baixa arquivos para o DSi via código QR.",
         "category": "utilities",
         "author": "Epicpkmn11",
         "version": "0.1.1",
@@ -262,7 +262,7 @@ def build_catalog_payload() -> Dict[str, Any]:
         "apps": apps,
         "categories": cats,
         "attribution": (
-            "Seleção baseada na lista de aplicações da GameBrew; "
+            "Seleção baseada na lista de apps da GameBrew; "
             "downloads oficiais (GitHub e outras fontes pinadas) com verificação SHA-256. "
             "Cada app lista todas as fontes de download disponíveis."
         ),
@@ -270,7 +270,7 @@ def build_catalog_payload() -> Dict[str, Any]:
 
 
 def installable_stems() -> frozenset:
-    """Stems de ficheiro (sem extensão) para classificação em rom_cleaner."""
+    """Stems de arquivo (sem extensão) para classificação em rom_cleaner."""
     stems = set()
     for app in list_apps():
         name = app.get("dest_filename") or ""

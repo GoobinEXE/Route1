@@ -1,0 +1,723 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T22:03:52+00:00",
+  "title": "Design System: Route Pico",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Chão",
+        "canonical": "rgb(var(--c-bg))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262627",
+          "#444546",
+          "#656667",
+          "#88898a",
+          "#adaeae",
+          "#d0d1d1",
+          "#eeeeef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Painel",
+        "canonical": "rgb(var(--c-surface))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "surface-2": {
+        "role": "neutral",
+        "displayName": "Painel Recuado",
+        "canonical": "rgb(var(--c-surface-2))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262627",
+          "#444546",
+          "#656667",
+          "#88898a",
+          "#adaeae",
+          "#d0d1d1",
+          "#eeeeef"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Linha",
+        "canonical": "rgb(var(--c-line))",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#87898c",
+          "#acaeb0",
+          "#cfd1d3",
+          "#edeef0"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Linha Firme",
+        "canonical": "rgb(var(--c-line-strong))",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#242729",
+          "#424549",
+          "#62676c",
+          "#858a8f",
+          "#abaeb3",
+          "#ced1d4",
+          "#edeff1"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Tinta",
+        "canonical": "rgb(var(--c-fg))",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#252729",
+          "#434548",
+          "#63666b",
+          "#86898e",
+          "#abaeb2",
+          "#cfd1d4",
+          "#edeef1"
+        ]
+      },
+      "fg-soft": {
+        "role": "neutral",
+        "displayName": "Tinta Suave",
+        "canonical": "rgb(var(--c-fg-soft))",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666c",
+          "#85898f",
+          "#abaeb3",
+          "#cfd1d5",
+          "#edeff1"
+        ]
+      },
+      "fg-mute": {
+        "role": "neutral",
+        "displayName": "Tinta Discreta",
+        "canonical": "rgb(var(--c-fg-mute))",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666d",
+          "#858a90",
+          "#aaaeb4",
+          "#ced1d5",
+          "#eceff2"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Azul de Ação",
+        "canonical": "rgb(var(--c-accent))",
+        "tonalRamp": [
+          "#000a24",
+          "#002551",
+          "#054484",
+          "#1665ba",
+          "#478bdc",
+          "#7cb1f3",
+          "#acd4ff",
+          "#d3f1ff"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Azul de Ação Firme",
+        "canonical": "rgb(var(--c-accent-strong))",
+        "tonalRamp": [
+          "#000a21",
+          "#03264d",
+          "#13457d",
+          "#2667b0",
+          "#508bd3",
+          "#82b1eb",
+          "#b0d4ff",
+          "#d6f1ff"
+        ]
+      },
+      "accent-fg": {
+        "role": "primary",
+        "displayName": "Azul de Texto",
+        "canonical": "rgb(var(--c-accent-fg))",
+        "tonalRamp": [
+          "#000a22",
+          "#02264f",
+          "#104480",
+          "#2366b4",
+          "#4e8bd7",
+          "#80b1ef",
+          "#afd4ff",
+          "#d5f1ff"
+        ]
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "Texto sobre Ação",
+        "canonical": "rgb(var(--c-on-accent))",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252728",
+          "#434547",
+          "#646669",
+          "#87898c",
+          "#acaeb0",
+          "#d0d1d2",
+          "#edeef0"
+        ]
+      },
+      "select": {
+        "role": "secondary",
+        "displayName": "Azul de Seleção",
+        "canonical": "rgb(var(--c-select))",
+        "tonalRamp": [
+          "#000926",
+          "#002554",
+          "#004488",
+          "#0065bf",
+          "#3e8be2",
+          "#76b2f8",
+          "#a8d5ff",
+          "#d0f2ff"
+        ]
+      },
+      "select-fill": {
+        "role": "secondary",
+        "displayName": "Preenchimento de Seleção",
+        "canonical": "rgb(var(--c-select-fill))",
+        "tonalRamp": [
+          "#000926",
+          "#002554",
+          "#004488",
+          "#0065bf",
+          "#3e8be2",
+          "#76b2f8",
+          "#a8d5ff",
+          "#d0f2ff"
+        ]
+      },
+      "on-select": {
+        "role": "neutral",
+        "displayName": "Texto sobre Seleção",
+        "canonical": "rgb(var(--c-on-select))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Verde de Sucesso",
+        "canonical": "rgb(var(--c-ok))",
+        "tonalRamp": [
+          "#001101",
+          "#00300d",
+          "#0b5421",
+          "#1e7a37",
+          "#4f9d5d",
+          "#83bf8b",
+          "#b1dfb6",
+          "#d7f9db"
+        ]
+      },
+      "warn": {
+        "role": "status",
+        "displayName": "Âmbar de Aviso",
+        "canonical": "rgb(var(--c-warn))",
+        "tonalRamp": [
+          "#190500",
+          "#3f1c00",
+          "#693600",
+          "#965204",
+          "#ba773e",
+          "#d8a175",
+          "#f2c7a6",
+          "#ffe8cf"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Vermelho de Perigo",
+        "canonical": "rgb(var(--c-danger))",
+        "tonalRamp": [
+          "#220000",
+          "#50000b",
+          "#820e1e",
+          "#b82332",
+          "#dd5558",
+          "#f88987",
+          "#ffb7b3",
+          "#ffdcd8"
+        ]
+      },
+      "chrome": {
+        "role": "neutral",
+        "displayName": "Moldura",
+        "canonical": "rgb(var(--c-chrome))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "chrome-fg": {
+        "role": "neutral",
+        "displayName": "Texto da Moldura",
+        "canonical": "rgb(var(--c-chrome-fg))",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#24272a",
+          "#42454a",
+          "#62666d",
+          "#858a90",
+          "#aaaeb4",
+          "#ced1d5",
+          "#eceff2"
+        ]
+      },
+      "hero": {
+        "role": "neutral",
+        "displayName": "Tela de Destaque",
+        "canonical": "rgb(var(--c-hero))",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#262626",
+          "#454545",
+          "#666666",
+          "#898989",
+          "#aeaeae",
+          "#d1d1d1",
+          "#eeeeee"
+        ]
+      },
+      "hero-fg": {
+        "role": "neutral",
+        "displayName": "Texto da Tela de Destaque",
+        "canonical": "rgb(var(--c-hero-fg))",
+        "tonalRamp": [
+          "#0a0b0c",
+          "#252729",
+          "#434548",
+          "#63666b",
+          "#86898e",
+          "#abaeb2",
+          "#cfd1d4",
+          "#edeef1"
+        ]
+      },
+      "tile-1": {
+        "role": "tertiary",
+        "displayName": "Laranja de Tarefa",
+        "canonical": "rgb(var(--c-tile-1))",
+        "tonalRamp": [
+          "#1e0100",
+          "#491100",
+          "#772800",
+          "#aa4000",
+          "#ce6928",
+          "#ea9769",
+          "#ffc09e",
+          "#ffe3c9"
+        ]
+      },
+      "tile-2": {
+        "role": "tertiary",
+        "displayName": "Verde de Tarefa",
+        "canonical": "rgb(var(--c-tile-2))",
+        "tonalRamp": [
+          "#001100",
+          "#003100",
+          "#00550c",
+          "#067c1e",
+          "#45a04b",
+          "#7dc27e",
+          "#ade1ad",
+          "#d5fbd4"
+        ]
+      },
+      "tile-3": {
+        "role": "tertiary",
+        "displayName": "Azul de Tarefa",
+        "canonical": "rgb(var(--c-tile-3))",
+        "tonalRamp": [
+          "#000827",
+          "#022357",
+          "#10418c",
+          "#2161c4",
+          "#4b87e7",
+          "#7eaffc",
+          "#add3ff",
+          "#d4f0ff"
+        ]
+      },
+      "tile-4": {
+        "role": "tertiary",
+        "displayName": "Turquesa de Tarefa",
+        "canonical": "rgb(var(--c-tile-4))",
+        "tonalRamp": [
+          "#00100f",
+          "#002f2d",
+          "#00514e",
+          "#007772",
+          "#3d9a95",
+          "#79bcb8",
+          "#aadcd9",
+          "#d3f7f4"
+        ]
+      },
+      "tile-5": {
+        "role": "tertiary",
+        "displayName": "Vermelho de Tarefa",
+        "canonical": "rgb(var(--c-tile-5))",
+        "tonalRamp": [
+          "#220000",
+          "#500005",
+          "#820f15",
+          "#b82328",
+          "#de5650",
+          "#f88a81",
+          "#ffb7af",
+          "#ffdcd5"
+        ]
+      },
+      "tile-6": {
+        "role": "tertiary",
+        "displayName": "Amarelo de Tarefa",
+        "canonical": "rgb(var(--c-tile-6))",
+        "tonalRamp": [
+          "#160700",
+          "#3a2000",
+          "#623c00",
+          "#8d5a00",
+          "#b07f26",
+          "#cea769",
+          "#ebcc9e",
+          "#ffebc9"
+        ]
+      },
+      "tile-7": {
+        "role": "tertiary",
+        "displayName": "Roxo de Tarefa",
+        "canonical": "rgb(var(--c-tile-7))",
+        "tonalRamp": [
+          "#110125",
+          "#301154",
+          "#532987",
+          "#7942be",
+          "#9b6be1",
+          "#bc99f7",
+          "#dbc2ff",
+          "#f6e4ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Relógio grande da tela de cima na Dupla Tela."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Título de tela no cabeçalho com Voltar."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Título do assistente (topo da escala 21 / 17,5 / 15)."
+      },
+      "title-sm": {
+        "displayName": "Title pequeno",
+        "purpose": "Título de seção do assistente."
+      },
+      "item": {
+        "displayName": "Item",
+        "purpose": "Rótulo de bloco, título de objetivo, nome do cartão, título de painel."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Subtítulo de tela e texto de painel."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Botões, abas da prateleira, barra de ícones, Voltar."
+      },
+      "hint": {
+        "displayName": "Hint",
+        "purpose": "Barra de dicas e contexto do item selecionado."
+      },
+      "key": {
+        "displayName": "Key",
+        "purpose": "Teclas desenhadas na barra de dicas."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Caminhos, hashes e registro de atividade."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-light",
+        "value": "0 1px 2px rgb(20 22 26 / 0.05), 0 6px 18px rgb(20 22 26 / 0.06)",
+        "purpose": "Painéis das telas de trabalho, esquema claro."
+      },
+      {
+        "name": "panel-dark",
+        "value": "0 1px 0 rgb(255 255 255 / 0.04) inset, 0 2px 4px rgb(0 0 0 / 0.32), 0 10px 28px rgb(0 0 0 / 0.30)",
+        "purpose": "Painéis, esquema escuro."
+      },
+      {
+        "name": "menu-light",
+        "value": "0 2px 6px rgb(20 22 26 / 0.08), 0 18px 48px rgb(20 22 26 / 0.16)",
+        "purpose": "Gaveta Atividade e menu de tema."
+      },
+      {
+        "name": "menu-dark",
+        "value": "0 1px 0 rgb(255 255 255 / 0.05) inset, 0 14px 44px rgb(0 0 0 / 0.55)",
+        "purpose": "Gaveta e menu, esquema escuro."
+      },
+      {
+        "name": "press",
+        "value": "0 1px 1px rgb(20 22 26 / 0.10)",
+        "purpose": "Botão primário pressionado."
+      },
+      {
+        "name": "relevo-estereo",
+        "value": "0 5px 0 rgb(var(--c-line-strong) / 0.55), 0 10px 18px rgb(0 0 0 / 0.08)",
+        "purpose": "Blocos do Estéreo 3D; desce para 0 2px 0 ao pressionar."
+      },
+      {
+        "name": "bisel-cubo",
+        "value": "inset 0 0 0 1px rgb(255 255 255 / 0.10), 0 6px 22px rgb(0 0 0 / 0.55)",
+        "purpose": "Painéis índigo-violeta do Cubo."
+      },
+      {
+        "name": "anel-hibrido",
+        "value": "0 0 0 3px rgb(var(--c-surface)), 0 0 0 6px rgb(var(--c-select)), 0 0 16px rgb(var(--c-select) / 0.45)",
+        "purpose": "Seleção do Híbrido: anel ciano duplo."
+      },
+      {
+        "name": "aro-canais",
+        "value": "0 0 0 2px rgb(var(--c-select)), 0 0 18px rgb(var(--c-select) / 0.5)",
+        "purpose": "Seleção de Canais: aro ciano com brilho."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Curva única de transição de estado."
+      },
+      {
+        "name": "dur",
+        "value": "180ms",
+        "purpose": "Duração padrão de hover, seleção e pressão."
+      },
+      {
+        "name": "pane-in",
+        "value": "220ms, opacidade 0→1 e subida de 6px",
+        "purpose": "Entrada de tela; desligada com prefers-reduced-motion."
+      },
+      {
+        "name": "drawer",
+        "value": "200ms opacidade, 240ms subida de 10px",
+        "purpose": "Abertura da gaveta Atividade."
+      },
+      {
+        "name": "meter",
+        "value": "400ms",
+        "purpose": "Preenchimento do medidor de espaço e da barra de uso."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "min-window",
+        "value": "960px × 640px"
+      },
+      {
+        "name": "wide",
+        "value": "1120px"
+      },
+      {
+        "name": "medium",
+        "value": "1040px"
+      },
+      {
+        "name": "short",
+        "value": "max-height 720px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botão primário",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Ação que executa algo no cartão; pílula azul de ação.",
+      "html": "<button class=\"ds-btn-primary\">Instalar pacote</button>",
+      "css": ".ds-btn-primary{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;padding:0.62rem 1.25rem;border:0;border-radius:999px;font-size:13px;font-weight:800;letter-spacing:0.01em;background:rgb(var(--c-accent, 51 132 225));color:rgb(var(--c-on-accent, 25 27 29));box-shadow:0 1px 0 rgb(255 255 255 / 0.18) inset,0 2px 5px rgb(0 0 0 / 0.16);cursor:pointer;transition:background 180ms cubic-bezier(0.22,1,0.36,1),transform 180ms cubic-bezier(0.22,1,0.36,1);}.ds-btn-primary:hover{background:rgb(var(--c-accent-strong, 44 114 194));}.ds-btn-primary:active{transform:translateY(1px);box-shadow:0 1px 1px rgb(20 22 26 / 0.10);}.ds-btn-primary:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}"
+    },
+    {
+      "name": "Botão secundário",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Ação secundária; painel com borda firme que acende em seleção no hover.",
+      "html": "<button class=\"ds-btn-ghost\">Escolher pasta</button>",
+      "css": ".ds-btn-ghost{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;padding:0.5rem 1rem;border-radius:999px;font-size:13px;font-weight:700;color:rgb(var(--c-fg, 42 45 49));background:rgb(var(--c-surface, 255 255 255));border:1px solid rgb(var(--c-line-strong, 144 149 155));cursor:pointer;transition:background 180ms,border-color 180ms;}.ds-btn-ghost:hover{background:rgb(var(--c-surface-2, 242 243 244));border-color:rgb(var(--c-select, 46 140 240));}.ds-btn-ghost:active{transform:translateY(1px);}.ds-btn-ghost:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}"
+    },
+    {
+      "name": "Bloco do Início (Dupla Tela)",
+      "kind": "custom",
+      "refersTo": "tile",
+      "description": "Bloco de tarefa com ícone colorido; o atual recebe os quatro cantos azuis da Dupla Tela.",
+      "html": "<div class=\"ds-tiles\"><button class=\"ds-tile ds-tile--current\" style=\"--hue:42 111 219\"><span class=\"ds-tile-art\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg></span><span class=\"ds-tile-label\">Cartão</span></button><button class=\"ds-tile\" style=\"--hue:223 106 18\"><span class=\"ds-tile-art\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M9 6h6v5H9z\"/></svg></span><span class=\"ds-tile-label\">Jogos</span></button></div>",
+      "css": ".ico{width:1em;height:1em;fill:currentColor;stroke:none;}.ds-tiles{display:grid;grid-template-columns:repeat(2,220px);gap:16px 18px;padding:12px;}.ds-tile{font-family:var(--font-sans, Geist, system-ui, sans-serif);position:relative;display:flex;align-items:center;gap:12px;min-height:72px;padding:10px 14px;text-align:left;border:2px solid rgb(var(--c-line-strong, 144 149 155) / 0.8);border-radius:6px;background:linear-gradient(180deg,rgb(var(--c-surface, 255 255 255)) 55%,rgb(var(--c-surface-2, 242 243 244)));color:rgb(var(--c-fg, 42 45 49));cursor:pointer;transition:transform 180ms;}.ds-tile-art{display:grid;place-items:center;width:44px;height:44px;border-radius:6px;border:2px solid rgb(var(--c-line, 214 217 220));background:rgb(var(--c-surface, 255 255 255));color:rgb(var(--hue));}.ds-tile-art .ico{width:26px;height:26px;}.ds-tile-label{font-size:15px;font-weight:800;}.ds-tile::after{content:'';position:absolute;inset:-6px;border:4px solid rgb(var(--c-select, 46 140 240));border-radius:3px;pointer-events:none;opacity:0;-webkit-mask-image:linear-gradient(90deg,#000 0 22%,transparent 22% 78%,#000 78%),linear-gradient(180deg,#000 0 22%,transparent 22% 78%,#000 78%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,#000 0 22%,transparent 22% 78%,#000 78%),linear-gradient(180deg,#000 0 22%,transparent 22% 78%,#000 78%);mask-composite:intersect;transition:opacity 180ms;}.ds-tile--current{border-color:rgb(var(--c-select, 46 140 240) / 0.6);}.ds-tile--current::after,.ds-tile:hover::after{opacity:1;}.ds-tile:active{transform:scale(0.98);}.ds-tile:focus-visible{outline:none;}"
+    },
+    {
+      "name": "Prateleira de abas",
+      "kind": "nav",
+      "refersTo": "tab-shelf",
+      "description": "Abas irmãs de uma tela como botões com ícone; a ativa recebe a seleção do tema.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab ds-tab--active\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>Cartão</button><button class=\"ds-tab\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>Jogos</button><button class=\"ds-tab\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg>RouteDex</button></div>",
+      "css": ".ico{width:1em;height:1em;fill:currentColor;stroke:none;}.ds-tabs{display:flex;flex-wrap:wrap;gap:10px;}.ds-tab{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:800;padding:0.55rem 0.95rem;border-radius:10px;color:rgb(var(--c-fg-soft, 69 73 79));background:rgb(var(--c-surface, 255 255 255));border:2px solid rgb(var(--c-line, 214 217 220));cursor:pointer;transition:background 180ms,color 180ms,box-shadow 180ms;}.ds-tab .ico{width:18px;height:18px;color:rgb(var(--c-fg-mute, 93 98 105));}.ds-tab:hover{color:rgb(var(--c-fg, 42 45 49));border-color:rgb(var(--c-line-strong, 144 149 155));}.ds-tab--active{color:rgb(var(--c-fg, 42 45 49));border-color:rgb(var(--c-select, 46 140 240) / 0.55);box-shadow:0 0 0 3px rgb(var(--c-select, 46 140 240) / 0.0);}.ds-tab--active .ico{color:rgb(var(--c-select, 46 140 240));}.ds-tab:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:6px;}"
+    },
+    {
+      "name": "Cabeçalho de tela",
+      "kind": "nav",
+      "refersTo": "screen-back",
+      "description": "Voltar em pílula, ícone da tarefa em quadrado tingido e título de 24px.",
+      "html": "<div class=\"ds-head\"><button class=\"ds-back\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M14.5 5.5L8 12l6.5 6.5\"/></svg>Voltar</button><span class=\"ds-head-icon\" style=\"--hue:223 106 18\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M8 2.5h8.5a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-9a2 2 0 0 1-2-2v-6l1.5-1.5L5.5 10V5z\"/><path d=\"M10 6v3M13 6v3M16 6v3\"/></svg></span><div><h1 class=\"ds-head-title\">Jogos</h1><p class=\"ds-head-sub\">Organize os jogos em Games/.</p></div></div>",
+      "css": ".ico{width:1em;height:1em;fill:currentColor;stroke:none;}.ds-head{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:flex;align-items:center;gap:14px;}.ds-back{display:inline-flex;align-items:center;gap:4px;padding:8px 14px 8px 8px;border-radius:999px;border:1px solid rgb(var(--c-line-strong, 144 149 155));background:rgb(var(--c-surface, 255 255 255));color:rgb(var(--c-fg, 42 45 49));font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background 180ms;}.ds-back .ico{width:18px;height:18px;}.ds-back:hover{background:rgb(var(--c-surface-2, 242 243 244));}.ds-back:focus-visible{outline:2px solid rgb(var(--c-fg, 42 45 49));outline-offset:4px;}.ds-head-icon{display:grid;place-items:center;width:46px;height:46px;border-radius:10px;background:rgb(var(--hue) / 0.14);color:rgb(var(--hue));}.ds-head-icon .ico{width:26px;height:26px;}.ds-head-title{margin:0;font-size:24px;font-weight:800;letter-spacing:-0.015em;line-height:1.15;color:rgb(var(--c-fg, 42 45 49));}.ds-head-sub{margin:2px 0 0;font-size:14px;color:rgb(var(--c-fg-soft, 69 73 79));}"
+    },
+    {
+      "name": "Barra de dicas",
+      "kind": "custom",
+      "refersTo": "hint-bar",
+      "description": "Contexto do item à esquerda e teclas desenhadas à direita; Voltar esmaecido no Início.",
+      "html": "<div class=\"ds-hints\"><span class=\"ds-hint-ctx\">Cartão</span><span class=\"ds-hint\"><kbd class=\"ds-key\">Setas</kbd> Mover</span><span class=\"ds-hint\"><kbd class=\"ds-key\">Enter</kbd> Abrir</span><span class=\"ds-hint ds-hint--off\"><kbd class=\"ds-key\">Esc</kbd> Voltar</span></div>",
+      "css": ".ds-hints{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:flex;align-items:center;justify-content:flex-end;gap:18px;min-height:30px;padding:5px 20px;background:rgb(var(--c-chrome, 255 255 255));color:rgb(var(--c-chrome-fg, 93 98 105));font-size:12px;font-weight:700;border-top:1px solid rgb(var(--c-line, 214 217 220));}.ds-hint-ctx{margin-right:auto;}.ds-hint{display:inline-flex;align-items:center;gap:6px;}.ds-hint--off{opacity:0.45;}.ds-key{display:inline-grid;place-items:center;min-width:22px;height:20px;padding:0 6px;border-radius:6px;border:1.5px solid currentColor;font:inherit;font-size:11px;font-weight:800;line-height:1;}"
+    },
+    {
+      "name": "Barra de ícones",
+      "kind": "nav",
+      "refersTo": "dock-button",
+      "description": "Início, Atividade, Tema e Configurações; o ativo recebe a seleção do tema.",
+      "html": "<nav class=\"ds-dock\"><button class=\"ds-dock-btn ds-dock-btn--active\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M3.5 11L12 4l8.5 7\"/><path d=\"M5.5 9.5v10h5v-5.5h3v5.5h5v-10\"/></svg>Início</button><button class=\"ds-dock-btn\"><svg class=\"ico\" viewBox=\"0 0 24 24\"><path d=\"M3 12.5h4l2.5-7 5 13 2.5-6H21\"/></svg>Atividade</button></nav>",
+      "css": ".ico{width:1em;height:1em;fill:currentColor;stroke:none;}.ds-dock{font-family:var(--font-sans, Geist, system-ui, sans-serif);display:flex;align-items:center;justify-content:center;gap:10px;min-height:64px;padding:8px 18px;background:rgb(var(--c-chrome, 255 255 255));}.ds-dock-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;border:1px solid transparent;background:transparent;color:rgb(var(--c-chrome-fg, 93 98 105));font:inherit;font-size:13px;font-weight:800;cursor:pointer;transition:background 180ms,box-shadow 180ms;}.ds-dock-btn .ico{width:22px;height:22px;}.ds-dock-btn:hover{background:rgb(var(--c-chrome-fg, 93 98 105) / 0.10);}.ds-dock-btn--active{box-shadow:inset 0 0 0 2px rgb(var(--c-select, 46 140 240));}.ds-dock-btn:focus-visible{outline:2px solid rgb(var(--c-chrome-fg, 93 98 105));outline-offset:3px;}"
+    },
+    {
+      "name": "Medidor de espaço",
+      "kind": "custom",
+      "refersTo": "status-bar",
+      "description": "Espaço livre do microSD desenhado como bateria na barra de status.",
+      "html": "<span class=\"ds-meter\"><span class=\"ds-meter-fill\" style=\"width:28%\"></span></span>",
+      "css": ".ds-meter{position:relative;display:inline-block;width:38px;height:18px;border:2px solid rgb(var(--c-chrome-fg, 93 98 105));border-radius:4px;padding:2px;box-sizing:border-box;}.ds-meter::after{content:'';position:absolute;right:-5px;top:4px;width:3px;height:6px;border-radius:0 2px 2px 0;background:rgb(var(--c-chrome-fg, 93 98 105));}.ds-meter-fill{display:block;height:100%;border-radius:1px;background:rgb(var(--c-select, 46 140 240));transition:width 400ms cubic-bezier(0.22,1,0.36,1);}"
+    },
+    {
+      "name": "Painel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Contêiner das telas de trabalho; borda e profundidade mudam por tema.",
+      "html": "<section class=\"ds-panel\"><h2 class=\"ds-panel-title\">Pacote DSPico</h2><p class=\"ds-panel-text\">Instala o Pico Launcher e o Pico Loader oficiais, verificados por SHA-256.</p></section>",
+      "css": ".ds-panel{font-family:var(--font-sans, Geist, system-ui, sans-serif);max-width:420px;padding:18px 20px;border-radius:14px;border:2px solid rgb(var(--c-line, 214 217 220));background:rgb(var(--c-surface, 255 255 255));box-shadow:0 1px 0 rgb(var(--c-line, 214 217 220) / 0.6);}.ds-panel-title{margin:0 0 6px;font-size:15px;font-weight:800;color:rgb(var(--c-fg, 42 45 49));}.ds-panel-text{margin:0;font-size:14px;line-height:1.5;color:rgb(var(--c-fg-soft, 69 73 79));}"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Menu Inicial do Seu Console",
+    "overview": "O Route Pico abre como o menu inicial de um console portátil ou de mesa: uma barra de status em cima com o cartão e a hora, as tarefas organizadas em blocos no meio, uma barra de ícones embaixo e, por último, uma barra de dicas de tecla. Os sete temas tomaram como referência menus iniciais de consoles reais e reproduzem a gramática de cada um (arranjo dos blocos, moldura, gesto de seleção, desenho das barras), sem copiar logotipos, ícones, fontes, sons ou nomes de marca. A navegação, o conteúdo e os controles são idênticos em todos os temas; muda o mundo material em volta deles.\n\nA densidade é a de um menu de console: poucos itens grandes, um item selecionado por vez, legenda do item escolhido e dicas de teclado sempre à vista. As telas internas trocam o Início por um cabeçalho com Voltar, o ícone colorido da tarefa e o título, e as abas irmãs aparecem como uma prateleira de ícones. Todo o trabalho real (formatar, instalar, organizar jogos) acontece em painéis sóbrios dentro dessas telas, porque a ferramenta escreve num cartão do usuário e o tom lúdico para no limite da operação destrutiva.\n\nO sistema recusa a barra lateral de dashboard do mundo anterior e recusa também o tema que só troca a cor de um mesmo layout. Cada tema tem paleta original e variantes clara (Catppuccin Latte) e noturna (Catppuccin Mocha), todas verificadas contra WCAG AA pelo gerador.",
+    "keyCharacteristics": [
+      "Quatro faixas fixas: barra de status, área do Início ou da tela, barra de ícones, barra de dicas.",
+      "Doze blocos no Início (seis DSPico, cinco Mais ferramentas, Configurações), cada um com ícone SVG próprio colorido por tarefa.",
+      "Uma seleção-assinatura por tema, aplicada ao bloco atual, à aba ativa, ao item de tema escolhido e ao botão ativo da barra de ícones.",
+      "Tipografia única em Geist, grotesca de cantos retos, com pesos 700 e 800 para tudo o que é rótulo.",
+      "Teclado completo: setas movem a seleção espacialmente no Início, Enter abre, Esc ou Backspace voltam, com histórico por hash."
+    ],
+    "rules": [
+      {
+        "name": "The Gerador Rule",
+        "body": "Nenhuma cor de tema é escrita à mão: toda mudança de paleta passa por `tools/build_themes.py`, que falha se alguma das 21 combinações não passar em WCAG AA. `themes.css` e `theme-data.js` são arquivos gerados.",
+        "section": "colors"
+      },
+      {
+        "name": "The Seleção Separada da Ação Rule",
+        "body": "A cor de seleção marca onde o usuário está; a cor de ação marca o que executa. Botões primários usam accent, a seleção-assinatura usa select, e as duas podem ter matizes diferentes no mesmo tema (Estéreo 3D: ação laranja, seleção menta).",
+        "section": "colors"
+      },
+      {
+        "name": "The Uma Cor Por Tarefa Rule",
+        "body": "A cor de uma tarefa é a mesma no bloco do Início, no cabeçalho da tela e no ícone da aba. Cor de tarefa pinta ícone, nunca texto corrido.",
+        "section": "colors"
+      },
+      {
+        "name": "The Piso de 11px Rule",
+        "body": "Nada funcional fica abaixo de 11px. Os tamanhos pequenos herdados do Tailwind sobem 1px no `skins.css`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Peso Faz a Hierarquia Rule",
+        "body": "Dentro de um mesmo tamanho, a hierarquia vem do peso (400 para texto, 700 para dica, 800 para rótulo) e da tinta (fg, fg-soft, fg-mute). Espaçamento largo entre letras é exclusivo do Cubo, onde os títulos azuis espaçados fazem parte do mundo.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mesma Ordem Rule",
+        "body": "Todos os arranjos usam o mesmo HTML; o tema muda grade, tamanhos e visibilidade, nunca a ordem de leitura nem o conjunto de blocos. A navegação por setas é espacial e calcula o vizinho pela posição real na tela.",
+        "section": "layout"
+      },
+      {
+        "name": "The Quatro Faixas Rule",
+        "body": "Status, conteúdo, ícones e dicas existem em todo tema e em toda tela. Um tema pode tornar uma faixa transparente ou curvá-la, mas não pode removê-la.",
+        "section": "layout"
+      },
+      {
+        "name": "The Profundidade Pertence ao Tema Rule",
+        "body": "Sombras de assinatura (relevo sólido, bisel, brilho de anel) ficam no bloco do tema em `console.css` ou `skins.css`. As sombras base do gerador valem para todos e não carregam identidade.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** gerar toda cor de tema por `tools/build_themes.py` e rodar `--check`; o gerador bloqueia combinações abaixo de WCAG AA.",
+      "**Do** usar as variáveis `--c-*` em `rgb(var(--c-x) / alfa)` para qualquer cor nova, em `console.css` ou `skins.css`.",
+      "**Do** colocar cada nova assinatura de tema dentro do bloco `html[data-family=\"…\"]` correspondente e manter layout, navegação e controles iguais entre temas.",
+      "**Do** dar a toda tarefa nova um ícone SVG próprio no sprite de `index.html` (traço de 2px, pontas arredondadas, viewBox 24) e uma cor de tarefa por `data-hue`.",
+      "**Do** aplicar a seleção do tema ao elemento atual em vez de inventar um estado novo; bloco, aba, item de tema e botão da barra compartilham o mesmo gesto.",
+      "**Do** manter a escala de cabeçalhos do assistente em 21 / 17,5 / 15px.",
+      "**Do** respeitar `prefers-reduced-motion`: sem animação de entrada de tela e sem ampliação do bloco selecionado."
+    ],
+    "donts": [
+      "**Don't** editar `themes.css` ou `theme-data.js` à mão.",
+      "**Don't** usar logotipos, ícones, fontes, sons ou nomes de marca de consoles; os temas usam nomes genéricos.",
+      "**Don't** voltar à barra lateral de dashboard nem criar um tema que só troca a cor do layout de outro.",
+      "**Don't** somar um contorno genérico de foco à seleção do tema em um elemento já selecionado.",
+      "**Don't** usar cor de tarefa em texto corrido nem cor de seleção como cor de ação.",
+      "**Don't** criar pontos de página no Tablet de Sala nem outros indicadores que não correspondam a páginas reais.",
+      "**Don't** deixar texto funcional abaixo de 11px."
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-"""Redação de caminhos com home do utilizador (PII em logs/UI)."""
+"""Redação de caminhos com home do usuário (PII em logs/UI)."""
 
 from __future__ import annotations
 
@@ -88,5 +88,5 @@ def expand_user_path(path: str) -> str:
     if not cleaned:
         return ""
     if cleaned.startswith("~"):
-        return os.path.expanduser(cleaned)
+        return os.path.normpath(os.path.expanduser(cleaned))
     return cleaned

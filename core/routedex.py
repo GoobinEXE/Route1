@@ -5,7 +5,7 @@ Port em Python (stdlib) das regras do PicoDex de rasalopa
 docs/licenses/PicoDex-LICENSE.txt), com diferenças deliberadas:
 
 * ``gamedata.json`` é lido e escrito sem perder campos desconhecidos, e um
-  ficheiro que não faz parse nunca é sobrescrito (mesma regra do launcher).
+  arquivo que não faz parse nunca é sobrescrito (mesma regra do launcher).
 * Toda a escrita no SD é atómica (``.partial`` + fsync + ``os.replace``) e
   toda a remoção guarda primeiro uma cópia no host.
 * A versão do Pico Loader / Launcher é identificada offline contra
@@ -86,6 +86,10 @@ _USRCHEAT_MAX_BYTES = 64 * 1024 * 1024
 
 _MANIFEST_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "pico_manifest.json")
 _manifest_cache: Optional[dict[str, Any]] = None
+_picodex_loader_cache: Optional[dict[str, Any]] = None
+# Cópia mais recente do manifesto da PicoDex baixada pelo usuário
+# (Verificar atualizações → PicoDex); a cópia incluída no app é o mínimo.
+PICODEX_USER_DIR = os.path.join(CACHE_DIR, "picodex")
 
 _ENHANCED_LAUNCHER_MARKER = b"rasalopa/pico-launcher-enhanced"
 _ENHANCED_LOADER_RE = re.compile(rb"Pico Loader Enhanced v([0-9][0-9A-Za-z.\-]{0,20})")
@@ -97,7 +101,7 @@ class RouteDexError(RuntimeError):
 
 
 # --------------------------------------------------------------------------- #
-# Infra: paths, hashing, escrita atómica, cópia de segurança
+# Infra: paths, hashing, escrita atómica, backup
 # --------------------------------------------------------------------------- #
 
 
@@ -155,7 +159,7 @@ def _atomic_write(path: str, data: bytes) -> None:
                 pass
         with open(tmp, "rb") as f:
             if hashlib.sha256(f.read()).digest() != hashlib.sha256(data).digest():
-                raise RouteDexError("Verificação pós-escrita falhou; ficheiro original mantido.")
+                raise RouteDexError("Verificação pós-escrita falhou; arquivo original mantido.")
         os.replace(tmp, path)
     finally:
         if os.path.exists(tmp):
@@ -173,7 +177,7 @@ def _host_backup_dir(label: str) -> str:
 
 
 def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: LogFn) -> dict[str, Any]:
-    """Copia cada ficheiro para o host (mantendo o caminho relativo) e só então remove."""
+    """Copia cada arquivo para o host (mantendo o caminho relativo) e só então remove."""
     backup_root: Optional[str] = None
     removed: list[str] = []
     failed: list[str] = []
@@ -192,7 +196,7 @@ def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: 
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(path, dst)
                 if _sha256_file(dst) != _sha256_file(path):
-                    raise RouteDexError("cópia de segurança não confere")
+                    raise RouteDexError("backup não confere")
                 os.remove(path)
             else:
                 continue
@@ -208,7 +212,7 @@ def _backup_then_remove(mount_path: str, paths: Iterable[str], label: str, log: 
 
 
 # --------------------------------------------------------------------------- #
-# Biblioteca: ROMs, saves e lixo numa só passagem
+# Biblioteca: ROMs, saves e lixo em uma só passagem
 # --------------------------------------------------------------------------- #
 
 
@@ -267,6 +271,10 @@ def scan_card(mount_path: str) -> dict[str, Any]:
     games: list[dict[str, Any]] = []
     saves: list[dict[str, Any]] = []
     junk: list[str] = []
+    # Pastas que o macOS recria a cada vez que o cartão é montado (.Trashes,
+    # .Spotlight-V100, .fseventsd). Como na PicoDex, não são lixo a limpar: são
+    # só mostradas. A .Trashes pode guardar arquivos apagados pelo usuário.
+    macos_dirs: list[dict[str, Any]] = []
     skip = {s.lower() for s in _COLLECT_SKIP_DIRS} - {".fseventsd", ".trashes", ".spotlight-v100"}
     for root, dirs, files in os.walk(mount_path):
         rel_root = _rel(mount_path, root)
@@ -275,8 +283,9 @@ def scan_card(mount_path: str) -> dict[str, Any]:
         for d in dirs:
             full = os.path.join(root, d)
             if d in JUNK_DIR_NAMES:
-                if not (d == ".fseventsd" and _fsevents_prevention_only(full)):
-                    junk.append(_rel(mount_path, full))
+                macos_dirs.append(
+                    {"rel": _rel(mount_path, full), "kept": d == ".fseventsd" and _fsevents_prevention_only(full)}
+                )
                 continue
             if d.lower() in skip or d.startswith("."):
                 continue
@@ -305,7 +314,7 @@ def scan_card(mount_path: str) -> dict[str, Any]:
                 if _is_junk_file(name):
                     junk.append(_rel(mount_path, os.path.join(root, name)))
     games.sort(key=lambda g: g["rel"].lower())
-    return {"games": games, "saves": saves, "junk": sorted(set(junk))}
+    return {"games": games, "saves": saves, "junk": sorted(set(junk)), "macos_dirs": macos_dirs}
 
 
 # --------------------------------------------------------------------------- #
@@ -323,6 +332,72 @@ def load_manifest() -> dict[str, Any]:
         except (OSError, ValueError):
             _manifest_cache = {}
     return _manifest_cache
+
+
+def validate_picodex_loader_manifest(data: Any) -> dict[str, Any]:
+    """Confere a forma do loaderReleases.json da PicoDex; levanta ValueError se inválido."""
+    if not isinstance(data, dict):
+        raise ValueError("raiz não é objeto")
+    releases = data.get("releases")
+    files = data.get("files")
+    if not isinstance(releases, list) or not releases or not isinstance(files, dict):
+        raise ValueError("sem releases/files")
+    if not all(isinstance(r, dict) and isinstance(r.get("tag"), str) for r in releases):
+        raise ValueError("release sem tag")
+    for name in ("picoLoader7.bin", "picoLoader9.bin", "aplist.bin", "savelist.bin"):
+        table = files.get(name)
+        if not isinstance(table, dict) or not table:
+            raise ValueError(f"sem hashes de {name}")
+        for digest, tags in table.items():
+            if not (isinstance(digest, str) and len(digest) == 64 and isinstance(tags, list)):
+                raise ValueError(f"entrada inválida em {name}")
+    builds = data.get("builds", {})
+    if not isinstance(builds, dict):
+        raise ValueError("builds inválido")
+    return data
+
+
+def _read_json(path: str) -> Optional[dict[str, Any]]:
+    try:
+        with open(path, encoding="utf-8") as f:
+            return validate_picodex_loader_manifest(json.load(f))
+    except (OSError, ValueError):
+        return None
+
+
+def load_picodex_loader_manifest() -> dict[str, Any]:
+    """Manifesto do Pico Loader mantido pela PicoDex (fonte oficial das versões).
+
+    Usa a cópia baixada pelo usuário quando é válida e cobre pelo menos
+    tantas releases como a incluída no app; senão a incluída (fixada no lock).
+    """
+    global _picodex_loader_cache
+    if _picodex_loader_cache is not None:
+        return _picodex_loader_cache
+    from core.upstreams import lock_entry, picodex_data_path
+
+    bundled = _read_json(picodex_data_path("loaderReleases.json")) or {"releases": [], "files": {}, "builds": {}}
+    try:
+        bundled_tag = lock_entry("picodex").get("tag", "")
+    except (OSError, ValueError, KeyError):
+        bundled_tag = ""
+    chosen, origin, tag = bundled, "app", bundled_tag
+    user = _read_json(os.path.join(PICODEX_USER_DIR, "loaderReleases.json"))
+    if user is not None and len(user["releases"]) >= len(bundled.get("releases") or []):
+        try:
+            with open(os.path.join(PICODEX_USER_DIR, "meta.json"), encoding="utf-8") as f:
+                meta = json.load(f)
+            tag = str(meta.get("tag") or tag)
+        except (OSError, ValueError):
+            pass
+        chosen, origin = user, "atualizado"
+    _picodex_loader_cache = dict(chosen, _origin=origin, _picodex_tag=tag)
+    return _picodex_loader_cache
+
+
+def reset_picodex_cache() -> None:
+    global _picodex_loader_cache
+    _picodex_loader_cache = None
 
 
 def identify_launcher(mount_path: str) -> dict[str, Any]:
@@ -355,6 +430,35 @@ def _intersect(sets: list[set[str]]) -> set[str]:
     return out
 
 
+_LOADER_API_VERSION_OFFSET = 0x0A
+_KNOWN_MAX_LOADER_API = 16
+
+
+def loader_api_info(mount_path: str) -> dict[str, Any]:
+    """Versão da API do Pico Loader (u16 em 0x0A do picoLoader7.bin) e o que ela permite.
+
+    Port de PicoDex ``loader.ts``: v1 abre jogos, v2 volta ao launcher, v3 cheats.
+    Valores 0 ou acima do maior conhecido contam como desconhecidos.
+    """
+    api: Optional[int] = None
+    try:
+        with open(_pico(mount_path, "picoLoader7.bin"), "rb") as f:
+            head = f.read(_LOADER_API_VERSION_OFFSET + 2)
+        if len(head) >= _LOADER_API_VERSION_OFFSET + 2:
+            v = int.from_bytes(head[_LOADER_API_VERSION_OFFSET : _LOADER_API_VERSION_OFFSET + 2], "little")
+            api = v if 0 < v <= _KNOWN_MAX_LOADER_API else None
+    except OSError:
+        api = None
+    caps: list[str] = []
+    if api is not None:
+        caps.append("game_loading")
+        if api >= 2:
+            caps.append("return_to_launcher")
+        if api >= 3:
+            caps.append("cheats")
+    return {"api_version": api, "capabilities": caps}
+
+
 def identify_loader(mount_path: str) -> dict[str, Any]:
     """Port de identifyLoader (PicoDex loaderVersion.ts), ciente do Loader Enhanced.
 
@@ -362,7 +466,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
     variant: official | enhanced (picoLoader7/9 do fork) | None
     """
     manifest = load_manifest()
-    loader = manifest.get("loader") or {}
+    loader = load_picodex_loader_manifest()
     order = [r.get("tag") for r in loader.get("releases") or [] if isinstance(r, dict)]
     latest_known = order[-1] if order else ""
     files_tbl = loader.get("files") or {}
@@ -409,6 +513,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
     builds = sorted(_intersect(build_sets)) if build_sets else []
 
     result: dict[str, Any] = {
+        "source": {"name": "PicoDex", "tag": loader.get("_picodex_tag", ""), "origin": loader.get("_origin", "app")},
         "variant": "enhanced" if enhanced_files else ("official" if present else None),
         "enhanced_version": enhanced_version,
         "enhanced_files": sorted(enhanced_files),
@@ -420,6 +525,7 @@ def identify_loader(mount_path: str) -> dict[str, Any]:
         "releases_behind": 0,
         "mismatch": None,
     }
+    result.update(loader_api_info(mount_path))
     if not present:
         result["status"] = "no-loader"
         return result
@@ -673,7 +779,7 @@ def set_stats(mount_path: str, rel: str, launch_count: Any, play_minutes: Any, l
 
 
 def prune_stale_entries(mount_path: str, file_names: list[str], log: LogFn = None) -> dict[str, Any]:
-    """Remove entradas de jogos que já não estão no cartão (cópia do JSON fica no host)."""
+    """Remove entradas de jogos que não estão mais no cartão (cópia do JSON fica no host)."""
     wanted = {n.lower() for n in file_names if isinstance(n, str)}
     if not wanted:
         return {"success": True, "removed": 0}
@@ -720,6 +826,48 @@ def _settings_problem(mount_path: str) -> Optional[str]:
     if not isinstance(obj, dict):
         return "settings.json inválido: a raiz não é um objeto."
     return None
+
+
+_ART_HEAD_BYTES = 64
+
+
+def launcher_art_problems(mount_path: str, launcher: str = "stock") -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Capas e ícones em /_pico que o Pico Launcher não consegue mostrar, e por quê.
+
+    PicoDex 0.10.3: uma capa fora do formato aparece como ruído ou some; um
+    ícone fora do formato aparece em branco. Quase sempre vêm de salvar a
+    imagem num editor; salvar de novo pelo Route Pico corrige.
+    """
+    from core.pico_bmp import validate_launcher_cover_bmp, validate_launcher_icon_bmp
+
+    covers: list[dict[str, str]] = []
+    icons: list[dict[str, str]] = []
+    for kind, out in (("covers", covers), ("icons", icons)):
+        for bucket in ("nds", "gba", "user"):
+            folder = _pico(mount_path, kind, bucket)
+            try:
+                names = sorted(os.listdir(folder), key=str.lower)
+            except OSError:
+                continue
+            for n in names:
+                if _is_junk_file(n) or not n.lower().endswith(".bmp"):
+                    continue
+                path = os.path.join(folder, n)
+                try:
+                    size = os.path.getsize(path)
+                    with open(path, "rb") as f:
+                        data = f.read(_ART_HEAD_BYTES if kind == "covers" else 4096)
+                except OSError as e:
+                    out.append({"rel": f"{PICO_DIR}/{kind}/{bucket}/{n}", "reason": f"não foi possível ler ({e.__class__.__name__})"})
+                    continue
+                reason = (
+                    validate_launcher_cover_bmp(data, size, launcher)
+                    if kind == "covers"
+                    else validate_launcher_icon_bmp(data)
+                )
+                if reason:
+                    out.append({"rel": f"{PICO_DIR}/{kind}/{bucket}/{n}", "reason": reason})
+    return covers, icons
 
 
 def check_health(mount_path: str) -> dict[str, Any]:
@@ -784,13 +932,16 @@ def check_health(mount_path: str) -> dict[str, Any]:
 
     launcher = identify_launcher(mount_path)
     loader = identify_loader(mount_path)
+    cover_problems, icon_problems = launcher_art_problems(
+        mount_path, "enhanced" if launcher.get("variant") == "enhanced" else "stock"
+    )
     problems = []
     if not launcher["present"]:
-        problems.append("Falta /_picoboot.nds: o DSPico não arranca o Pico Launcher.")
+        problems.append("Falta /_picoboot.nds: o DSPico não inicia o Pico Launcher.")
     if missing_required:
-        problems.append("Faltam ficheiros obrigatórios do Pico Loader em /_pico: " + ", ".join(missing_required) + ".")
+        problems.append("Faltam arquivos obrigatórios do Pico Loader em /_pico: " + ", ".join(missing_required) + ".")
     if loader["status"] == "mixed":
-        problems.append("Os ficheiros do Pico Loader vêm de releases diferentes; reinstale o loader.")
+        problems.append("Os arquivos do Pico Loader vêm de releases diferentes; reinstale o loader.")
     if loader.get("builds") and "DSPICO" not in loader["builds"]:
         problems.append("O Pico Loader no cartão foi feito para outro flashcard (" + ", ".join(loader["builds"]) + ").")
     sp = _settings_problem(mount_path)
@@ -810,6 +961,9 @@ def check_health(mount_path: str) -> dict[str, Any]:
         "missing_required": missing_required,
         "missing_optional": missing_optional,
         "junk": scan["junk"],
+        "macos_dirs": scan["macos_dirs"],
+        "cover_problems": cover_problems,
+        "icon_problems": icon_problems,
         "orphan_saves": orphan_saves,
         "duplicate_saves": duplicate_saves,
         "orphan_art": orphan_art,
@@ -824,7 +978,7 @@ def check_health(mount_path: str) -> dict[str, Any]:
 def remove_card_items(mount_path: str, rels: list[str], log: LogFn = None) -> dict[str, Any]:
     """Remove itens que o relatório de saúde apontou (lixo, saves órfãos, arte órfã).
 
-    Só aceita caminhos que o próprio relatório devolveria; cada ficheiro vai
+    Só aceita caminhos que o próprio relatório devolveria; cada arquivo vai
     primeiro para ~/.route_1_kit_cache/routedex_backup/.
     """
     if not isinstance(rels, list) or not rels:
@@ -842,7 +996,7 @@ def remove_card_items(mount_path: str, rels: list[str], log: LogFn = None) -> di
 
 
 # --------------------------------------------------------------------------- #
-# Capturas de ecrã (Enhanced: hold START)
+# Capturas de tela (Enhanced: hold START)
 # --------------------------------------------------------------------------- #
 
 
@@ -877,7 +1031,7 @@ def _find_shot(mount_path: str, shot_id: str) -> dict[str, Any]:
 
 
 def screenshot_png(mount_path: str, shot_id: str) -> bytes:
-    """As duas telas empilhadas (topo em cima) num único PNG."""
+    """As duas telas empilhadas (topo em cima) em um único PNG."""
     from core.pico_bmp import decode_bmp_rgba, rgba_to_png
 
     shot = _find_shot(mount_path, shot_id)

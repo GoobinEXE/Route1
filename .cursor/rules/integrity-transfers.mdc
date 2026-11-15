@@ -24,7 +24,7 @@ alwaysApply: false
 ## Concorrência
 
 - Uma escrita activa no SD de cada vez
-- Durante MSC “ocupado”, não escrever pelo gestor local
+- Durante MSC “ocupado”, não escrever pelo gerenciador local
 
 ## Proibido
 

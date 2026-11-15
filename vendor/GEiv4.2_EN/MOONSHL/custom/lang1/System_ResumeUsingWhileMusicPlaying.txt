@@ -1,5 +1,0 @@
-Resume music playback after reboot
-
-OFF = Resume playback from beginning
-ON  = Resume from last checkpoint
-       saved every 5 seconds

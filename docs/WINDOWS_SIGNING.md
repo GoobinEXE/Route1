@@ -47,7 +47,7 @@ Quando os três secrets **e** as três variables estiverem definidos, o job Wind
 
 ## Assinatura local (PFX / OV)
 
-Só para testes numa máquina Windows com Windows SDK:
+Só para testes em uma máquina Windows com Windows SDK:
 
 ```bash
 export WINDOWS_PFX_PATH="/c/path/to/DarkRoom.pfx"

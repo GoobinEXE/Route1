@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag a publicar (ex. v1.0.0); vazio = só build de artefactos"
+        description: "Tag a publicar (ex. v1.0.0); vazio = só build de artefatos"
         required: false
         default: ""
 
@@ -52,11 +52,59 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install innosetup -y
 
+      - name: Import macOS signing certificate (Developer ID)
+        if: runner.os == 'macOS'
+        id: mac_sign
+        shell: bash
+        env:
+          MACOS_CERT_P12: ${{ secrets.MACOS_CERT_P12 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          MACOS_NOTARY_KEY_P8: ${{ secrets.MACOS_NOTARY_KEY_P8 }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+        run: |
+          if [[ -z "${MACOS_CERT_P12}" || -z "${MACOS_CERT_PASSWORD}" || -z "${MACOS_NOTARY_KEY_P8}" \
+            || -z "${MACOS_NOTARY_KEY_ID}" || -z "${MACOS_NOTARY_ISSUER_ID}" ]]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Assinatura macOS omitida: secrets ausentes (ver docs/MACOS_SIGNING.md)."
+            exit 0
+          fi
+          KEYCHAIN="${RUNNER_TEMP}/routepico-signing.keychain-db"
+          KPASS="$(openssl rand -base64 24)"
+          security create-keychain -p "$KPASS" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KPASS" "$KEYCHAIN"
+          printf '%s' "$MACOS_CERT_P12" | base64 --decode > "${RUNNER_TEMP}/cert.p12"
+          security import "${RUNNER_TEMP}/cert.p12" -P "$MACOS_CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          rm -f "${RUNNER_TEMP}/cert.p12"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KPASS" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          printf '%s' "$MACOS_NOTARY_KEY_P8" | base64 --decode > "${RUNNER_TEMP}/AuthKey.p8"
+          {
+            echo "ROUTE_PICO_NOTARY_KEY=${RUNNER_TEMP}/AuthKey.p8"
+            echo "ROUTE_PICO_NOTARY_KEY_ID=${MACOS_NOTARY_KEY_ID}"
+            echo "ROUTE_PICO_NOTARY_ISSUER=${MACOS_NOTARY_ISSUER_ID}"
+            echo "ROUTE_PICO_SIGNING_KEYCHAIN=${KEYCHAIN}"
+          } >> "$GITHUB_ENV"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "Assinatura macOS (Developer ID) e notarização ativas."
+
       - name: Build macOS (portable zip + DMG)
         if: runner.os == 'macOS'
+        env:
+          # Em tag de release o app do macOS só sai assinado e notarizado; sem os
+          # secrets este passo falha e a release fica sem os arquivos do macOS.
+          ROUTE_PICO_REQUIRE_SIGNING: ${{ startsWith(github.ref, 'refs/tags/v') && '1' || '0' }}
         run: |
           chmod +x tools/build_macos_release.sh
           ./tools/build_macos_release.sh
+
+      - name: Remove macOS signing keychain
+        if: always() && runner.os == 'macOS' && steps.mac_sign.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          security delete-keychain "${ROUTE_PICO_SIGNING_KEYCHAIN}" || true
+          rm -f "${RUNNER_TEMP}/AuthKey.p8"
 
       - name: Build Windows (PyInstaller)
         if: runner.os == 'Windows'
@@ -84,7 +132,7 @@ jobs:
             echo "Assinatura Windows (Dark Room / Artifact Signing) activa."
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
-            echo "Assinatura Windows omitida — secrets/vars Azure em falta (ver docs/WINDOWS_SIGNING.md)."
+            echo "Assinatura Windows omitida — secrets/vars Azure ausentes (ver docs/WINDOWS_SIGNING.md)."
           fi
 
       - name: Azure login (OIDC)
@@ -146,7 +194,7 @@ jobs:
     name: GitHub Release
     needs: build
     runs-on: ubuntu-latest
-    # Publica mesmo se um SO falhar, desde que existam artefactos.
+    # Publica mesmo se um SO falhar, desde que existam artefatos.
     if: always() && startsWith(github.ref, 'refs/tags/v') && needs.build.result != 'cancelled'
     steps:
       - name: Checkout
@@ -162,7 +210,7 @@ jobs:
       - name: Require at least one artefact
         run: |
           count=$(find release_download -type f 2>/dev/null | wc -l | tr -d ' ')
-          echo "Ficheiros: ${count}"
+          echo "Arquivos: ${count}"
           find release_download -type f -print || true
           test "$count" -gt 0
 
@@ -187,7 +235,7 @@ jobs:
             ### Notas
 
             - Use um **cartão SD de teste** na primeira utilização.
-            - macOS pode pedir confirmação em *Privacidade e Segurança* (binário não notarizado pela Apple nesta release).
+            - macOS: app assinado com Developer ID e notarizado pela Apple; abre com dois cliques. Build para Apple Silicon (arm64).
             - Windows: builds assinados com Authenticode (Dark Room) quando o Azure Artifact Signing estiver configurado; caso contrário o SmartScreen pode avisar — “Mais informações” → Executar mesmo assim se confiar na origem.
             - Licença: GPL-3.0. Aviso legal e risco de brick: ver README.
 

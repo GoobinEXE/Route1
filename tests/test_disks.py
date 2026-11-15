@@ -127,7 +127,7 @@ def test_macos_force_cluster_retries_admin_on_permission(monkeypatch):
 
     monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
     monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
-    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501, raising=False)
     monkeypatch.setattr(
         disks,
         "_macos_terminal_newfs",
@@ -145,12 +145,12 @@ def test_macos_force_cluster_retries_admin_on_permission(monkeypatch):
 
 
 def test_macos_force_cluster_terminal_fallback_on_eperm(monkeypatch):
-    """Mantido: euid!=0 usa Terminal directamente (sem osascript)."""
+    """Mantido: euid!=0 usa Terminal diretamente (sem osascript)."""
     term_calls = []
 
     monkeypatch.setattr(disks.subprocess, "run", lambda *a, **k: _Proc(0))
     monkeypatch.setattr(disks, "_macos_newfs_bin", lambda: "/sbin/newfs_msdos")
-    monkeypatch.setattr(disks.os, "geteuid", lambda: 501)
+    monkeypatch.setattr(disks.os, "geteuid", lambda: 501, raising=False)
     monkeypatch.setattr(
         disks,
         "_macos_terminal_newfs",
@@ -192,3 +192,25 @@ def test_resolve_safe_drive_match(monkeypatch, tmp_path):
     d = disks.resolve_safe_drive(str(sd))
     assert d is not None
     assert d["device_id"] == "disk3s1"
+
+
+def test_macos_rejects_mounted_disk_images():
+    """Um .dmg montado (ex.: o instalador do app) não pode aparecer como cartão."""
+    dmg = {
+        "BusProtocol": "Disk Image",
+        "Removable": True,
+        "RemovableMedia": True,
+        "Internal": False,
+        "Ejectable": True,
+        "TotalSize": 1_090_000_000,
+    }
+    assert disks._macos_volume_allowed(dmg) is False
+    virtual = dict(dmg, BusProtocol="", VirtualOrPhysical="Virtual")
+    assert disks._macos_volume_allowed(virtual) is False
+
+
+def test_macos_accepts_sd_reader_and_usb():
+    sd = {"BusProtocol": "Secure Digital", "Removable": True, "Internal": False, "TotalSize": 32_000_000_000}
+    usb = {"BusProtocol": "USB", "RemovableMedia": True, "Internal": False, "TotalSize": 16_000_000_000}
+    assert disks._macos_volume_allowed(sd) is True
+    assert disks._macos_volume_allowed(usb) is True

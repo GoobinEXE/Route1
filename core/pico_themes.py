@@ -18,7 +18,12 @@ from core.sdio import UndoStack, sync_volume
 from core.twilight import _is_safe_archive_member
 
 _THEME_NAME_RE = re.compile(r"^[A-Za-z0-9._\- ]{1,64}$")
-_CUSTOM_REQUIRED_FILES = frozenset(
+# Arquivos que o Pico Launcher procura num tema custom. Nomes conforme o código
+# (arm9/source/romBrowser/Theme/custom/CustomRomBrowserViewFactory.cpp), que abre
+# cada um com `if (OpenThemeFile(...))`: todos são opcionais. O docs/Themes.md
+# oficial escreve "gridcellPlttSelected.bin", mas o launcher e o tema raspberry
+# incluído usam "gridcellSelectedPltt.bin".
+_CUSTOM_THEME_FILES = frozenset(
     {
         "bannerListCell.bin",
         "bannerListCellPltt.bin",
@@ -28,7 +33,7 @@ _CUSTOM_REQUIRED_FILES = frozenset(
         "gridcell.bin",
         "gridcellPltt.bin",
         "gridcellSelected.bin",
-        "gridcellPlttSelected.bin",
+        "gridcellSelectedPltt.bin",
         "scrim.bin",
         "scrimPltt.bin",
         "topbg.bin",
@@ -83,7 +88,7 @@ def _color_ok(obj: Any) -> bool:
 def _validate_theme_folder(folder_path: str) -> tuple[bool, str, Optional[dict[str, Any]]]:
     theme_json = os.path.join(folder_path, "theme.json")
     if not os.path.isfile(theme_json):
-        return False, "theme.json em falta.", None
+        return False, "theme.json ausente.", None
     try:
         data = _json_load(theme_json)
     except Exception as e:
@@ -100,10 +105,11 @@ def _validate_theme_folder(folder_path: str) -> tuple[bool, str, Optional[dict[s
         return False, "darkTheme deve ser booleano.", None
 
     if kind == "custom":
+        # Um tema custom sem nenhuma imagem conhecida não é um tema, é uma pasta
+        # com theme.json; com pelo menos uma, o launcher usa o que existir.
         present = set(os.listdir(folder_path))
-        missing = sorted(name for name in _CUSTOM_REQUIRED_FILES if name not in present)
-        if missing:
-            return False, "Tema custom incompleto: " + ", ".join(missing), None
+        if not present & _CUSTOM_THEME_FILES:
+            return False, "Tema custom sem nenhuma imagem (.bin) do Pico Launcher.", None
 
     return True, "ok", data
 
@@ -132,7 +138,7 @@ def _write_json_atomic(path: str, data: dict[str, Any], undo: UndoStack) -> None
 
 
 def list_pico_themes(mount_path: str) -> dict[str, Any]:
-    """Lista temas válidos em /_pico/themes e tema activo em settings.json."""
+    """Lista temas válidos em /_pico/themes e tema ativo em settings.json."""
     try:
         root = _themes_root(mount_path)
         os.makedirs(root, exist_ok=True)
@@ -166,7 +172,7 @@ def list_pico_themes(mount_path: str) -> dict[str, Any]:
 
 
 def set_pico_theme(mount_path: str, theme_folder: str) -> tuple[bool, str, dict[str, Any]]:
-    """Define o tema activo no /_pico/settings.json (campo theme)."""
+    """Define o tema ativo no /_pico/settings.json (campo theme)."""
     stats: dict[str, Any] = {}
     try:
         folder = _safe_theme_folder(theme_folder or "")
@@ -185,7 +191,7 @@ def set_pico_theme(mount_path: str, theme_folder: str) -> tuple[bool, str, dict[
             return False, msg, stats
         sync_volume(mount_path)
         stats["theme"] = folder
-        return True, f"Tema activo definido para '{folder}'.", stats
+        return True, f"Tema ativo definido para '{folder}'.", stats
     except Exception as e:
         return False, redact_text(e), stats
 

@@ -1,4 +1,4 @@
-"""Testes do gestor de ROMs (listar / importar / remover)."""
+"""Testes do gerenciador de ROMs (listar / importar / remover)."""
 
 import os
 

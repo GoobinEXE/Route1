@@ -80,7 +80,7 @@ def ensure_twlmagician_tools(log_callback=None) -> dict[str, str]:
     Garante tools pinados do TWLMagician (twltool / 7za|7z / fatcat / ndsblc).
 
     O release macOS é só o GUI PyInstaller — as tools vêm de Darwin/ no
-    repositório (pins SHA-256). A extracção da NAND usa fatcat (o 7za
+    repositório (pins SHA-256). A extração da NAND usa fatcat (o 7za
     standalone no Darwin não abre .img de NAND como arquivo).
     """
     system = platform.system()
@@ -107,7 +107,7 @@ def ensure_twlmagician_tools(log_callback=None) -> dict[str, str]:
             "ndsblc": "twlm_ndsblc_linux",
         }
 
-    emit_log(log_callback, "A preparar tools TWLMagician (pinados)…")
+    emit_log(log_callback, "Preparando tools TWLMagician (pinados)…")
     twltool = ensure_cached(specs["twltool"], log_callback)
     za = ensure_cached(specs["za"], log_callback)
     fatcat = ensure_cached(specs["fatcat"], log_callback)
@@ -198,7 +198,7 @@ def read_nocash_footer(nand_path: str) -> tuple[str, str]:
     size = os.path.getsize(nand_path)
     if size < _NAND_MIN_BYTES:
         raise RuntimeError(
-            f"nand.bin demasiado pequeno ({size // (1024 * 1024)} MiB). "
+            f"nand.bin pequeno demais ({size // (1024 * 1024)} MiB). "
             "É necessário um dump completo do dumpTool."
         )
     with open(nand_path, "rb") as f:
@@ -206,7 +206,7 @@ def read_nocash_footer(nand_path: str) -> tuple[str, str]:
         magic = f.read(0x10)
         if magic != _NOCASH_MAGIC:
             raise RuntimeError(
-                "Footer No$GBA em falta no nand.bin. "
+                "Footer No$GBA ausente no nand.bin. "
                 "Use o dump do dumpTool (com footer) — não um dump raw sem footer."
             )
         cid = hexlify(f.read(0x10)).upper().decode("ascii")
@@ -337,7 +337,7 @@ def _build_bootloader(
                 pc = os.path.join(walk_root, "bootloader files")
                 break
     if not os.path.isdir(pc):
-        raise RuntimeError("Pasta 'for PC/bootloader files' em falta no hiyaCFW.")
+        raise RuntimeError("Pasta 'for PC/bootloader files' ausente no hiyaCFW.")
 
     _apply_ips(os.path.join(pc, "bootloader arm7 patch.ips"), os.path.join(work, "arm7.bin"))
     _apply_ips(os.path.join(pc, "bootloader arm9 patch.ips"), os.path.join(work, "arm9.bin"))
@@ -391,7 +391,7 @@ def _decrypt_and_extract_sdnand(
     log_callback=None,
 ) -> str:
     """
-    nandcrypt + extracção da partição TWLN via fatcat (offset 1109504).
+    nandcrypt + extração da partição TWLN via fatcat (offset 1109504).
 
     No Darwin o 7za pinado não abre .img de NAND como arquivo; o TWLMagician
     oficial usa fatcat neste passo.
@@ -400,7 +400,7 @@ def _decrypt_and_extract_sdnand(
     twltool = tools["twltool"]
     fatcat = tools.get("fatcat") or ""
     if not fatcat or not os.path.isfile(fatcat):
-        raise RuntimeError("fatcat em falta — necessário para extrair a SDNAND.")
+        raise RuntimeError("fatcat ausente — necessário para extrair a SDNAND.")
 
     _run(
         [twltool, "nandcrypt", "--in", nand_copy, "--out", img],
@@ -409,19 +409,19 @@ def _decrypt_and_extract_sdnand(
         log_callback=log_callback,
     )
     if not os.path.isfile(img):
-        raise RuntimeError("nandcrypt não gerou a imagem desencriptada.")
+        raise RuntimeError("nandcrypt não gerou a imagem descriptografada.")
     try:
         img_size = os.path.getsize(img)
     except OSError:
         img_size = 0
     if img_size < _NAND_MIN_BYTES:
         raise RuntimeError(
-            f"Imagem desencriptada demasiado pequena ({img_size} bytes)."
+            f"Imagem descriptografada pequena demais ({img_size} bytes)."
         )
 
     sdnand = os.path.join(work, "sdnand_out")
     os.makedirs(sdnand, exist_ok=True)
-    emit_log(log_callback, "A extrair partição TWLN com fatcat…")
+    emit_log(log_callback, "Extraindo partição TWLN com fatcat…")
     # fatcat -O <offset> -x <outdir> <image>
     _run(
         [fatcat, "-O", _TWLN_FAT_OFFSET, "-x", sdnand, img],
@@ -449,7 +449,7 @@ def _install_launcher_app(
     launcher_folder: str,
     log_callback=None,
 ) -> str:
-    """Descarrega launcher pinado, extrai .app, copia para launcher_folder. Devolve nome do .app."""
+    """Baixa launcher pinado, extrai .app, copia para launcher_folder. Devolve nome do .app."""
     pin_key = _LAUNCHER_PIN_KEYS.get(region)
     if not pin_key:
         raise RuntimeError(f"Sem pin de launcher para região {region}.")
@@ -514,7 +514,7 @@ def update_hiya_only(mount_path: str, log_callback=None) -> tuple[bool, str]:
                 found = os.path.join(walk_root, "hiya.dsi")
                 break
         if not found:
-            return False, "hiya.dsi em falta no pacote."
+            return False, "hiya.dsi ausente no pacote."
         src = found
 
     undo = UndoStack()
@@ -541,8 +541,8 @@ def install_hiya_cfw(
     log_callback=None,
 ) -> tuple[bool, str]:
     """
-    Instala hiyaCFW + SDNAND no cartão a partir do nand.bin do utilizador.
-    Nunca escreve na SysNAND da consola.
+    Instala hiyaCFW + SDNAND no cartão a partir do nand.bin do usuário.
+    Nunca escreve na SysNAND do console.
     """
     log = lambda msg: emit_log(log_callback, msg)
 
@@ -550,7 +550,7 @@ def install_hiya_cfw(
         return update_hiya_only(mount_path, log_callback)
 
     log("=== Instalando hiyaCFW (SDNAND) ===")
-    log("O app não grava na NAND da consola — só no cartão SD.")
+    log("O app não grava na NAND do console — só no cartão SD.")
 
     try:
         nand = resolve_nand_path(mount_path, nand_path)
@@ -568,21 +568,21 @@ def install_hiya_cfw(
             archive, os.path.join(CACHE_DIR, "hiyaCFW_extract"), log_callback
         )
     except Exception as e:
-        return False, f"Falha a preparar tools/pacote: {e}"
+        return False, f"Falha ao preparar tools/pacote: {e}"
 
-    # Trabalho em staging — nunca decrypt in-place no nand do utilizador
+    # Trabalho em staging — nunca decrypt in-place no nand do usuário
     with tempfile.TemporaryDirectory(dir=CACHE_DIR, prefix="hiya_work_") as work:
         try:
             nand_copy = os.path.join(work, "nand.bin")
-            log("A copiar nand.bin para staging…")
+            log("Copiando nand.bin para staging…")
             shutil.copy2(nand, nand_copy)
 
-            log("A gerar bootloader…")
+            log("Gerando bootloader…")
             bootloader = _build_bootloader(
                 work, hiya_root, tools, nand_copy, log_callback
             )
 
-            log("A desencriptar NAND e extrair SDNAND (pode demorar)…")
+            log("Descriptografando NAND e extraindo SDNAND (pode demorar)…")
             sdnand = _decrypt_and_extract_sdnand(
                 work, tools, nand_copy, console_id, log_callback
             )
@@ -590,7 +590,7 @@ def install_hiya_cfw(
             app_id, region = _detect_region(sdnand)
             log(f"Região detectada: {region}")
 
-            # Mesclar ficheiros hiyaCFW no sdnand staging
+            # Mesclar arquivos hiyaCFW no sdnand staging
             sdnand_pkg = os.path.join(hiya_root, "for SDNAND SD card")
             if not os.path.isdir(sdnand_pkg):
                 for walk_root, dirs, _ in os.walk(hiya_root):
@@ -657,11 +657,11 @@ def install_hiya_cfw(
                     if not os.path.isdir(src):
                         continue
                     dst = os.path.join(mount_path, dname)
-                    log(f"A copiar {dname}/…")
+                    log(f"Copiando {dname}/…")
                     n = _stage_dir_copy(undo, src, dst, log_callback)
-                    log(f"✅ {dname}/ ({n} ficheiros).")
+                    log(f"✅ {dname}/ ({n} arquivos).")
 
-                # ficheiros na raiz do SDNAND relevantes
+                # arquivos na raiz do SDNAND relevantes
                 for fname in ("hiya.dsi",):
                     src = os.path.join(sdnand, fname)
                     if os.path.isfile(src):
@@ -678,7 +678,7 @@ def install_hiya_cfw(
                 from core.exploits import _twilight_present
 
                 if not _twilight_present(mount_path):
-                    log("TWiLight em falta — a instalar versão pinada…")
+                    log("TWiLight ausente — instalando versão pinada…")
                     ok, msg = install_twilight_menu(mount_path, log_callback=log_callback)
                     if not ok:
                         raise RuntimeError(f"hiya OK parcial, mas TWiLight falhou: {msg}")
@@ -687,7 +687,7 @@ def install_hiya_cfw(
                 _cleanup_baks(baks)
 
                 if not hiya_markers_ok(mount_path):
-                    raise RuntimeError("Validação pós-install: hiya.dsi/hiya em falta.")
+                    raise RuntimeError("Validação pós-install: hiya.dsi/hiya ausente.")
 
                 log("🎉 hiyaCFW + SDNAND instalados no SD.")
                 log(

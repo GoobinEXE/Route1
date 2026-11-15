@@ -153,7 +153,7 @@ def test_kekatsu_recipe_creates_databases(tmp_path, monkeypatch, fake_cache):
     assert "UDB-Kekatsu-DS=" in text
     assert (sd / "roms" / "apps" / "Kekatsu.nds").is_file()
 
-    # Segunda instalação não sobrescreve config do utilizador
+    # Segunda instalação não sobrescreve config do usuário
     db.write_text("custom=https://example.com/db\n", encoding="utf-8")
     ok2, _ = sd_utils.install_homebrew(str(sd), "kekatsu")
     assert ok2 is True

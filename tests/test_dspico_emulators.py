@@ -258,7 +258,9 @@ def test_organize_all_emulator_roms_by_platform(tmp_path):
     samples = {
         "ROMs/GBA/Zelda.gba": "gba",
         "ROMs/NES/Mega.nes": "nes",
-        "ROMs/Genesis/Sonic.gen": "genesis",
+        "ROMs/Genesis/Sonic.gen": "gen",
+        "ROMs/GBC/Link.gbc": "gb",
+        "ROMs/WS/Gunpey.ws": "ws",
         "ROMs/2600/Pitfall.a26": "2600",
         "ROMs/800/Basic.car": "800",
         "ROMs/INTV/Astrosmash.int": "int",

@@ -126,16 +126,19 @@ def test_identify_loader_official_mixed_and_enhanced(fake_sd, monkeypatch):
     for n, b in files.items():
         _write(sd / "_pico" / n, b)
     h = {n: routedex._sha256_file(str(sd / "_pico" / n)) for n in files}
-    manifest = {
-        "loader": {
-            "releases": [{"tag": "v1.0.0"}, {"tag": "v1.1.0"}, {"tag": "v1.2.0"}],
-            "files": {n: {h[n]: ["v1.1.0"]} for n in files},
-            "builds": {n: {h[n]: ["DSPICO"]} for n in files},
-        },
-        "loader_enhanced": {"files": {}},
+    # Pico Loader oficial: manifesto da PicoDex; Enhanced: o nosso.
+    picodex = {
+        "releases": [{"tag": "v1.0.0"}, {"tag": "v1.1.0"}, {"tag": "v1.2.0"}],
+        "files": {n: {h[n]: ["v1.1.0"]} for n in files},
+        "builds": {n: {h[n]: ["DSPICO"]} for n in files},
+        "_picodex_tag": "v0.12.0",
+        "_origin": "app",
     }
-    _manifest(monkeypatch, manifest)
+    monkeypatch.setattr(routedex, "_picodex_loader_cache", picodex)
+    _manifest(monkeypatch, {"loader_enhanced": {"files": {}}})
+    manifest = {"loader": picodex}
     res = routedex.identify_loader(str(sd))
+    assert res["source"] == {"name": "PicoDex", "tag": "v0.12.0", "origin": "app"}
     assert res["status"] == "identified" and res["candidates"] == ["v1.1.0"]
     assert res["releases_behind"] == 1 and res["variant"] == "official" and res["builds"] == ["DSPICO"]
 
@@ -166,7 +169,8 @@ def test_shipped_manifest_knows_pinned_releases():
     m = routedex.load_manifest()
     assert "v1.3.0" in m["launcher"]["official"].values()
     assert "enhanced-v1.11.0" in m["launcher"]["enhanced"].values()
-    assert "v1.6.0" in [r["tag"] for r in m["loader"]["releases"]]
+    assert "loader" not in m  # o Pico Loader oficial vem do manifesto da PicoDex
+    assert "enhanced-v1.0.1" in [r["tag"] for r in m["loader_enhanced"]["releases"]]
 
 
 # --- saúde -----------------------------------------------------------------
@@ -185,13 +189,18 @@ def test_health_finds_junk_orphans_and_duplicates_and_removes_with_backup(fake_s
     rep = routedex.check_health(str(sd))
     assert rep["orphan_saves"] == ["Games/Lost.sav"]
     assert rep["duplicate_saves"][0]["in_folder"] == "Games/saves/Kept.sav"
-    assert "Games/._Kept.nds" in rep["junk"] and ".Spotlight-V100" in rep["junk"]
-    assert ".fseventsd" not in rep["junk"]
+    assert rep["junk"] == ["Games/._Kept.nds"]
+    # Pastas do macOS não são lixo a limpar (PicoDex): só aparecem como aviso.
+    dirs = {d["rel"]: d["kept"] for d in rep["macos_dirs"]}
+    assert dirs == {".Spotlight-V100": False, ".fseventsd": True}
     assert rep["orphan_art"] == ["_pico/covers/user/Gone.nds.bmp"]
+    assert rep["cover_problems"] == [{"rel": "_pico/covers/user/Gone.nds.bmp", "reason": "arquivo pequeno demais (2 bytes)"}]
     assert "picoLoader7.bin" in rep["missing_required"]
 
     with pytest.raises(routedex.RouteDexError):
         routedex.remove_card_items(str(sd), ["Games/Kept.sav"])
+    with pytest.raises(routedex.RouteDexError):
+        routedex.remove_card_items(str(sd), [".Spotlight-V100"])
     out = routedex.remove_card_items(str(sd), ["Games/Lost.sav"])
     assert out["removed"] == ["Games/Lost.sav"] and not (sd / "Games" / "Lost.sav").exists()
     backups = [os.path.join(r, f) for r, _d, fs in os.walk(routedex.CACHE_DIR) for f in fs]
@@ -355,3 +364,26 @@ def test_enhanced_variant_is_opt_in_and_allowlisted():
     assert not updates._is_allowed_url("https://github.com/rasalopa/other/releases/download/x/a.zip")
     res = updates.install_dspico_component("/nonexistent", "pico-launcher", "pinned", variant="bogus")
     assert res["success"] is False
+
+
+def test_launcher_art_problems_follow_launcher_rules(fake_sd):
+    from core import pico_bmp
+
+    sd = _card(fake_sd)
+    good_cover = pico_bmp.rgba_to_cover_bmp(2, 2, bytes([200, 10, 10, 255] * 4))
+    good_icon = pico_bmp.rgba_to_icon_bmp(2, 2, bytes([10, 200, 10, 255] * 4))
+    _write(sd / "_pico" / "covers" / "nds" / "AMCE.bmp", good_cover)
+    _write(sd / "_pico" / "icons" / "user" / "Ok.nds.bmp", good_icon)
+    # Capa com DIB de 108 bytes (V4): o launcher do LNH recusa, o Enhanced aceita.
+    v4 = bytearray(good_cover)
+    struct.pack_into("<I", v4, 14, 108)
+    _write(sd / "_pico" / "covers" / "user" / "V4.nds.bmp", bytes(v4))
+    bad_icon = bytearray(good_icon)
+    struct.pack_into("<H", bad_icon, 28, 8)
+    _write(sd / "_pico" / "icons" / "gba" / "BPEE.bmp", bytes(bad_icon))
+    covers, icons = routedex.launcher_art_problems(str(sd), "stock")
+    assert [c["rel"] for c in covers] == ["_pico/covers/user/V4.nds.bmp"]
+    assert "40" in covers[0]["reason"]
+    assert icons == [{"rel": "_pico/icons/gba/BPEE.bmp", "reason": "8 bits por pixel; o launcher precisa de 4"}]
+    covers_enh, _ = routedex.launcher_art_problems(str(sd), "enhanced")
+    assert covers_enh == []

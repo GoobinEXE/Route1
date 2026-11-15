@@ -23,7 +23,7 @@ const char *r1_fs_root(void);
  */
 int r1_fs_list(const char *rel_dir, r1_fs_entry_t *out, int max_entries);
 
-/* Apaga ficheiro ou pasta (recursivo). critical_ok=1 após aviso forte na UI. */
+/* Apaga arquivo ou pasta (recursivo). critical_ok=1 após aviso forte na UI. */
 int r1_fs_delete(const char *rel_path, int critical_ok);
 
 unsigned long long r1_fs_free_bytes(void);

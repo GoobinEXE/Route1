@@ -1,9 +1,9 @@
 ; Inno Setup 6 — instalador Route Pico (Windows x64)
-; Compilar: ISCC /DMyAppVersion=1.0.0 packaging/windows/RoutePico.iss
+; Compilar: ISCC /DMyAppVersion=1.2.0 packaging/windows/RoutePico.iss
 ; Pré-requisito: dist\RoutePico\ gerado pelo PyInstaller.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1.0"
+  #define MyAppVersion "1.2.0"
 #endif
 
 #define MyAppName "Route Pico"

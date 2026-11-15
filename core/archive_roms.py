@@ -1,4 +1,4 @@
-"""Extracção segura de ROMs a partir de .zip / .7z / .rar para importação."""
+"""Extração segura de ROMs a partir de .zip / .7z / .rar para importação."""
 
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ def _extract_rar_safe(archive_path: str, tmp: str) -> None:
     if not za:
         raise RuntimeError(
             "Não foi possível obter o 7za pinado para extrair .rar. "
-            "Verifique a ligação à Internet ou extraia o arquivo manualmente."
+            "Verifique a conexão com a Internet ou extraia o arquivo manualmente."
         )
     # 7za: -y assume Yes; -o sem espaço antes do path
     out_switch = f"-o{tmp}"
@@ -166,11 +166,11 @@ def expand_rom_sources(
     Expande ROMs soltas e arquivos (.zip/.7z/.rar) para paths absolutos de ROM.
 
     Retorna (rom_paths, errors, stats). Staging temporário é limpo no fim;
-    os paths devolvidos são cópias sob um staging partilhado que o caller
+    os paths devolvidos são cópias sob um staging compartilhado que o caller
     deve usar imediatamente (ainda válido até cleanup do contexto).
 
     Nota: o staging vive até ``cleanup_expand_staging(stats)`` ou GC do
-    TemporaryDirectory guardado em stats[\"_staging_dirs\"].
+    TemporaryDirectory salvo em stats[\"_staging_dirs\"].
     """
     allowed = frozenset(
         e.lower() if e.startswith(".") else f".{e.lower()}" for e in allowed_exts

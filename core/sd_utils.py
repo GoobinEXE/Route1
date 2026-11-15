@@ -138,7 +138,7 @@ def _extract_usrcheat_from_zip(zip_path: str, dest_dir: str) -> Optional[str]:
 def install_cheats(mount_path: str, log_callback=None) -> tuple[bool, str]:
     """
     Instala usrcheat.dat em /_nds/TWiLightMenu/extras/.
-    Fonte: ficheiro em Downloads/Desktop (sem URL estável pinável).
+    Fonte: arquivo em Downloads/Desktop (sem URL estável pinável).
     """
     log = lambda msg: emit_log(log_callback, msg)
     if not is_safe_mount_path(mount_path):
@@ -174,9 +174,9 @@ def install_cheats(mount_path: str, log_callback=None) -> tuple[bool, str]:
             )
 
         if os.path.basename(src).lower() not in _ALLOWED_CHEAT_NAMES:
-            return False, "Ficheiro de cheats inválido (nome esperado: usrcheat.dat)."
+            return False, "Arquivo de cheats inválido (nome esperado: usrcheat.dat)."
         if os.path.getsize(src) < _USRCHEAT_MIN:
-            return False, "usrcheat.dat demasiado pequeno — ficheiro incompleto?"
+            return False, "usrcheat.dat pequeno demais — arquivo incompleto?"
 
         extras = os.path.join(mount_path, "_nds", "TWiLightMenu", "extras")
         os.makedirs(extras, exist_ok=True)
@@ -220,7 +220,7 @@ def copy_nand_backup(mount_path: str, log_callback=None) -> tuple[bool, str]:
             out_dir = os.path.join(desktop, f"NAND_{folder}_{stamp}")
             os.makedirs(out_dir, exist_ok=True)
             dst = os.path.join(out_dir, "nand.bin")
-            log(f"A copiar {folder}/nand.bin ({d.get('size_mb')} MiB)…")
+            log(f"Copiando {folder}/nand.bin ({d.get('size_mb')} MiB)…")
             shutil.copy2(src, dst)
             sha_src = os.path.join(mount_path, folder, "nand.bin.sha1")
             if os.path.isfile(sha_src):

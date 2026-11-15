@@ -6,7 +6,7 @@ Guia para agentes (Cursor e similares) que trabalham neste repositório.
 
 App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões SD para **Nintendo DSi** e flashcards (GEi / AceKard / R4 / **DSPico**). Nome do produto: **Route Pico** (antes Route 1 Kit). Foco: cartucho **DSPico**; softmod DSi e GEi/R4 ficam em «Mais ferramentas».
 
-- Duas partes no mesmo repositório: o **desktop** (descrito abaixo) e o **app do console** `.nds` em `nds/` (secção «App do console»), ligados pelo protocolo USB em `protocol/`
+- Duas partes no mesmo repositório: o **desktop** (descrito abaixo) e o **app do console** `.nds` em `nds/` (seção «App do console»), ligados pelo protocolo USB em `protocol/`
 - Shell: Python 3.10+ + **pywebview** (janela nativa; **sem** servidor HTTP)
 - UI: HTML/CSS/JS offline em `static/` (Tailwind compilado localmente, fontes embutidas)
 - Lógica: módulos em `core/` (intocados pela shell)
@@ -20,7 +20,7 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 |---------|--------|
 | `app.py` | Entrada pywebview, `Api` (fachada de domínio), `OP_LOCK` / logs, preflight + ops de montagem |
 | `services/` | `FilePickerPort`, `wizard_flow`, `web_events` (UI ↔ Api) |
-| `static/` | Shell HTML/CSS/JS (sidebar, DSPico, Softmod, Utilidades, Cartão) |
+| `static/` | Shell HTML/CSS/JS (Início, DSPico, Mais ferramentas, Configurações) |
 | `static/assets/` | Logo, ícones, plataformas, fontes |
 | `core/disks.py` | Listagem e formatação de volumes removíveis |
 | `core/sdio.py` | Pré-voo de escrita, sync de volume |
@@ -29,12 +29,19 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `vendor/GEiv4.2_EN/` | Pacote base do flashcard GEi (kernel + MoonShell) |
 | `core/rom_cleaner.py` | Organização de ROMs / saves |
 | `core/rom_manager.py` | Listar / importar / remover / mover jogos no SD (`/roms/`) |
-| `core/dspico.py` | Pacote DSPico LNH (`Games/`, emunand, settings, RPI-RP2, organizar pastas); pacote/firmware só `LNH-team`; `DSPICO_OFFICIAL_LINKS` (repos + [manual ChiScart](https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf)) — ver secção **Fontes oficiais DSPico** |
+| `core/dspico.py` | Pacote DSPico LNH (`Games/`, emunand, settings, RPI-RP2, organizar pastas); pacote/firmware só `LNH-team`; `DSPICO_OFFICIAL_LINKS` (repos + [manual ChiScart](https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf)) — ver seção **Fontes oficiais DSPico** |
 | `core/dspico_emulators.py` | Catálogo + instalação de emuladores Pico-Launcher (pins `DSPICO_EMU_CACHE_KEYS`) |
 | `core/updates.py` | Verificar / instalar actualizações do ecossistema DSPico (pinned + latest LNH); variante opt-in `enhanced` (rasalopa) para launcher/loader |
 | `core/routedex.py` | RouteDex: `gamedata.json` sem perdas, saúde do cartão, versão do loader/launcher, capturas, banners/capas de pasta, fundos noturnos, `usrcheat.dat` (port do PicoDex, MIT) |
-| `core/data/pico_manifest.json` | SHA-256 por ficheiro das releases Pico Loader/Launcher (oficial + Enhanced); regenerar com `tools/gen_pico_manifest.py` |
-| `static/js/routedex.js` | UI do separador DSPico → RouteDex |
+| `core/upstreams.py` + `core/data/upstreams.lock.json` | **Fontes oficiais** (PicoDex, Pico Launcher, Pico Loader, Launcher Enhanced, Loader Enhanced): repos, tags e SHA-256 em uso; `cache_pins`, `updates` e RouteDex leem daqui |
+| `core/picodex_rules.py` | Regras da PicoDex onde o app faz o mesmo: sistemas e pastas `Games/<sistema>/`, destino da arte (`artPaths`), correspondência de capas no catálogo libretro-thumbnails (`matching`) |
+| `core/data/picodex/loaderReleases.json` | Manifesto de versões do Pico Loader **mantido pela PicoDex** (cópia fixada no lock; o usuário pode atualizá-lo pelo painel) |
+| `core/data/pico_manifest.json` | SHA-256 do `LAUNCHER.nds` (oficial + Enhanced) e do Loader Enhanced — só o que a PicoDex não cobre; `tools/gen_pico_manifest.py` |
+| `static/js/routedex.js` | UI do separador DSPico → RouteDex (biblioteca por sistema, galeria, capas, estatísticas, capturas, pastas, cheats) |
+| `core/library_views.py` | Vistas da PicoDex: biblioteca por sistema, galeria, capas que faltam (só par exato, nunca ícones), estatísticas |
+| `core/art_picker.py` | Janela de capa e ícone + banner de pasta (PicoDex CoverPicker/BannerEditor): Python fornece imagens (data URL), a UI compõe no canvas, Python codifica/valida/grava com verify-before-replace |
+| `core/loader_compat.py` | Compatibilidade por jogo com o Pico Loader (port de `loaderlists.ts`) |
+| `static/js/picodex-ui.js` + `static/picodex.css` | Janelas da PicoDex: capa e ícone, banner de pasta, estatísticas, compatibilidade, associações de arquivo |
 | `core/pico_themes.py` | Temas Pico Launcher (`/_pico/themes/`) |
 | `core/artwork.py` | Capas/ícones: SteamGridDB (principal) → GameTDB + Libretro → TWiLight `boxart/` / `icons/` |
 | `core/steamgriddb.py` | Cliente API SteamGridDB (chave em prefs / `STEAMGRIDDB_API_KEY`) |
@@ -49,17 +56,18 @@ App desktop **multiplataforma** (macOS / Windows / Linux) que prepara cartões S
 | `core/privacy.py` | Redação de paths / PII em logs e respostas |
 | `tests/` | pytest |
 | `tools/update_pins.py` | Verificar / atualizar pins SHA-256 |
-| `tools/gen_pico_manifest.py` | Regenerar / `--check` o manifesto de hashes usado pelo RouteDex |
-| `nds/` | App do console (C, libnds): gestor de ficheiros do microSD + ponte USB (`make -C nds test`, `make -C nds nds`) |
-| `protocol/` | Spec R1USB partilhada desktop ↔ console (`R1USB.md` + `messages.json`) |
+| `tools/sync_upstreams.py` | `--check` / `--apply`: alinhar o lock com as releases mais recentes das cinco fontes oficiais (workflow semanal `upstreams.yml` abre PR) |
+| `tools/gen_pico_manifest.py` | Regenerar `core/data/pico_manifest.json` (corrido pelo `sync_upstreams.py --apply`) |
+| `nds/` | App do console (C, libnds): gerenciador de arquivos do microSD + ponte USB (`make -C nds test`, `make -C nds nds`) |
+| `protocol/` | Spec R1USB compartilhada desktop ↔ console (`R1USB.md` + `messages.json`) |
 | `docs/console/` | Plano, arquitetura e manuais do app do console |
 | `tools/build_icons.py` | Regenerar ícones a partir dos SVGs (`static/assets/`) |
 | `packaging/` | Spec PyInstaller + Inno Setup (Windows; publisher **Dark Room**) |
 | `docs/WINDOWS_SIGNING.md` | Authenticode / Azure Artifact Signing no CI |
 | `docs/ui-parity.md` | Inventário de funcionalidades → navegação (gate de UI) |
-| `.cursor/rules/*.mdc` | Regras detalhadas e sempre/parcialmente aplicadas (`dspico-sources` quando ficheiros DSPico) |
+| `.cursor/rules/*.mdc` | Regras detalhadas e sempre/parcialmente aplicadas (`dspico-sources` quando arquivos DSPico) |
 
-## Como correr
+## Como rodar
 
 ```bash
 source .venv/bin/activate
@@ -86,18 +94,18 @@ python tools/update_pins.py --check
 ## Arquitetura da bridge
 
 1. JS chama métodos de `Api` (pywebview serializa JSON).
-2. Cada chamada corre numa **thread não-daemon**.
+2. Cada chamada roda em uma **thread não-daemon**.
 3. Escritas no SD passam por `_run_mount_op` + `OP_LOCK` (`blocking=False`); **`preflight` dentro do lock**.
-4. Diálogos de ficheiro: `FilePickerPort` (pywebview `create_file_dialog`), injectado na `Api`.
+4. Diálogos de arquivo: `FilePickerPort` (pywebview `create_file_dialog`), injectado na `Api`.
 5. Eventos UI: `services/web_events.py` → `evaluate_js` (`R1K.events.dispatch`); `get_logs` é fallback.
 6. Respostas tipicamente `{success: bool, error?: str, ...}` — erros via `_reject` / redação em `core.privacy`.
-7. Fecho da janela: se `OP_LOCK.locked()`, **bloquear** o close.
+7. Fechamento da janela: se `OP_LOCK.locked()`, **bloquear** o close.
 
 ## Invariantes (não negociáveis)
 
 Detalhe e exemplos: `.cursor/rules/` — não duplicar aqui; cumprir sempre.
 
-1. **Concorrência** (`concurrency-safety`): timeouts em subprocess de disco; `finally` no lock; UI `busy` + `finally`; fecho bloqueado com op em curso.
+1. **Concorrência** (`concurrency-safety`): timeouts em subprocess de disco; `finally` no lock; UI `busy` + `finally`; fechamento bloqueado com op em curso.
 2. **Defensiva** (`defensive-programming`): `with` / cleanup; inputs da UI não confiáveis; nunca crashar a janela com exceção não tratada na fronteira.
 3. **API segura** (`secure-api-boundary`): `_as_path_str`, `_as_bool` (nunca `bool("false")`), `is_safe_mount_path` / `resolve_safe_drive`; `subprocess` só com lista de args; XSS → `escapeHtml` / `textContent`.
 4. **Privacidade** (`privacy-logging`): não logar home absoluto; `redact_path` / `redact_text`; não devolver conteúdo de `nand.bin` nem segredos.
@@ -109,22 +117,24 @@ Detalhe e exemplos: `.cursor/rules/` — não duplicar aqui; cumprir sempre.
 
 - Preferir mudanças mínimas e alinhadas ao estilo existente (nomes, helpers de `app.py` / `core/` / `services/`).
 - UI 100% **offline**: sem CDN, sem fetch remoto na UI (downloads oficiais só via `core/cache.py` com pins).
-- Temas da app: tokens em `themes.css` + entrada em `THEMES` (`theme.js`); CSS consome `--c-*`.
-- Navegação: sidebar Início / DSPico / Softmod DSi / Utilidades / Cartão SD / Outros flashcards / Definições; wizards em `services/wizard_flow.py`.
+- Temas do app: sete temas (Dupla Tela, Câmera Dupla, Canais, Tablet de Sala, Cubo, Estéreo 3D, Híbrido) × modos Original / Claro (Catppuccin Latte) / Noturno (Catppuccin Mocha) / Sistema. Paletas em `tools/build_themes.py`, que gera `static/themes.css` + `static/theme-data.js` e falha se alguma combinação não passar em WCAG AA (`tests/test_themes.py`); nunca editar os gerados à mão. Painéis, botões, abas e o gesto de seleção de cada tema ficam em `static/skins.css`; o shell e o arranjo do Início de cada tema em `static/console.css`. As funções e os controles das telas de trabalho são os mesmos em todos. Fonte da UI: Geist embutida (OFL). Ícones do app: sólidos de cantos retos no sprite de `static/index.html`. Ícone do programa: framboesa do DSPico (LNH team, CC BY-SA 4.0) com a seta de rota; crédito em `docs/licenses/`. Nada de logotipos, ícones, fontes ou nomes de marcas da Nintendo.
+- Navegação: menu de console (barra de status, Início com blocos, telas com Voltar e abas irmãs, barra de ícones; histórico por hash em `static/js/shell.js`; `docs/ui-parity.md`). O arranjo do Início muda por tema em `static/console.css`; cada painel vive no HTML da sua vista; um só seletor de cartão (barra de cima) e um só log (gaveta Atividade); wizards em `services/wizard_flow.py`.
 - DSPico (pacote/firmware): só downloads `DSPICO_CACHE_KEYS` / `github.com/LNH-team/`; jogos NDS/DSi em `Games/`; UF2 só com `dspico_firmware_uf2_ready()`.
 - DSPico Enhanced: só por escolha explícita (`variant="enhanced"`), pins `DSPICO_ENHANCED_CACHE_KEYS`, aviso `ENHANCED_DISCLAIMER` visível; o oficial continua o padrão e há sempre «Voltar ao oficial».
+- Fontes oficiais: os pacotes do launcher/loader (oficial e Enhanced) e os dados da PicoDex vêm **só** dos repos de `core/upstreams.py`; nunca escrever pins/URLs destes pacotes à mão — usar `tools/sync_upstreams.py --apply`. `tests/test_upstreams.py` falha se um repo, pin ou URL sair do registro.
+- PicoDex primeiro: onde o app e a PicoDex fazem a mesma coisa (pastas por sistema, destino da arte, escolha de capas, versão do loader, gamedata, saúde, banners, capturas), seguir `core/picodex_rules.py` / `core/routedex.py` e a PicoDex upstream.
 - RouteDex: crédito ao PicoDex (rasalopa, MIT) visível na UI; nunca sobrescrever um `gamedata.json` que não faz parse; remoções copiam antes para `~/.route_1_kit_cache/routedex_backup/`.
-- DSPico (emuladores): pins em `DSPICO_EMU_CACHE_KEYS` (guias Sanrax / autores oficiais); NDS em `/_pico/emulators/` ou `/Emulators/`; ROMs retro em `/ROMs/`; nunca descarregar BIOS proprietária.
-- Idioma do produto / README: português (pt); manter mensagens de UI e logs de utilizador em PT.
+- DSPico (emuladores): pins em `DSPICO_EMU_CACHE_KEYS` (guias Sanrax / autores oficiais); NDS em `/_pico/emulators/` ou `/Emulators/`; ROMs retro em `/ROMs/`; nunca baixar BIOS proprietária.
+- Idioma do produto / README: português (pt); manter mensagens de UI e logs de usuário em PT.
 - Não inventar telemetria remota.
 
 ## Fontes oficiais DSPico (agents)
 
-Ao trabalhar no modo DSPico (`core/dspico*.py`, `core/pico_*.py`, `static/dspico.js`, `static/js/*`, testes associados), **usar estas fontes** — não inventar layout do SD, nomes de ficheiros nem fluxo de firmware. Regra Cursor: `.cursor/rules/dspico-sources.mdc`. URLs também em `DSPICO_OFFICIAL_LINKS` (`core/dspico.py`).
+Ao trabalhar no modo DSPico (`core/dspico*.py`, `core/pico_*.py`, `static/dspico.js`, `static/js/*`, testes associados), **usar estas fontes** — não inventar layout do SD, nomes de arquivos nem fluxo de firmware. Regra Cursor: `.cursor/rules/dspico-sources.mdc`. URLs também em `DSPICO_OFFICIAL_LINKS` (`core/dspico.py`).
 
 | Fonte | URL |
 |-------|-----|
-| Manual utilizador (ChiScart PDF) | https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf |
+| Manual usuário (ChiScart PDF) | https://www.chiscart.com/manuals/DS_Pico_user_manual_87a632eec6.pdf |
 | GUIDE LNH | https://github.com/LNH-team/dspico/blob/develop/GUIDE.md |
 | Usage Pico Launcher | https://github.com/LNH-team/pico-launcher/blob/develop/docs/Usage.md |
 | Themes Pico Launcher | https://github.com/LNH-team/pico-launcher/blob/develop/docs/Themes.md |
@@ -144,7 +154,7 @@ Homebrew `.nds` aberto a partir do Pico Launcher. Plano e fases: `docs/console/P
 Invariantes:
 
 1. **Integridade:** nunca promover sem hash OK; em falha apaga-se só o `.r1partial`.
-2. **Concorrência:** uma escrita no SD de cada vez; USB e gestor local nunca escrevem em paralelo.
+2. **Concorrência:** uma escrita no SD de cada vez; USB e gerenciador local nunca escrevem em paralelo.
 3. **Caminhos:** um só helper (`r1_path_is_safe`); rejeitar `..`, NUL e caminhos de outro volume; `_picoboot.nds` e `/_pico` exigem confirmação forte (`E_DENIED` sem ela).
 4. **Protocolo:** mudança em `protocol/` sobe a versão em `messages.json`, `version.h` e `R1USB.md` no mesmo commit; `tests/test_protocol_messages.py` compara os dois lados.
 5. **Timeouts:** I/O USB e SD com limite; a sessão aborta se o cartão desaparecer.
@@ -168,19 +178,19 @@ Antes de refactors cosméticos, assinalar:
 
 - [ ] subprocess sem `timeout=`
 - [ ] preflight / escrita fora de `OP_LOCK`
-- [ ] fecho da janela sem guarda de lock
+- [ ] fechamento da janela sem guarda de lock
 - [ ] path / bool da UI sem tipagem / revalidação
 - [ ] path absoluto de home em log ou payload
-- [ ] ficheiro de probe / handle / `.partial` sem cleanup
+- [ ] arquivo de probe / handle / `.partial` sem cleanup
 - [ ] `copy_verified` a verificar **depois** do replace, ou multi-write sem undo
 - [ ] Win32 `ctypes.sizeof(buf)` onde a API pede TCHARs
 - [ ] `split()[0]` / `result.success` / `float(...)` sem guarda
-- [ ] XSS: `innerHTML` com input do utilizador sem escape
+- [ ] XSS: `innerHTML` com input do usuário sem escape
 - [ ] `nds/`: promote sem hash, escrita paralela no SD, path traversal, frame USB fora da spec ou sem bump de versão, sucesso reportado após falha parcial
 
 ## Fora de âmbito típico
 
-- Não commitiar sem pedido explícito do utilizador.
+- Não commitiar sem pedido explícito do usuário.
 - Não alterar pins SHA-256 / URLs em `core/cache.py` sem evidência (`update_pins.py` / digest oficial).
 - Não formatar / escrever em volumes que falhem `is_safe_mount_path`.
 - Não adicionar dependências sem atualizar `requirements.txt` + lock com hashes quando aplicável.

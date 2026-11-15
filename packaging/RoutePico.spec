@@ -13,12 +13,28 @@ STATIC = os.path.join(ROOT, "static")
 ICON_ICNS = os.path.join(STATIC, "assets", "app-icon.icns")
 ICON_ICO = os.path.join(STATIC, "assets", "app-icon.ico")
 
+# Versão única: core/__init__.py (o Info.plist e o instalador Windows leem daqui).
+sys.path.insert(0, ROOT)
+from core import __version__ as APP_VERSION  # noqa: E402
+
+# Assinatura macOS (tools/build_macos_release.sh). Vazio = assinatura ad-hoc local.
+# Com identidade "Developer ID Application", o PyInstaller assina cada binário de
+# dentro para fora com hardened runtime + timestamp, como a notarização exige.
+MAC_SIGN_IDENTITY = os.environ.get("ROUTE_PICO_CODESIGN_IDENTITY") or None
+MAC_ENTITLEMENTS = (
+    os.path.join(ROOT, "packaging", "macos", "entitlements.plist") if MAC_SIGN_IDENTITY else None
+)
+
 datas = [
     (STATIC, "static"),
     (os.path.join(ROOT, "CHANGELOG.md"), "."),
     # Manifesto de hashes Pico Loader/Launcher usado pelo RouteDex (offline).
     (os.path.join(ROOT, "core", "data"), os.path.join("core", "data")),
-    (os.path.join(ROOT, "vendor", "GEiv4.2_EN"), os.path.join("vendor", "GEiv4.2_EN")),
+    # Licença do Route Pico e avisos de terceiros vão junto com o binário.
+    (os.path.join(ROOT, "LICENSE"), "."),
+    (os.path.join(ROOT, "docs", "licenses"), os.path.join("docs", "licenses")),
+    # O pacote GEi (kernel/MoonShell) é software de terceiros sem licença de
+    # redistribuição: NÃO entra no app; o usuário baixa o oficial (Downloads).
 ]
 binaries = []
 hiddenimports = list(collect_submodules("core")) + list(collect_submodules("services"))
@@ -66,8 +82,8 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
+    codesign_identity=MAC_SIGN_IDENTITY if sys.platform == "darwin" else None,
+    entitlements_file=MAC_ENTITLEMENTS if sys.platform == "darwin" else None,
     icon=ICON_ICO if sys.platform.startswith("win") else None,
 )
 
@@ -94,8 +110,9 @@ if sys.platform == "darwin":
         info_plist={
             "CFBundleName": "Route Pico",
             "CFBundleDisplayName": "Route Pico",
-            "CFBundleShortVersionString": "1.1.0",
-            "CFBundleVersion": "1.1.0",
+            "CFBundleShortVersionString": APP_VERSION,
+            "CFBundleVersion": APP_VERSION,
+            "NSHumanReadableCopyright": "GPL-3.0 · Route Pico",
             "NSHighResolutionCapable": True,
             "LSMinimumSystemVersion": "11.0",
         },

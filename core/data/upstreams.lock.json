@@ -1,0 +1,41 @@
+{
+  "pico_launcher": {
+    "asset": "Pico_Launcher.zip",
+    "repo": "LNH-team/pico-launcher",
+    "sha256": "b4ed7f2cf2713e0c74985764536a0bfb7381566c67b0f85dc8b83375bcfc495d",
+    "size": 325374,
+    "tag": "v1.3.0"
+  },
+  "pico_launcher_enhanced": {
+    "asset": "Pico_Launcher_Enhanced.zip",
+    "repo": "rasalopa/pico-launcher-enhanced",
+    "sha256": "6169f3ef57c46505efd81442a9f05c25c8889947f00c6e967080f16d75b2699f",
+    "size": 430837,
+    "tag": "enhanced-v1.11.0"
+  },
+  "pico_loader": {
+    "asset": "Pico_Loader_DSPICO.zip",
+    "repo": "LNH-team/pico-loader",
+    "sha256": "a3eaa2ce0e9a461a2baeda719cce1385e8218521b66f1cf892225c0bedff01b2",
+    "size": 94378,
+    "tag": "v1.7.1"
+  },
+  "pico_loader_enhanced": {
+    "asset": "Pico_Loader_Enhanced_v1.0.1.zip",
+    "repo": "rasalopa/pico-loader",
+    "sha256": "cba2fe62fdb6cc5fbf0ef72bf98ba458b3dfd1d26b3a414ef841da35364e34d5",
+    "size": 69705,
+    "tag": "enhanced-v1.0.1"
+  },
+  "picodex": {
+    "commit": "6be41cbb9d9ef1498aca3b042127c3772b6220b3",
+    "files": {
+      "loaderReleases.json": {
+        "sha256": "c2f344139613c4850355ff9689e9844593638d14aedb213835f62b95b012a49a",
+        "source": "src/data/loaderReleases.json"
+      }
+    },
+    "repo": "rasalopa/picodex",
+    "tag": "v0.12.0"
+  }
+}

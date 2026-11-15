@@ -16,7 +16,7 @@ APP      := RoutePico
 BUILD    := build
 HOST_BIN := $(BUILD)/routepico_host
 
-HOST_CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Iinclude -DR1_HOST_SIM
+HOST_CFLAGS := -std=c11 -Wall -Wextra -Wpedantic -Iinclude -DR1_HOST_SIM -D_DEFAULT_SOURCE
 HOST_SRCS := \
 	src/main.c \
 	src/app/browser.c \

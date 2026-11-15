@@ -203,7 +203,7 @@ const RomExplorer = (() => {
     const label = btn.querySelector(".rom-x-toolbtn-label");
     const text = n > 0 ? `Remover (${n})` : "Remover";
     if (label) label.textContent = text;
-    btn.title = n > 0 ? `Remover ${n} seleccionado(s)` : "Remover seleccionados";
+    btn.title = n > 0 ? `Remover ${n} selecionado(s)` : "Remover selecionados";
     btn.setAttribute("aria-label", btn.title);
   }
 
@@ -216,7 +216,7 @@ const RomExplorer = (() => {
     const el = document.getElementById("rom-x-status");
     if (!el) return;
     if (!mount()) {
-      el.textContent = "Seleccione um cartão SD.";
+      el.textContent = "Selecione um cartão SD.";
       return;
     }
     if (isSearching()) {
@@ -233,7 +233,7 @@ const RomExplorer = (() => {
     const path = cwd ? `/roms/${cwd}/` : "/roms/";
     el.innerHTML =
       `<strong>${total}</strong> itens` +
-      (sel ? ` · <strong>${sel}</strong> seleccionados` : "") +
+      (sel ? ` · <strong>${sel}</strong> selecionados` : "") +
       ` · <span title="${escapeHtml(path)}">${escapeHtml(path)}</span>`;
   }
 
@@ -429,7 +429,7 @@ const RomExplorer = (() => {
 
     if (!mount()) {
       el.innerHTML = emptyHtml(
-        "Nenhum cartão seleccionado",
+        "Nenhum cartão selecionado",
         "Escolha um volume SD acima para explorar <code>/roms/</code>."
       );
       updateRemoveBtn();
@@ -445,7 +445,7 @@ const RomExplorer = (() => {
       : [...dirs, ...files];
 
     if (searching && searchHits === null) {
-      el.innerHTML = emptyHtml("A pesquisar…", "");
+      el.innerHTML = emptyHtml("Pesquisando…", "");
       updateRemoveBtn();
       updateUpBtn();
       renderStatus();
@@ -584,7 +584,7 @@ const RomExplorer = (() => {
     if (loadInFlight) return;
     loadInFlight = true;
     if (grid && !isSearching()) {
-      grid.innerHTML = emptyHtml("A carregar…", "");
+      grid.innerHTML = emptyHtml("Carregando…", "");
     }
     try {
       const api = getApi() || (await waitForApi());
@@ -592,7 +592,7 @@ const RomExplorer = (() => {
         if (grid) {
           grid.innerHTML = emptyHtml(
             "API indisponível",
-            "Reinicie a aplicação e tente de novo."
+            "Reinicie o app e tente de novo."
           );
         }
         renderStatus();
@@ -881,7 +881,7 @@ const RomExplorer = (() => {
     const rows = [
       ["Plataforma", plat],
       ["Tamanho", rom.size_label || "—"],
-      ["Ficheiro", rom.name || "—"],
+      ["Arquivo", rom.name || "—"],
       ["Tipo", rom.kind || "game"],
     ];
     if (rom.game_code) rows.push(["Game code", rom.game_code]);
@@ -934,7 +934,7 @@ const RomExplorer = (() => {
     const artMsg =
       (artState && artState.message) ||
       (artSearching
-        ? "A procurar na Internet…"
+        ? "Procurando na Internet…"
         : "Use «Pesquisar» ou «Buscar online» para ver opções.");
 
     body.innerHTML =
@@ -969,7 +969,7 @@ const RomExplorer = (() => {
       </div>` +
       `<div class="dspico-art-actions mt-2">
         <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="rom-x-art-auto">Buscar online</button>
-        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="rom-x-art-manual">Ficheiro do PC…</button>
+        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="rom-x-art-manual">Arquivo do PC…</button>
       </div>` +
       `<p class="dspico-art-local-hint">PNG ou BMP. JPEG não suportado.</p>` +
       `<p class="rom-x-drawer-hint">${escapeHtml(
@@ -982,11 +982,11 @@ const RomExplorer = (() => {
         ? `<div class="dspico-art-grid mt-2">${opts}</div>
            <p class="rom-x-drawer-hint">Clique para gravar PNG no cartão.</p>`
         : !artSearching
-          ? `<p class="rom-x-drawer-hint mt-1">Ainda sem resultados — pesquise ou escolha um ficheiro.</p>`
+          ? `<p class="rom-x-drawer-hint mt-1">Ainda sem resultados — pesquise ou escolha um arquivo.</p>`
           : "") +
       `</div>` +
       `<div class="rom-x-drawer-section">` +
-      `<h5>Como corre</h5>` +
+      `<h5>Como roda</h5>` +
       `<p><strong>${escapeHtml(run.title || "")}</strong></p>` +
       `<p>${escapeHtml(run.body || "")}</p>` +
       reqList +
@@ -1024,7 +1024,7 @@ const RomExplorer = (() => {
     const b = document.getElementById("rom-x-drawer-backdrop");
     const body = document.getElementById("rom-x-drawer-body");
     if (body) {
-      body.innerHTML = `<p class="rom-x-drawer-hint">A carregar detalhes…</p>`;
+      body.innerHTML = `<p class="rom-x-drawer-hint">Carregando detalhes…</p>`;
     }
     if (d) {
       d.classList.remove("hidden");
@@ -1055,7 +1055,7 @@ const RomExplorer = (() => {
         searching: false,
         query: artQueryDraft,
         message:
-          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um ficheiro do PC.",
+          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um arquivo do PC.",
         candidates: [],
       });
     } catch (err) {
@@ -1090,7 +1090,7 @@ const RomExplorer = (() => {
       renderDrawerBody(drawerData, {
         searching: true,
         query: artQueryDraft,
-        message: "A procurar na Internet…",
+        message: "Procurando na Internet…",
         candidates: [],
       });
     }
@@ -1166,7 +1166,7 @@ const RomExplorer = (() => {
       }
       setBusy(true);
       appendLog(
-        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
+        artKind === "icon" ? "Gravando ícone…" : "Gravando capa…",
         "info"
       );
       const res = await api.apply_rom_artwork_url(
@@ -1214,13 +1214,13 @@ const RomExplorer = (() => {
         return `<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded border border-line text-[12px]">
           <div>
             <div class="font-medium text-fg">${name}</div>
-            <div class="text-[11px] text-fg-mute">Em falta: ${escapeHtml(need)}</div>
+            <div class="text-[11px] text-fg-mute">Faltando: ${escapeHtml(need)}</div>
           </div>
           <div class="flex flex-wrap gap-1">
             <button type="button" class="btn-secondary !text-[11px] !py-1 !px-2" data-twl-search="${rel}">Pesquisar</button>
             <button type="button" class="btn-ghost !text-[11px] !py-1 !px-2" data-twl-file="${rel}" data-twl-kind="${
               item.missing_cover ? "boxart" : "icon"
-            }">Escolher ficheiro</button>
+            }">Escolher arquivo</button>
           </div>
         </div>`;
       })
@@ -1228,7 +1228,7 @@ const RomExplorer = (() => {
     el.innerHTML = `
       <div class="rounded-lg border border-line p-3 space-y-2">
         <p class="text-[12px] font-semibold text-fg">Jogos sem capa/ícone TWiLight após o lote</p>
-        <p class="text-[11px] text-fg-mute">Abra o jogo para buscar online ou escolha um ficheiro. Só TWiLight — não afecta DSPico.</p>
+        <p class="text-[11px] text-fg-mute">Abra o jogo para buscar online ou escolha um arquivo. Só TWiLight — não afecta DSPico.</p>
         <div class="space-y-2 max-h-56 overflow-y-auto">${rows}</div>
       </div>`;
     el.querySelectorAll("[data-twl-search]").forEach((btn) => {
@@ -1250,7 +1250,7 @@ const RomExplorer = (() => {
 
   async function batchArtwork() {
     if (!mount()) {
-      appendLog("Seleccione um cartão SD.", "warn");
+      appendLog("Selecione um cartão SD.", "warn");
       return;
     }
     if (busy) {
@@ -1265,9 +1265,9 @@ const RomExplorer = (() => {
       }
       setBusy(true, null, {
         op: "generate_twilight_artwork_batch",
-        label: "A buscar capas e ícones…",
+        label: "Buscando capas e ícones…",
       });
-      appendLog("A buscar capas e ícones TWiLight em lote…", "info");
+      appendLog("Buscando capas e ícones TWiLight em lote…", "info");
       const res = await api.generate_twilight_artwork_batch(mount());
       if (res && res.success) {
         appendLog(res.message || "Lote TWiLight concluído.", "success");
@@ -1298,10 +1298,10 @@ const RomExplorer = (() => {
         return;
       }
       setBusy(true);
-      appendLog("A procurar capa e ícone online…", "info");
+      appendLog("Procurando capa e ícone online…", "info");
       const result = await api.fetch_rom_artwork(mount(), drawerRel);
       if (result && result.success) {
-        appendLog(result.message || "Arte descarregada.", "success");
+        appendLog(result.message || "Arte baixada.", "success");
         invalidateCatalog();
         await openDrawer(drawerRel);
         await refresh();
@@ -1351,7 +1351,7 @@ const RomExplorer = (() => {
 
       setBusy(true);
       appendLog(
-        k === "boxart" ? "A gravar capa…" : "A gravar ícone…",
+        k === "boxart" ? "Gravando capa…" : "Gravando ícone…",
         "info"
       );
       const result = await api.set_rom_artwork(
@@ -1361,7 +1361,7 @@ const RomExplorer = (() => {
         picked.path
       );
       if (result && result.success) {
-        appendLog(result.message || "Arte actualizada.", "success");
+        appendLog(result.message || "Arte atualizada.", "success");
         invalidateCatalog();
         await openDrawer(drawerRel);
         await refresh();
@@ -1589,7 +1589,7 @@ const RomExplorer = (() => {
 
   async function handleDropTo(destRel, ev) {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     const internal = parseInternalDrag(ev);
@@ -1597,7 +1597,7 @@ const RomExplorer = (() => {
       await moveSelection(internal, destRel);
       return;
     }
-    // Drop do SO: File.path (pywebview) — vários ficheiros / arquivos de uma vez.
+    // Drop do SO: File.path (pywebview) — vários arquivos / arquivos de uma vez.
     if (ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files.length) {
       const paths = [];
       for (let i = 0; i < ev.dataTransfer.files.length; i++) {
@@ -1609,7 +1609,7 @@ const RomExplorer = (() => {
         await onNativeDrop(paths);
       } else {
         appendLog(
-          "Não foi possível ler os caminhos dos ficheiros arrastados. Use Adicionar.",
+          "Não foi possível ler os caminhos dos arquivos arrastados. Use Adicionar.",
           "warn"
         );
       }
@@ -1629,7 +1629,7 @@ const RomExplorer = (() => {
 
     setBusy(true);
     appendLog(
-      `A mover ${filtered.length} item(ns) ➔ /roms/${destRel || ""}/…`,
+      `Movendo ${filtered.length} item(ns) ➔ /roms/${destRel || ""}/…`,
       "info"
     );
     try {
@@ -1700,7 +1700,7 @@ const RomExplorer = (() => {
           return (
             `<div class="rom-x-dupe-group" data-idx="${i}">` +
             `<p class="rom-x-dupe-group-title">${name}</p>` +
-            `<p class="rom-x-dupe-group-sub">A importar: ${src}</p>` +
+            `<p class="rom-x-dupe-group-sub">Importando: ${src}</p>` +
             (existing
               ? `<ul class="text-[11px] text-fg-mute mb-2 list-disc pl-4">${existing}</ul>`
               : "") +
@@ -1763,7 +1763,7 @@ const RomExplorer = (() => {
       return;
     }
     setBusy(true, document.getElementById("rom-x-add"));
-    appendLog(`A verificar duplicatas…`, "info");
+    appendLog(`Verificando duplicatas…`, "info");
     let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
@@ -1790,7 +1790,7 @@ const RomExplorer = (() => {
         resolutions = chosen;
         setBusy(true, document.getElementById("rom-x-add"));
       }
-      appendLog(`A importar ${n} ROM(s)…`, "info");
+      appendLog(`Importando ${n} ROM(s)…`, "info");
       const result = await api.import_roms(
         mount(),
         paths,
@@ -1817,7 +1817,7 @@ const RomExplorer = (() => {
 
   async function openDupesSheet() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (busy) {
@@ -1920,13 +1920,13 @@ const RomExplorer = (() => {
     }
     if (
       !confirm(
-        `Apagar ${toDelete.length} ficheiro(s) duplicado(s) (e saves associados)?`
+        `Apagar ${toDelete.length} arquivo(s) duplicado(s) (e saves associados)?`
       )
     ) {
       return;
     }
     setBusy(true, document.getElementById("rom-x-dupes"));
-    appendLog(`A remover ${toDelete.length} duplicata(s)…`, "info");
+    appendLog(`Removendo ${toDelete.length} duplicata(s)…`, "info");
     try {
       const api = getApi() || (await waitForApi());
       const result = await api.delete_roms(
@@ -1965,7 +1965,7 @@ const RomExplorer = (() => {
 
   async function addFiles() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (busy) {
@@ -1977,7 +1977,7 @@ const RomExplorer = (() => {
       const picked = await api.pick_rom_files();
       if (!picked || !picked.success) {
         appendLog(
-          `Erro ao escolher ficheiros: ${(picked && picked.error) || "falha"}`,
+          `Erro ao escolher arquivos: ${(picked && picked.error) || "falha"}`,
           "error"
         );
         return;
@@ -1991,7 +1991,7 @@ const RomExplorer = (() => {
 
   async function mkdir() {
     if (!mount()) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     const name = prompt("Nome da nova pasta:");
@@ -2041,13 +2041,13 @@ const RomExplorer = (() => {
     ensureSheetBindings();
     const filesOnly = selectedFilesOnly();
     if (!filesOnly.length) {
-      alert("Seleccione pelo menos um jogo (ficheiros, não pastas).");
+      alert("Selecione pelo menos um jogo (arquivos, não pastas).");
       return;
     }
     const sheet = document.getElementById("rom-x-delete-sheet");
     const count = document.getElementById("rom-x-sheet-count");
     if (count) {
-      count.textContent = `${filesOnly.length} ficheiro(s) serão removidos de /roms/.`;
+      count.textContent = `${filesOnly.length} arquivo(s) serão removidos de /roms/.`;
     }
     if (sheet) {
       sheet.classList.remove("hidden");
@@ -2101,7 +2101,7 @@ const RomExplorer = (() => {
 
     closeDeleteSheet();
     setBusy(true, document.getElementById("rom-x-remove"));
-    appendLog(`A remover ${filesOnly.length} jogo(s)…`, "info");
+    appendLog(`Removendo ${filesOnly.length} jogo(s)…`, "info");
     try {
       const result = await api.delete_roms(
         mount(),

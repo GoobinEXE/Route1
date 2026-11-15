@@ -8,7 +8,7 @@
 #
 # Assinatura local (opcional, fase all/package):
 #   WINDOWS_PFX_PATH / WINDOWS_PFX_PASSWORD — SignTool com certificado .pfx
-#   Ou WINDOWS_SIGNTOOL_CMD — comando completo; "$1" / {} = ficheiro a assinar
+#   Ou WINDOWS_SIGNTOOL_CMD — comando completo; "$1" / {} = arquivo a assinar
 # Ver docs/WINDOWS_SIGNING.md (Azure Artifact Signing no CI).
 set -euo pipefail
 
@@ -76,7 +76,7 @@ sign_one() {
     return 1
   }
   if [[ -z "${WINDOWS_PFX_PATH:-}" ]]; then
-    echo "WINDOWS_PFX_PATH (ou WINDOWS_SIGNTOOL_CMD) em falta." >&2
+    echo "WINDOWS_PFX_PATH (ou WINDOWS_SIGNTOOL_CMD) ausente." >&2
     return 1
   fi
   local args=(
@@ -101,7 +101,7 @@ sign_tree() {
     sign_one "$f"
     count=$((count + 1))
   done < <(find "$dir" -type f \( -iname '*.exe' -o -iname '*.dll' \) -print0)
-  echo "    ${count} ficheiro(s) assinados."
+  echo "    ${count} arquivo(s) assinados."
 }
 
 want_local_sign() {
@@ -111,6 +111,8 @@ want_local_sign() {
 run_build() {
   rm -rf "$DIST" "$BUILD"
   mkdir -p "$DIST"
+  echo "==> Avisos de terceiros (licenças do que vai no app)"
+  python tools/gen_third_party_notices.py
   echo "==> PyInstaller (Route Pico ${VERSION})"
   python -m PyInstaller \
     --noconfirm \
@@ -160,7 +162,7 @@ run_package() {
     if want_local_sign; then
       local signtool_path
       signtool_path="$(find_signtool)" || exit 1
-      # Inno: $f = caminho do ficheiro; /Snome=comando
+      # Inno: $f = caminho do arquivo; /Snome=comando
       local sign_def
       if [[ -n "${WINDOWS_SIGNTOOL_CMD:-}" ]]; then
         sign_def="${WINDOWS_SIGNTOOL_CMD} \$f"
@@ -193,7 +195,7 @@ case "$PHASE" in
     run_build
     ;;
   package)
-    # Em CI o dist já vem da fase build; não apagar OUT se já existir artefactos parciais.
+    # Em CI o dist já vem da fase build; não apagar OUT se já existir artefatos parciais.
     run_package
     ;;
   all)
@@ -209,7 +211,7 @@ case "$PHASE" in
 esac
 
 echo
-echo "Artefactos em ${OUT}:"
+echo "Artefatos em ${OUT}:"
 if [[ -d "$OUT" ]]; then
   ls -lh "$OUT" || true
 fi

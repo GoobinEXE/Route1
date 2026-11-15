@@ -6,16 +6,16 @@ def test_qt_filters_to_webview_normalizes_patterns():
         (
             "ROMs (*.nds *.dsi)",
             "Portáteis (*.gba;*.gbc)",
-            "Todos os ficheiros (*.*)",
+            "Todos os arquivos (*.*)",
         )
     )
     assert out == (
         "ROMs (*.nds;*.dsi)",
         "Portáteis (*.gba;*.gbc)",
-        "Todos os ficheiros (*.*)",
+        "Todos os arquivos (*.*)",
     )
 
 
 def test_qt_filters_to_webview_defaults_when_empty():
     out = qt_filters_to_webview((None, "", "   "))
-    assert out == ("Todos os ficheiros (*.*)",)
+    assert out == ("Todos os arquivos (*.*)",)

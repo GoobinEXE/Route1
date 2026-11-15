@@ -14,6 +14,8 @@ BUILD="${ROOT}/build"
 rm -rf "$OUT" "$DIST" "$BUILD"
 mkdir -p "$OUT"
 
+echo "==> Avisos de terceiros (licenças do que vai no app)"
+python tools/gen_third_party_notices.py
 echo "==> PyInstaller (Route Pico ${VERSION}, ${ARCH})"
 python -m PyInstaller \
   --noconfirm \
@@ -56,5 +58,5 @@ tar -C "$OUT" -czf "$INSTALL_TGZ" RoutePico-install
 rm -rf "$INSTALL_DIR"
 
 echo
-echo "Artefactos em ${OUT}:"
+echo "Artefatos em ${OUT}:"
 ls -lh "$OUT"

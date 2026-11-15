@@ -22,7 +22,7 @@ _GITHUB_RELEASE_TAG_RE = re.compile(
     r"/releases/tag/([A-Za-z0-9_.\-]+)$"
 )
 
-# URLs exactas que a UI pode abrir no browser do sistema (allowlist).
+# URLs exatas que a UI pode abrir no browser do sistema (allowlist).
 EXTERNAL_URL_ALLOWLIST = frozenset(
     {
         REPO_URL,
@@ -88,7 +88,7 @@ def _pinned_github_release_pages() -> frozenset:
 
 
 def is_allowed_external_url(url: str) -> bool:
-    """Allowlist exacta + GameBrew wiki + repos/releases GitHub pinados."""
+    """Allowlist exata + GameBrew wiki + repos/releases GitHub pinados."""
     if not isinstance(url, str):
         return False
     cleaned = url.strip()
@@ -167,7 +167,7 @@ _INTERNAL_SECTIONS = frozenset(
     }
 )
 
-# Itens de docs/git que, se forem parar a uma secção de utilizador por engano, são omitidos na UI.
+# Itens de docs/git que, se forem parar a uma seção de usuário por engano, são omitidos na UI.
 _REPO_DOCS_ONLY_RE = re.compile(
     r"(?i)("
     r"\breadme\b|"
@@ -185,7 +185,7 @@ _REPO_DOCS_ONLY_RE = re.compile(
     r")"
 )
 
-# Títulos mostrados a utilizadores leigos / medianos.
+# Títulos mostrados a usuários leigos / medianos.
 _USER_SECTION_TITLES = {
     "adicionado": "Novidades",
     "alterado": "Melhorias",
@@ -231,7 +231,7 @@ def parse_latest_changelog(text: str) -> Optional[Dict[str, Any]]:
     """Extrai a primeira versão publicada (ignora Unreleased).
 
     Secções internas (ex. Desenvolvimento) são omitidas — a UI Sobre
-    só mostra notas em linguagem de utilizador.
+    só mostra notas em linguagem de usuário.
     """
     if not text or not isinstance(text, str):
         return None
@@ -371,7 +371,7 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
             },
             {
                 "title": "Backup da NAND",
-                "text": "Não salte o nand.bin. Guarde a pasta DT… no computador antes de instalar o Unlaunch ou o hiyaCFW.",
+                "text": "Não pule o nand.bin. Salve a pasta DT… no computador antes de instalar o Unlaunch ou o hiyaCFW.",
             },
             {
                 "title": "hiyaCFW",
@@ -382,15 +382,15 @@ def build_about_payload(base_dir: str) -> Dict[str, Any]:
                 "text": "FAT32 apaga tudo no volume selecionado. Confirme sempre a unidade certa.",
             },
             {
-                "title": "Consola e slot",
+                "title": "Console e slot",
                 "text": "Só DSi / DSi XL. Softmod = SD lateral; flashcard = MicroSD do cartucho Slot-1.",
             },
         ],
         "legal": [
             "Software “como está” (AS IS), sem garantias. Você assume a responsabilidade pelo uso.",
             "Não afiliado à Nintendo. Marcas pertencem aos respetivos donos.",
-            "Código do app: GPL-3.0. Binários descarregados mantêm licenças dos projetos originais.",
-            "O app não fornece ROMs; só organiza ficheiros que você coloca no cartão.",
+            "Código do app: GPL-3.0. Binários baixados mantêm licenças dos projetos originais.",
+            "O app não fornece ROMs; só organiza arquivos que você coloca no cartão.",
         ],
         "credits": [
             {

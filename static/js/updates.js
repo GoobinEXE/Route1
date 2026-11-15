@@ -2,6 +2,7 @@
  * Verificar Atualizações — ecossistema DSPico.
  */
 (function () {
+  let lastComponents = [];
   function escapeHtml(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
@@ -18,8 +19,6 @@
     if (typeof selectedDrive !== "undefined" && selectedDrive && selectedDrive.mount_path) {
       return selectedDrive.mount_path;
     }
-    const sel = document.getElementById("dspico-drive-select");
-    if (sel && sel.value) return sel.value;
     return "";
   }
 
@@ -27,14 +26,14 @@
     const el = panel();
     if (!el) return;
     el.classList.remove("hidden");
-    el.innerHTML = '<p class="text-[12px] text-fg-mute">A verificar versões (cartão, pins da app, GitHub LNH)…</p>';
-    R1K.shell && R1K.shell.toggleActivity(true);
+    // O progresso aparece aqui mesmo; a gaveta Atividade fica para as escritas no cartão.
+    el.innerHTML = '<p class="text-[12px] text-fg-mute">Verificando versões (cartão, pins do app, GitHub LNH)…</p>';
 
     try {
       const api = typeof waitForApi === "function" ? await waitForApi() : window.pywebview && pywebview.api;
       if (!api || typeof api.check_dspico_updates !== "function") {
         el.innerHTML =
-          '<p class="text-[12px] text-fg-mute">API de actualizações indisponível nesta build. Use Preparar SD com os pins oficiais.</p>';
+          '<p class="text-[12px] text-fg-mute">API de atualizações indisponível nesta build. Use Preparar SD com os pins oficiais.</p>';
         return;
       }
       const path = drivePath();
@@ -53,6 +52,7 @@
       return;
     }
     const comps = res.components || [];
+    lastComponents = comps;
     if (!comps.length) {
       el.innerHTML = '<p class="text-[12px] text-fg-mute">Nenhum componente reportado.</p>';
       return;
@@ -75,7 +75,7 @@
         }
         if (c.can_install_latest) {
           actions.push(
-            `<button type="button" class="btn-primary !text-[11px] !px-2 !py-1" onclick="R1K.updates.install('${id}','latest')">Mais recente</button>`
+            `<button type="button" class="btn-primary !text-[11px] !px-2 !py-1" onclick="R1K.updates.install('${id}','latest')">Instalar mais recente</button>`
           );
         }
         if (c.release_url) {
@@ -89,8 +89,9 @@
             : c.installed_variant === "official"
             ? ' <span class="text-fg-mute">(oficial)</span>'
             : "";
+        const note = c.note ? `<div class="text-[11px] text-fg-mute">${escapeHtml(c.note)}</div>` : "";
         return (
-          `<div class="updates-row"><span>${name}</span><span>${installed}${variantTag}</span><span>${pinned}</span><span>${latest}</span>` +
+          `<div class="updates-row"><span>${name}${note}</span><span>${installed}${variantTag}</span><span>${pinned}</span><span>${latest}</span>` +
           `<span class="flex flex-wrap gap-1 justify-end">${actions.join("")}</span></div>`
         );
       })
@@ -150,13 +151,13 @@
   const ENHANCED_CONFIRM = {
     "pico-launcher":
       "Instalar o Pico Launcher Enhanced (fork de rasalopa, não oficial)?\n\n" +
-      "• Substitui só /_picoboot.nds e os temas incluídos; jogos, saves, capas e definições ficam.\n" +
+      "• Substitui só /_picoboot.nds e os temas incluídos; jogos, saves, capas e configurações ficam.\n" +
       "• Grava favoritos e estatísticas em /_pico/gamedata.json.\n" +
       "• Problemas desta versão vão para github.com/rasalopa/pico-launcher-enhanced, não para o LNH team.\n" +
       "• Pode voltar ao oficial a qualquer momento neste painel.",
     "pico-loader":
       "Instalar o Pico Loader Enhanced (fork de rasalopa, não oficial)?\n\n" +
-      "• Só para o DSPico: noutro flashcard mantenha o loader feito para ele.\n" +
+      "• Só para o DSPico: em outro flashcard mantenha o loader feito para ele.\n" +
       "• Substitui picoLoader7.bin e picoLoader9.bin; aplist/savelist/patchlist do oficial ficam.\n" +
       "• Volta ao launcher dentro do jogo com L + R + Direita + Select; jogos DSi-enhanced e modo DSi ainda não.\n" +
       "• Problemas desta versão vão para o rasalopa, não para o LNH team.",
@@ -166,17 +167,19 @@
     const path = drivePath();
     const v = variant || "official";
     if (!path) {
-      alert("Seleccione o microSD do DSPico.");
+      alert("Selecione o microSD do DSPico.");
       return;
     }
     if (v === "enhanced") {
       if (!confirm(ENHANCED_CONFIRM[component] || "Instalar a variante Enhanced (não oficial)?")) return;
     } else if (channel === "latest") {
-      const ok = confirm(
-        `Instalar a versão mais recente de ${component} a partir de github.com/LNH-team?\n\n` +
-          "O ficheiro será verificado pelo digest SHA-256 do release. Continuar?"
-      );
-      if (!ok) return;
+      const comp = (lastComponents || []).find((c) => c.id === component) || {};
+      const repo = String(comp.release_url || "").replace(/^https:\/\/github\.com\//, "").replace(/\/releases$/, "");
+      const what =
+        component === "picodex"
+          ? "Atualizar os dados da PicoDex (manifesto de versões do Pico Loader) para a release mais recente?\n\nNão grava nada no microSD."
+          : `Instalar a versão mais recente de ${comp.label || component} a partir de github.com/${repo || "LNH-team"}?\n\nO arquivo será verificado pelo digest SHA-256 do release.`;
+      if (!confirm(what)) return;
     }
     try {
       const api = typeof waitForApi === "function" ? await waitForApi() : window.pywebview && pywebview.api;

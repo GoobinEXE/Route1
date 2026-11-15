@@ -1,0 +1,56 @@
+name: Fontes oficiais
+
+# Mantém o Route Pico na versão mais recente das cinco fontes oficiais
+# (core/upstreams.py): PicoDex, Pico Launcher, Pico Loader e as variantes
+# Enhanced. Toda a segunda-feira (e à mão) corre tools/sync_upstreams.py --apply,
+# corre os testes e abre um PR com o lock e os dados novos para revisão.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime (hashed lock) e dev
+        run: |
+          python -m pip install --upgrade "pip>=26.2"
+          python -m pip install --require-hashes -r requirements.lock.txt
+          python -m pip install -r requirements-dev.txt
+
+      - name: Atualizar lock a partir das releases
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/sync_upstreams.py --apply
+
+      - name: Testes
+        run: pytest -q
+
+      - name: Abrir PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/upstreams-sync
+          title: "Fontes oficiais: atualizar PicoDex / Pico Launcher / Pico Loader / Enhanced"
+          commit-message: "Atualizar fontes oficiais (tools/sync_upstreams.py --apply)"
+          body: |
+            Gerado por `tools/sync_upstreams.py --apply`: novas releases das fontes oficiais
+            (`core/upstreams.py`). Digests SHA-256 conferidos contra os publicados pelo GitHub.
+            Rever o diff de `core/data/upstreams.lock.json` e de `core/data/` antes de juntar.
+          add-paths: |
+            core/data/upstreams.lock.json
+            core/data/picodex/**
+            core/data/pico_manifest.json

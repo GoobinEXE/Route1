@@ -1,4 +1,4 @@
-"""Preferências locais da app (prefs.json no directório de dados do utilizador)."""
+"""Preferências locais do app (prefs.json no diretório de dados do usuário)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from typing import Any, Optional
 
 
 def user_data_dir() -> str:
-    """Pasta de dados do utilizador (prefs, etc.)."""
+    """Pasta de dados do usuário (prefs, etc.)."""
     if sys.platform == "darwin":
         root = os.path.expanduser("~/Library/Application Support/Route1Kit")
     elif sys.platform.startswith("win"):

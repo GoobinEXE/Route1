@@ -11,6 +11,7 @@ import pytest
 NDS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "nds")
 
 
+@pytest.mark.skipif(os.name == "nt", reason="a simulação do host do app do console é POSIX (statvfs, lstat)")
 @pytest.mark.skipif(not (shutil.which("make") and shutil.which("cc")), reason="make/cc indisponíveis")
 def test_nds_host_suite():
     res = subprocess.run(

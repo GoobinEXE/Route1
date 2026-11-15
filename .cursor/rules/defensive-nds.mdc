@@ -11,4 +11,4 @@ alwaysApply: false
 - Falhas → mensagem UI + código `E_*`; não hang infinito sem timeout
 - Limpar staging em todos os caminhos de erro (`goto cleanup` / equivalente)
 - UI: textos fixos em PT; não concatenar paths crus em overlays sem truncar
-- Sem alocações ilimitadas em listagens (cap de entradas por ecrã / paginação)
+- Sem alocações ilimitadas em listagens (cap de entradas por tela / paginação)

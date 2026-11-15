@@ -212,7 +212,7 @@ def test_generate_twilight_artwork_batch_writes_and_missing(fake_sd, monkeypatch
     missing = res.get("missing") or []
     assert any(m.get("rel_path", "").endswith("Ghost.nds") for m in missing)
     assert host_before == (set(tmp_path.iterdir()) if tmp_path.exists() else set())
-    # Teto de URLs no lote: poucos downloads tentados por jogo em falta
+    # Teto de URLs no lote: poucos downloads tentados por jogo ausente
     assert hits["n"] >= 1
 
 
@@ -363,7 +363,7 @@ def test_twilight_batch_skips_complete_games(fake_sd, monkeypatch):
 
     def boom(*a, **k):
         calls["n"] += 1
-        raise AssertionError("não deve descarregar")
+        raise AssertionError("não deve baixar")
 
     monkeypatch.setattr(artwork, "is_safe_mount_path", lambda p: True)
     monkeypatch.setattr(artwork, "sync_volume", lambda *a, **k: None)

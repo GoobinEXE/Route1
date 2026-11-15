@@ -2,15 +2,20 @@
  * Área exclusiva DSPico — fontes só LNH-team.
  * Depende de getApi / selectedDrive / runMountOp / escapeHtml / setBusy (app.js).
  */
+
+/** Ícones de estado (SVG, traço 2px, herdam a cor do texto). */
+function stateIcon(ok) {
+  const body = ok
+    ? '<circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/>'
+    : '<circle cx="8" cy="8" r="6.5" stroke-dasharray="2.4 2.2"/>';
+  return `<svg class="state-icon" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg><span class="sr-only">${ok ? "Presente:" : "Faltando:"}</span>`;
+}
 const Dspico = (() => {
-  let section = "status";
+  let section = "cartao";
   let gamesCwd = "";
   let selectedRels = new Set();
   let lastInspect = null;
   let renderGen = 0;
-  let artRel = null;
-  let artKind = "cover";
-  let artGen = 0;
   let artEscBound = false;
   let artMeta = null;
   let artCandidates = [];
@@ -22,16 +27,24 @@ const Dspico = (() => {
   let drivePollTimer = null;
   let lastPolledMount = null;
   const GAMES_VIRTUAL_THRESHOLD = 80;
-  const SECTIONS = [
-    "status",
-    "setup",
-    "games",
-    "routedex",
-    "emulators",
-    "emunand",
-    "settings",
-    "firmware",
-  ];
+  // Aba → seções renderizadas dentro dela (ids dspico-section-<seção>).
+  const TABS = {
+    cartao: ["status", "health", "setup", "links"],
+    games: ["games"],
+    routedex: ["routedex"],
+    launcher: ["settings", "assoc", "picothemes", "night"],
+    extras: ["emulators", "usbapps"],
+    avancado: ["emunand", "firmware"],
+  };
+  const SECTIONS = Object.keys(TABS);
+  const LEGACY_SECTIONS = {
+    status: "cartao",
+    setup: "cartao",
+    settings: "launcher",
+    emulators: "extras",
+    emunand: "avancado",
+    firmware: "avancado",
+  };
 
   function mount() {
     return (typeof selectedDrive !== "undefined" && selectedDrive && selectedDrive.mount_path) || null;
@@ -59,22 +72,31 @@ const Dspico = (() => {
         ? isHardBusy()
         : typeof busy !== "undefined" && busy;
     if (hard) {
-      alert("Aguarde a operação em andamento terminar antes de mudar de secção.");
+      alert("Aguarde a operação em andamento terminar antes de mudar de seção.");
       return;
     }
-    if (!SECTIONS.includes(name)) name = "status";
+    selectSection(name);
+    refresh();
+  }
+
+  /** Muda a aba visível sem renderizar (usado antes de entrar na vista). */
+  function selectSection(name) {
+    if (LEGACY_SECTIONS[name]) name = LEGACY_SECTIONS[name];
+    if (!SECTIONS.includes(name)) name = "cartao";
+    if (section === "games" && name !== "games") gamesShellBuilt = false;
     section = name;
     for (const key of SECTIONS) {
-      const el = document.getElementById(`dspico-section-${key}`);
+      const pane = document.getElementById(`dspico-pane-${key}`);
       const tab = document.getElementById(`dspico-tab-${key}`);
-      if (el) el.classList.toggle("hidden", section !== key);
+      const on = section === key;
+      if (pane) pane.classList.toggle("hidden", !on);
       if (tab) {
-        const on = section === key;
         tab.classList.toggle("adv-tab--active", on);
         tab.setAttribute("aria-selected", on ? "true" : "false");
+        tab.tabIndex = on ? 0 : -1;
       }
     }
-    refresh();
+    if (window.R1K && R1K.shell && R1K.shell.onDspicoSection) R1K.shell.onDspicoSection(section);
   }
 
   function startDrivePoll() {
@@ -118,20 +140,44 @@ const Dspico = (() => {
 
   async function renderActive(gen) {
     const m = mount();
-    if (section === "status") await renderStatus(gen, m);
-    else if (section === "setup") await renderSetup(gen, m);
-    else if (section === "games") await renderGames(gen, m);
-    else if (section === "routedex") await renderRoutedex(gen, m);
-    else if (section === "emulators") await renderEmulators(gen, m);
-    else if (section === "emunand") await renderEmunand(gen, m);
-    else if (section === "settings") await renderSettings(gen, m);
-    else if (section === "firmware") await renderFirmware(gen, m);
+    const renderers = {
+      status: renderStatus,
+      setup: renderSetup,
+      games: renderGames,
+      routedex: renderRoutedex,
+      health: renderHealth,
+      links: renderLinks,
+      settings: renderSettings,
+      picothemes: renderPicoThemes,
+      assoc: async (gen, m) => {
+        const el = document.getElementById("dspico-section-assoc");
+        if (el && m && gen === renderGen && window.R1K && R1K.picodex) await R1K.picodex.renderAssociations(el, m);
+      },
+      night: renderNight,
+      emulators: renderEmulators,
+      usbapps: renderUsbApps,
+      emunand: renderEmunand,
+      firmware: renderFirmware,
+    };
+    const subs = TABS[section] || [];
+    if (!m) {
+      // Sem cartão: um único aviso por aba.
+      subs.forEach((sub, i) => {
+        const el = document.getElementById(`dspico-section-${sub}`);
+        if (el) el.innerHTML = i === 0 ? needDriveHtml() : "";
+      });
+      return;
+    }
+    for (const sub of subs) {
+      if (gen !== renderGen) return;
+      await renderers[sub](gen, m);
+    }
   }
 
   function needDriveHtml() {
     return `
       <section class="panel p-5">
-        <p class="opt-does">Seleccione o <strong>microSD do cartucho DSPico</strong> acima.</p>
+        <p class="opt-does">Selecione o <strong>microSD do cartucho DSPico</strong> na barra de cima.</p>
         <p class="opt-when mt-1">Não é o SD lateral do DSi — é o cartão dentro do cartucho Slot-1.</p>
       </section>`;
   }
@@ -180,18 +226,25 @@ const Dspico = (() => {
   async function renderStatus(gen, m) {
     const el = document.getElementById("dspico-section-status");
     if (!el) return;
+    bindUpdatesFold();
     if (!m) {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A inspeccionar…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Verificando o cartão…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
-      const data = await api.inspect_dspico(m);
+      let data = await api.inspect_dspico(m);
+      // O Início pode estar lendo o cartão neste instante: espera e tenta de novo.
+      for (let i = 0; i < 4 && data && !data.success && /andamento/i.test(String(data.error || "")); i++) {
+        await new Promise((r) => setTimeout(r, 350));
+        if (gen !== renderGen) return;
+        data = await api.inspect_dspico(m);
+      }
       if (gen !== renderGen) return;
       if (!(data && data.success)) {
         el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">${escapeHtml(
-          (data && data.error) || "Falha ao inspeccionar."
+          (data && data.error) || "Falha ao verificar o cartão."
         )}</p></section>`;
         return;
       }
@@ -206,7 +259,7 @@ const Dspico = (() => {
         <section class="panel p-5 space-y-4">
           <div class="flex items-start justify-between gap-3 flex-wrap">
             <div>
-              <h3 class="text-sm font-semibold text-fg">Estado do microSD</h3>
+              <h3 class="section-label">${data.markers_ok ? "Cartão pronto" : "Cartão sem o pacote completo"}</h3>
               <p class="text-[12px] text-fg-mute mt-1">
                 Pacote: ${
                   data.markers_ok
@@ -216,15 +269,21 @@ const Dspico = (() => {
                 · Jogos em <code>Games/</code>: ${escapeHtml(String(data.games_count || 0))}
               </p>
             </div>
-            <button type="button" class="btn-ghost !text-[11px]" id="dspico-refresh-status">Actualizar</button>
+            <div class="flex flex-wrap gap-2">
+              ${
+                data.markers_ok
+                  ? '<button type="button" class="btn-primary" id="dspico-status-main">Verificar atualizações</button>'
+                  : '<button type="button" class="btn-primary" id="dspico-status-main">Instalar pacote oficial</button>'
+              }
+            </div>
           </div>
           <ul class="space-y-2">
             ${checklist
               .map((c) => {
                 const opt = c.optional ? ' <span class="text-fg-mute">(opcional)</span>' : "";
-                const icon = c.ok ? "✅" : c.optional ? "○" : "○";
+                const icon = stateIcon(!!c.ok);
                 const cls = c.ok ? "text-ok" : "text-fg-mute";
-                return `<li class="text-[13px] ${cls}">${icon} ${escapeHtml(
+                return `<li class="state-row text-[13px] ${cls}">${icon} ${escapeHtml(
                   c.label || c.id
                 )}${opt}</li>`;
               })
@@ -240,11 +299,20 @@ const Dspico = (() => {
           : "ainda sem asset nas releases LNH (compile via GUIDE)"
       }
           </div>
-          ${linksHtml(data.official_links)}
         </section>`;
-      bindLinkButtons(el);
-      const btn = document.getElementById("dspico-refresh-status");
-      if (btn) btn.onclick = () => refresh();
+      const main = document.getElementById("dspico-status-main");
+      if (main) {
+        main.onclick = data.markers_ok
+          ? () => {
+              // Abrir a seção já dispara a verificação (ver bindUpdatesFold).
+              const fold = document.getElementById("fold-updates");
+              if (!fold) return;
+              if (fold.open && window.R1K && R1K.updates) R1K.updates.check();
+              fold.open = true;
+              fold.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          : () => installOfficialPackage();
+      }
     } catch (e) {
       if (gen !== renderGen) return;
       el.innerHTML = `<section class="panel p-5"><p class="text-danger text-[12px]">${escapeHtml(
@@ -265,68 +333,119 @@ const Dspico = (() => {
       return;
     }
     if (gen !== renderGen) return;
-    await RouteDex.render(gen, m, el);
+    await RouteDex.render(gen, m, el, { only: ["library", "covers", "stats", "assoc", "shots", "health", "folders", "cheats"] });
+  }
+
+  async function renderPicoThemes(gen, m) {
+    const el = document.getElementById("dspico-section-picothemes");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (window.R1K && R1K.launcherExtras) await R1K.launcherExtras.renderPicoThemes(el);
+  }
+
+  async function renderNight(gen, m) {
+    const el = document.getElementById("dspico-section-night");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (typeof RouteDex !== "undefined" && RouteDex.renderNight) await RouteDex.renderNight(m, el);
+  }
+
+  async function renderUsbApps(gen, m) {
+    const el = document.getElementById("dspico-section-usbapps");
+    if (!el || !m || gen !== renderGen) {
+      if (el && !m) el.innerHTML = "";
+      return;
+    }
+    if (window.R1K && R1K.launcherExtras) R1K.launcherExtras.renderUsbApps(el);
   }
 
   async function renderSetup(gen, m) {
     const el = document.getElementById("dspico-section-setup");
-    if (!el) return;
+    if (!el || !foldIsOpen(el)) return;
     if (!m) {
       el.innerHTML = needDriveHtml();
       return;
     }
+    el.innerHTML = `
+      <section class="panel space-y-3">
+        <p class="text-[13px] text-fg-soft leading-relaxed">
+          Baixa e verifica (SHA-256) o <strong>Pico Launcher</strong> e o <strong>Pico Loader DSPICO</strong>
+          oficiais do LNH team e reescreve <code>_picoboot.nds</code> e <code>_pico/</code>. Jogos e saves ficam.
+        </p>
+        <button type="button" class="btn-secondary" id="dspico-btn-setup">Reinstalar pacote oficial</button>
+      </section>`;
+    const btn = document.getElementById("dspico-btn-setup");
+    if (btn) btn.onclick = () => installOfficialPackage();
+    if (typeof Wizard !== "undefined" && Wizard.mount) Wizard.mount("wizard-root-dspico", "dspico");
+  }
+
+  async function installOfficialPackage() {
+    if (
+      !confirm(
+        "Escrever o pacote oficial DSPico neste microSD?\n\n" +
+          "Serão atualizados _picoboot.nds e a pasta _pico/."
+      )
+    ) {
+      return;
+    }
+    await runMountOp({ method: "setup_dspico" });
+  }
+
+  /** A seção Atualizações verifica sozinha na primeira abertura. */
+  function bindUpdatesFold() {
+    const fold = document.getElementById("fold-updates");
+    if (!fold || fold.dataset.bound) return;
+    fold.dataset.bound = "1";
+    fold.addEventListener("toggle", () => {
+      const panel = document.getElementById("updates-panel");
+      const empty = !panel || panel.classList.contains("hidden") || !panel.textContent.trim();
+      if (fold.open && empty && window.R1K && R1K.updates) R1K.updates.check();
+    });
+  }
+
+  /** Seções recolhíveis: só carregam quando abertas (a saúde lê o cartão). */
+  function foldIsOpen(el) {
+    const d = el && el.closest("details");
+    if (!d || d.open) return true;
+    if (!d.dataset.lazyBound) {
+      d.dataset.lazyBound = "1";
+      d.addEventListener("toggle", () => {
+        if (d.open && section === "cartao") refresh();
+      });
+    }
+    el.innerHTML = "";
+    return false;
+  }
+
+  async function renderHealth(gen, m) {
+    const el = document.getElementById("dspico-section-health");
+    if (!el || !foldIsOpen(el)) return;
+    if (typeof RouteDex === "undefined") return;
+    if (gen !== renderGen) return;
+    // Dentro da seção recolhível: o resumo já dá título e descrição.
+    await RouteDex.render(gen, m, el, { only: ["health"], bare: true });
+  }
+
+  async function renderLinks(gen, m) {
+    const el = document.getElementById("dspico-section-links");
+    if (!el || !foldIsOpen(el)) return;
     let links = (lastInspect && lastInspect.official_links) || null;
     if (!links) {
       try {
         const api = getApi() || (await waitForApi());
         const res = await api.get_dspico_official_links();
-        if (gen !== renderGen) return;
         links = (res && res.links) || {};
       } catch (_e) {
         links = {};
       }
     }
-    el.innerHTML = `
-      <section class="panel p-5 space-y-4">
-        <div>
-          <h3 class="text-sm font-semibold text-fg">Preparar microSD</h3>
-          <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
-            Descarrega e verifica (SHA-256) o <strong>Pico Launcher</strong> e o
-            <strong>Pico Loader DSPICO</strong> oficiais e escreve
-            <code>_picoboot.nds</code> + <code>_pico/</code> + <code>Games/</code>.
-          </p>
-        </div>
-        <div class="note">
-          O pacote base vem só de <code>github.com/LNH-team/</code>, com SHA-256 fixado na app.
-        </div>
-        <button type="button" class="btn-primary" id="dspico-btn-setup">Instalar / actualizar pacote oficial</button>
-        <div class="enhanced-card">
-          <h4>Depois: Pico Launcher Enhanced <span class="enhanced-tag">Recomendado</span><span class="enhanced-tag enhanced-tag--warn">Não oficial</span></h4>
-          <p>Fork do launcher oficial, de rasalopa, que acrescenta favoritos, jogos concluídos, estatísticas, capturas de ecrã e,
-          com o Loader Enhanced, a volta ao launcher de dentro do jogo. É opcional, troca só o <code>_picoboot.nds</code>
-          (e os <code>picoLoader*.bin</code>, se escolher o loader) e pode voltar ao oficial quando quiser. O RouteDex usa estes dados.</p>
-          <p class="enhanced-disclaimer">Não é suportado pelo LNH team: problemas com a variante Enhanced vão para github.com/rasalopa/pico-launcher-enhanced.</p>
-          <div><button type="button" class="btn-ghost !text-[11px]" id="dspico-btn-enhanced">Ver variantes Enhanced</button></div>
-        </div>
-        ${linksHtml(links)}
-      </section>`;
+    if (gen !== renderGen) return;
+    el.innerHTML = `<p class="text-[12px] text-fg-mute">Abrem no navegador do sistema.</p>${linksHtml(links)}`;
     bindLinkButtons(el);
-    const enh = document.getElementById("dspico-btn-enhanced");
-    if (enh) enh.onclick = () => window.R1K && R1K.updates && R1K.updates.check();
-    const btn = document.getElementById("dspico-btn-setup");
-    if (btn) {
-      btn.onclick = async () => {
-        if (
-          !confirm(
-            "Escrever o pacote oficial DSPico neste microSD?\n\n" +
-              "Serão actualizados _picoboot.nds e a pasta _pico/."
-          )
-        ) {
-          return;
-        }
-        await runMountOp({ method: "setup_dspico" });
-      };
-    }
   }
 
   function destroyGamesListVlist() {
@@ -342,9 +461,13 @@ const Dspico = (() => {
 
   function organizePanelHtml() {
     return `
-        <section class="panel p-5 space-y-3" id="dspico-organize-panel">
+        <details class="fold panel" id="dspico-organize-panel">
+          <summary class="fold-head">
+            <span class="fold-title">Organizar pastas</span>
+            <span class="fold-sub">Arruma os jogos por franquia ou plataforma e apaga pastas de outros sistemas</span>
+          </summary>
+          <div class="fold-body space-y-3">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Organizar pastas</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Remove conteúdo de outros sistemas (TWiLight, GEi, R4, hiya, …) e deixa
               só o necessário para o DSPico. Jogos NDS e ROMs retro seguem o mesmo layout;
@@ -386,32 +509,33 @@ const Dspico = (() => {
           </div>
           <button type="button" class="btn-primary" id="dspico-btn-organize">Organizar pastas</button>
           <p class="text-[11px] text-fg-mute">
-            Esta acção apaga pastas de outros sistemas. Saves vão com cada jogo.
+            Esta ação apaga pastas de outros sistemas. Saves vão com cada jogo.
             Apps/homebrew → <code>Games/Apps/</code>. Retro de todos os emuladores
             (GB, GBA, NES, Genesis, Atari, Coleco, …) segue o mesmo layout —
             sem pasta <code>ROMs/</code> para jogos (<code>ROMs/BIOS</code> preservada).
           </p>
-        </section>`;
+          </div>
+        </details>`;
   }
 
   function gamesChromeHtml() {
     return `
         <section class="panel p-5 space-y-3 relative" id="dspico-games-panel">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="text-[12px]" id="dspico-games-crumb">
-              <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" disabled>↑</button>
-              <code>SD/</code> <span class="text-fg-mute">biblioteca</span>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-batch-art">Buscar capas e ícones</button>
-              <button type="button" class="btn-secondary !text-[11px]" id="dspico-games-add">Adicionar jogos</button>
-              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-dupes">Apagar duplicatas</button>
-              <button type="button" class="btn-ghost !text-[11px]" id="dspico-games-mkdir">Nova pasta</button>
-              <button type="button" class="btn-ghost !text-[11px] text-danger" id="dspico-games-del" disabled>Remover</button>
-            </div>
+          <div class="games-toolbar">
+            <button type="button" class="btn-primary" id="dspico-games-add">Adicionar jogos</button>
+            <label class="pdx-radio" title="Como a PicoDex: cada jogo vai para Games/<pasta do sistema> (nds, gba, gb…) e ganha a capa do catálogo"><input type="checkbox" id="dspico-games-bysystem"> Cada sistema na sua pasta</label>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-batch-art">Capas que faltam</button>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-mkdir">Nova pasta</button>
+            <button type="button" class="btn-ghost btn-sm" id="dspico-games-dupes">Apagar duplicatas</button>
+            <button type="button" class="btn-ghost btn-sm text-danger" id="dspico-games-del" disabled>Remover</button>
           </div>
+          <div class="games-crumb text-[12px]" id="dspico-games-crumb">
+            <button type="button" class="btn-ghost !px-2 !py-1" id="dspico-games-up" disabled aria-label="Pasta acima">↑</button>
+            <code>SD/</code> <span class="text-fg-mute">biblioteca</span>
+          </div>
+          <div id="dspico-import-results" class="hidden"></div>
           <div id="dspico-games-drop" class="dspico-games-drop rounded-md border border-dashed border-line p-2">
-            <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">A listar…</p>
+            <p class="text-[11px] text-fg-mute mb-2" id="dspico-games-hint">Listando…</p>
             <div id="dspico-games-list" class="dspico-games-list space-y-0.5"></div>
           </div>
           <div id="dspico-conflict-sheet" class="rom-x-overlay hidden" role="dialog" aria-modal="true" aria-hidden="true">
@@ -456,6 +580,22 @@ const Dspico = (() => {
           confirmOrganize: true,
           sourceBtn: orgBtn,
         });
+      };
+    }
+    const bySys = document.getElementById("dspico-games-bysystem");
+    if (bySys && !bySys._dspicoBound) {
+      bySys._dspicoBound = true;
+      try {
+        bySys.checked = localStorage.getItem(IMPORT_KEY) === "1";
+      } catch (_e) {
+        bySys.checked = false;
+      }
+      bySys.onchange = () => {
+        try {
+          localStorage.setItem(IMPORT_KEY, bySys.checked ? "1" : "0");
+        } catch (_e) {
+          /* preferência só desta sessão */
+        }
       };
     }
     const batchArtBtn = document.getElementById("dspico-games-batch-art");
@@ -503,7 +643,7 @@ const Dspico = (() => {
       delBtn.onclick = async () => {
         const mountPath = mount();
         if (!mountPath || !selectedRels.size) return;
-        if (!confirm(`Remover ${selectedRels.size} ficheiro(s)?`)) return;
+        if (!confirm(`Remover ${selectedRels.size} arquivo(s)?`)) return;
         setBusy(true);
         try {
           const api2 = getApi() || (await waitForApi());
@@ -554,7 +694,7 @@ const Dspico = (() => {
         if (paths.length) importPaths(paths);
         else
           appendLog(
-            "Não foi possível ler os caminhos dos ficheiros arrastados. Use Adicionar.",
+            "Não foi possível ler os caminhos dos arquivos arrastados. Use Adicionar.",
             "warn"
           );
       };
@@ -721,7 +861,7 @@ const Dspico = (() => {
     }
     if (!gamesShellBuilt || gamesShellMount !== m || !document.getElementById("dspico-games-list")) {
       destroyGamesListVlist();
-      el.innerHTML = organizePanelHtml() + gamesChromeHtml();
+      el.innerHTML = gamesChromeHtml() + organizePanelHtml();
       gamesShellBuilt = true;
       gamesShellMount = m;
       bindGamesShellHandlers(m);
@@ -731,9 +871,9 @@ const Dspico = (() => {
     const crumbHost = document.getElementById("dspico-games-crumb");
     if (listEl) {
       destroyGamesListVlist();
-      listEl.innerHTML = `<p class="text-fg-mute text-[12px] p-2">A listar jogos…</p>`;
+      listEl.innerHTML = `<p class="text-fg-mute text-[12px] p-2">Listando jogos…</p>`;
     }
-    if (hint) hint.textContent = "A listar…";
+    if (hint) hint.textContent = "Listando…";
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.browse_dspico_games(m, gamesCwd);
@@ -795,7 +935,7 @@ const Dspico = (() => {
       if (hint) {
         hint.textContent =
           dirs.length + files.length
-            ? `${dirs.length} pasta(s) · ${files.length} ficheiro(s) — arraste ROMs para aqui`
+            ? `${dirs.length} pasta(s) · ${files.length} arquivo(s) — arraste ROMs para aqui`
             : "Pasta vazia — arraste ROMs ou use Adicionar";
       }
       if (!listEl) return;
@@ -901,7 +1041,7 @@ const Dspico = (() => {
   async function addGames() {
     const m = mount();
     if (!m) {
-      alert("Seleccione o microSD primeiro.");
+      alert("Selecione o microSD primeiro.");
       return;
     }
     if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
@@ -911,13 +1051,13 @@ const Dspico = (() => {
     try {
       const api = getApi() || (await waitForApi());
       if (!api || typeof api.pick_dspico_rom_files !== "function") {
-        appendLog("API de selecção de jogos indisponível.", "error");
+        appendLog("API de seleção de jogos indisponível.", "error");
         return;
       }
       const picked = await api.pick_dspico_rom_files();
       if (!picked || !picked.success) {
         appendLog(
-          `Erro ao escolher ficheiros: ${(picked && picked.error) || "falha"}`,
+          `Erro ao escolher arquivos: ${(picked && picked.error) || "falha"}`,
           "error"
         );
         return;
@@ -925,7 +1065,7 @@ const Dspico = (() => {
       if (picked.cancelled) return;
       const paths = picked.paths || [];
       if (!paths.length) {
-        appendLog("Nenhum ficheiro seleccionado.", "warn");
+        appendLog("Nenhum arquivo selecionado.", "warn");
         return;
       }
       await importPaths(paths);
@@ -934,586 +1074,17 @@ const Dspico = (() => {
     }
   }
 
-  function ensureArtEsc() {
-    if (artEscBound) return;
-    artEscBound = true;
-    document.addEventListener("keydown", (ev) => {
-      if (ev.key !== "Escape") return;
-      const panel = document.getElementById("dspico-art-panel");
-      if (panel && !panel.classList.contains("hidden")) {
-        closeArtPanel();
-      }
-    });
-  }
-
-  function artQueryValue() {
-    const el = document.getElementById("dspico-art-query");
-    if (el) artQueryDraft = String(el.value || "");
-    return artQueryDraft;
-  }
-
-  function artPathLabel(state) {
-    const rel = (state && state.rel_path) || artRel || "";
-    const area = (state && state.area) || (artMeta && artMeta.area) || "";
-    if (!rel) return "";
-    if (rel.startsWith("ROMs/") || rel.startsWith("Games/")) return rel;
-    if (area === "roms") return "ROMs/" + rel.replace(/^ROMs\//, "");
-    return "Games/" + rel.replace(/^Games\//, "");
-  }
-
-  function closeArtPanel() {
-    artQueryValue();
-    artRel = null;
-    artMeta = null;
-    artCandidates = [];
-    artSearching = false;
-    artGen += 1;
-    const panel = document.getElementById("dspico-art-panel");
-    const backdrop = document.getElementById("dspico-art-backdrop");
-    if (panel) {
-      panel.classList.add("hidden");
-      panel.setAttribute("aria-hidden", "true");
-    }
-    if (backdrop) backdrop.classList.add("hidden");
-  }
-
-  function bindArtControls(candidates) {
-    const body = document.getElementById("dspico-art-body");
-    if (!body) return;
-    body.querySelectorAll("[data-art-kind]").forEach((tab) => {
-      tab.onclick = () => {
-        const k = tab.getAttribute("data-art-kind");
-        if (k !== "cover" && k !== "icon") return;
-        if (artKind === k) return;
-        artQueryValue();
-        artKind = k;
-        artCandidates = [];
-        artSearching = false;
-        renderArtBody({
-          ...(artMeta || {}),
-          kind: artKind,
-          current:
-            artKind === "icon"
-              ? artMeta && artMeta.icon
-              : artMeta && artMeta.cover,
-          candidates: [],
-          message:
-            "Escolha «Pesquisar» ou «Buscar online» para ver opções de " +
-            (artKind === "icon" ? "ícone" : "capa") +
-            ".",
-        });
-      };
-    });
-    const queryEl = document.getElementById("dspico-art-query");
-    if (queryEl) {
-      queryEl.oninput = () => {
-        artQueryDraft = String(queryEl.value || "");
-      };
-      queryEl.onkeydown = (ev) => {
-        if (ev.key === "Enter") {
-          ev.preventDefault();
-          runArtSearch(artQueryValue());
-        }
-      };
-    }
-    const searchBtn = document.getElementById("dspico-art-search-btn");
-    if (searchBtn) searchBtn.onclick = () => runArtSearch(artQueryValue());
-    const autoBtn = document.getElementById("dspico-art-auto");
-    if (autoBtn) {
-      autoBtn.onclick = () => runArtSearch("", { clearQuery: false });
-    }
-    const manBtn = document.getElementById("dspico-art-manual");
-    if (manBtn) manBtn.onclick = () => pickArtFile();
-    body.querySelectorAll("[data-art-idx]").forEach((btn) => {
-      btn.onclick = () => {
-        const idx = parseInt(btn.getAttribute("data-art-idx") || "-1", 10);
-        const c = candidates[idx];
-        if (c && c.url) applyArtUrl(c.url);
-      };
-    });
-  }
-
-  function renderArtBody(state) {
-    const body = document.getElementById("dspico-art-body");
-    if (!body) return;
-    const kind = state.kind || artKind;
-    const current = state.current;
-    const candidates = Array.isArray(state.candidates)
-      ? state.candidates
-      : artCandidates;
-    artCandidates = candidates;
-    const hints = state.hints || (artMeta && artMeta.hints) || {};
-    const isIcon = kind === "icon";
-
-    // Preservar texto da pesquisa entre re-renders (nunca depender de toolbar fora do body).
-    const qEl = document.getElementById("dspico-art-query");
-    if (qEl) artQueryDraft = String(qEl.value || "");
-    if (typeof state.query === "string") artQueryDraft = state.query;
-    const queryVal = artQueryDraft;
-    const restoreFocus =
-      qEl && document.activeElement === qEl ? qEl.selectionStart : null;
-
-    const currentHtml = current
-      ? `<img src="${current}" alt="" draggable="false">`
-      : `<div class="dspico-art-ph ${
-          isIcon ? "dspico-art-ph--icon" : ""
-        }">Sem ${isIcon ? "ícone" : "capa"}</div>`;
-
-    const plat = (state.platform || (artMeta && artMeta.platform) || "")
-      .toString()
-      .toUpperCase();
-    const pathLabel = artPathLabel(state);
-
-    const opts = candidates
-      .map((c, i) => {
-        const src = escapeHtml(c.preview || c.url || "");
-        const srcLabel = escapeHtml(
-          (c.source ? c.source + " · " : "") + (c.label || "opção")
-        );
-        return (
-          `<button type="button" class="dspico-art-opt ${
-            isIcon ? "dspico-art-opt--icon" : ""
-          }" data-art-idx="${i}">
-            <img src="${src}" alt="" draggable="false" loading="lazy" referrerpolicy="no-referrer"
-                 onerror="this.classList.add('hidden'); this.insertAdjacentHTML('afterend','<div class=\\'dspico-art-ph${
-                   isIcon ? " dspico-art-ph--icon" : ""
-                 }\\'>—</div>');">
-            <span class="dspico-art-opt-label">${srcLabel}</span>
-          </button>`
-        );
-      })
-      .join("");
-
-    body.innerHTML =
-      `<div>
-        <p class="text-[13px] font-medium text-fg">${escapeHtml(
-          state.display_name ||
-            (artMeta && artMeta.display_name) ||
-            artRel ||
-            ""
-        )}</p>
-        <p class="text-[11px] text-fg-mute mt-0.5">${escapeHtml(pathLabel)}${
-          state.game_code || (artMeta && artMeta.game_code)
-            ? " · " +
-              escapeHtml(state.game_code || (artMeta && artMeta.game_code) || "")
-            : ""
-        }${plat ? " · " + escapeHtml(plat) : ""}</p>
-      </div>` +
-      `<div class="dspico-art-tabs">
-        <button type="button" class="dspico-art-tab ${
-          kind === "cover" ? "dspico-art-tab--on" : ""
-        }" data-art-kind="cover" id="dspico-art-tab-cover">Capa</button>
-        <button type="button" class="dspico-art-tab ${
-          kind === "icon" ? "dspico-art-tab--on" : ""
-        }" data-art-kind="icon" id="dspico-art-tab-icon">Ícone</button>
-      </div>` +
-      `<div class="dspico-art-current ${
-        isIcon ? "dspico-art-current--icon" : ""
-      }">${currentHtml}
-        <div class="min-w-0">
-          <p class="text-[12px] text-fg-soft">Actual no cartão</p>
-          <p class="text-[11px] text-fg-mute mt-1 leading-relaxed">${escapeHtml(
-            hints[kind] || ""
-          )}</p>
-        </div>
-      </div>` +
-      `<div class="dspico-art-search">
-        <div class="dspico-art-search-row">
-          <input type="text" id="dspico-art-query" placeholder="Pesquisar por nome ou TID…" autocomplete="off" spellcheck="false" value="${escapeHtml(
-            queryVal
-          )}">
-          <button type="button" class="btn-secondary" id="dspico-art-search-btn">Pesquisar</button>
-        </div>
-      </div>` +
-      `<div class="dspico-art-actions">
-        <button type="button" class="btn-primary !py-1.5 !px-3 text-[11px]" id="dspico-art-auto">Buscar online</button>
-        <button type="button" class="btn-secondary !py-1.5 !px-3 text-[11px]" id="dspico-art-manual">Escolher ficheiro do PC…</button>
-      </div>` +
-      `<p class="dspico-art-local-hint">Do teu PC: PNG ou BMP (JPEG não suportado).</p>` +
-      (state.searching || artSearching
-        ? `<p class="text-[12px] text-fg-mute">A procurar na Internet…</p>`
-        : "") +
-      (state.message
-        ? `<p class="text-[12px] text-fg-soft">${escapeHtml(state.message)}</p>`
-        : "") +
-      (candidates.length
-        ? `<div class="dspico-art-grid">${opts}</div>
-           <p class="text-[11px] text-fg-mute">Clique numa opção para gravar no formato Pico Launcher (BMP).</p>`
-        : !(state.searching || artSearching)
-          ? `<p class="text-[12px] text-fg-mute">Use «Pesquisar» ou «Buscar online» para ver capas/ícones, ou escolha um ficheiro do PC.</p>`
-          : "");
-
-    bindArtControls(candidates);
-    const newQ = document.getElementById("dspico-art-query");
-    if (newQ && restoreFocus != null) {
-      newQ.focus();
-      try {
-        const pos = Math.min(restoreFocus, newQ.value.length);
-        newQ.setSelectionRange(pos, pos);
-      } catch (_e) {
-        /* ignore */
-      }
-    }
-  }
-
-  function renderBatchMissing(missing) {
-    const el = document.getElementById("dspico-batch-missing");
-    if (!el) return;
-    const list = Array.isArray(missing) ? missing : [];
-    if (!list.length) {
-      el.classList.add("hidden");
-      el.innerHTML = "";
-      return;
-    }
-    el.classList.remove("hidden");
-    const rows = list
-      .map((item, idx) => {
-        const name = escapeHtml(item.display_name || item.rel_path || "?");
-        const bits = [];
-        if (item.missing_cover) bits.push("capa");
-        if (item.missing_icon) bits.push("ícone");
-        const need = bits.length ? bits.join(" + ") : "arte";
-        const rel = escapeHtml(item.rel_path || "");
-        return `<div class="flex flex-wrap items-center justify-between gap-2 p-2 rounded border border-line text-[12px]" data-miss-idx="${idx}">
-          <div>
-            <div class="font-medium text-fg">${name}</div>
-            <div class="text-[11px] text-fg-mute">Em falta: ${escapeHtml(need)}</div>
-          </div>
-          <div class="flex flex-wrap gap-1">
-            <button type="button" class="btn-secondary !text-[11px] !py-1 !px-2" data-miss-search="${rel}">Pesquisar</button>
-            <button type="button" class="btn-ghost !text-[11px] !py-1 !px-2" data-miss-file="${rel}" data-miss-kind="${
-              item.missing_cover ? "cover" : "icon"
-            }">Escolher ficheiro</button>
-          </div>
-        </div>`;
-      })
-      .join("");
-    el.innerHTML = `
-      <div class="rounded-lg border border-line p-3 space-y-2 bg-surface-2/40">
-        <p class="text-[12px] font-semibold text-fg">Jogos sem capa/ícone após o lote</p>
-        <p class="text-[11px] text-fg-mute">Pesquise online ou escolha um ficheiro. Só DSPico — não afecta TWiLight.</p>
-        <div class="space-y-2 max-h-56 overflow-y-auto">${rows}</div>
-      </div>`;
-    el.querySelectorAll("[data-miss-search]").forEach((btn) => {
-      btn.onclick = () => {
-        const rel = btn.getAttribute("data-miss-search") || "";
-        if (rel) openArtPanel(rel);
-      };
-    });
-    el.querySelectorAll("[data-miss-file]").forEach((btn) => {
-      btn.onclick = async () => {
-        const rel = btn.getAttribute("data-miss-file") || "";
-        const kind = btn.getAttribute("data-miss-kind") || "cover";
-        if (!rel) return;
-        artRel = rel;
-        artKind = kind === "icon" ? "icon" : "cover";
-        await pickArtFile();
-      };
-    });
-  }
-
-  async function runDspicoArtworkBatch() {
+  /** Capa e ícone de um jogo: janela portada da PicoDex (static/js/picodex-ui.js). */
+  function openArtPanel(rel) {
     const m = mount();
-    if (!m) {
-      alert("Seleccione um cartão.");
-      return;
-    }
-    if (typeof busy !== "undefined" && busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    try {
-      const api = getApi() || (await waitForApi());
-      const fn =
-        api &&
-        (api.generate_dspico_artwork_batch || api.generate_dspico_covers_batch);
-      if (!fn) {
-        appendLog("API de lote DSPico indisponível.", "error");
-        return;
-      }
-      setBusy(true, null, {
-        op: "generate_dspico_artwork_batch",
-        label: "A buscar capas e ícones…",
-      });
-      appendLog("A buscar capas e ícones DSPico em lote…", "info");
-      const res = await fn.call(api, m);
-      if (res && res.success) {
-        appendLog(res.message || "Lote concluído.", "success");
-        renderBatchMissing(res.missing || []);
-        refresh();
-      } else {
-        appendLog((res && res.error) || "Falha no lote DSPico.", "error");
-        renderBatchMissing([]);
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
+    if (!rel || !m || !(window.R1K && R1K.picodex)) return;
+    R1K.picodex.openCoverPicker(m, rel, { onSaved: () => refresh() });
   }
 
-  async function openArtPanel(rel, keepKind) {
-    if (!rel || !mount()) return;
-    ensureArtEsc();
-    const gen = ++artGen;
-    const sameGame = artRel === rel;
-    artRel = rel;
-    if (!keepKind && !sameGame) {
-      artKind = "cover";
-      artQueryDraft = "";
-    }
-    const panel = document.getElementById("dspico-art-panel");
-    const backdrop = document.getElementById("dspico-art-backdrop");
-    const title = document.getElementById("dspico-art-title");
-    if (title) title.textContent = "Arte do jogo";
-    if (panel) {
-      panel.classList.remove("hidden");
-      panel.setAttribute("aria-hidden", "false");
-    }
-    if (backdrop) backdrop.classList.remove("hidden");
-    artSearching = false;
-    artCandidates = [];
-    renderArtBody({
-      display_name: (rel.split("/").pop() || rel).replace(/\.[^.]+$/, ""),
-      rel_path: rel,
-      kind: artKind,
-      query: artQueryDraft,
-      searching: false,
-      message: "A carregar…",
-      candidates: [],
-    });
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.get_dspico_game_artwork !== "function") {
-        if (gen !== artGen) return;
-        renderArtBody({
-          rel_path: rel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: "API de arte DSPico indisponível.",
-          candidates: [],
-        });
-        return;
-      }
-      const meta = await api.get_dspico_game_artwork(mount(), rel);
-      if (gen !== artGen) return;
-      if (!(meta && meta.success)) {
-        renderArtBody({
-          rel_path: rel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: (meta && meta.error) || "Falha ao carregar.",
-          candidates: [],
-        });
-        return;
-      }
-      artMeta = meta;
-      renderArtBody({
-        ...meta,
-        kind: artKind,
-        query: artQueryDraft,
-        current: artKind === "icon" ? meta.icon : meta.cover,
-        candidates: [],
-        searching: false,
-        message:
-          "Use «Pesquisar» ou «Buscar online» para ver opções, ou escolha um ficheiro do PC.",
-      });
-    } catch (e) {
-      if (gen !== artGen) return;
-      renderArtBody({
-        rel_path: rel,
-        kind: artKind,
-        query: artQueryDraft,
-        message: e.message || String(e),
-        candidates: [],
-      });
-    }
-  }
-
-  async function runArtSearch(query, opts) {
-    if (!artRel || !mount()) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    const options = opts && typeof opts === "object" ? opts : {};
-    if (typeof opts === "number") {
-      options.expectedGen = opts;
-    }
-    const gen =
-      options.expectedGen != null ? options.expectedGen : ++artGen;
-    let q = typeof query === "string" ? query : artQueryValue();
-    if (options.clearQuery) {
-      artQueryDraft = "";
-      q = "";
-    } else {
-      artQueryDraft = q;
-    }
-    artSearching = true;
-    artCandidates = [];
-    renderArtBody({
-      ...(artMeta || {}),
-      rel_path: artRel,
-      kind: artKind,
-      query: artQueryDraft,
-      searching: true,
-      message: "A procurar na Internet…",
-      candidates: [],
-      current:
-        artKind === "icon"
-          ? artMeta && artMeta.icon
-          : artMeta && artMeta.cover,
-    });
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.search_dspico_artwork !== "function") {
-        if (gen !== artGen) return;
-        artSearching = false;
-        appendLog("API de pesquisa de arte indisponível.", "error");
-        renderArtBody({
-          ...(artMeta || {}),
-          rel_path: artRel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: "API de pesquisa indisponível.",
-          candidates: [],
-        });
-        return;
-      }
-      setBusy(true, null, { soft: true });
-      const data = await api.search_dspico_artwork(
-        mount(),
-        artRel,
-        artKind,
-        q
-      );
-      if (gen !== artGen) return;
-      artSearching = false;
-      if (!(data && data.success)) {
-        renderArtBody({
-          ...(artMeta || {}),
-          rel_path: artRel,
-          kind: artKind,
-          query: artQueryDraft,
-          message: (data && data.error) || "Pesquisa falhou.",
-          candidates: [],
-          current:
-            artKind === "icon"
-              ? artMeta && artMeta.icon
-              : artMeta && artMeta.cover,
-        });
-        return;
-      }
-      artMeta = { ...(artMeta || {}), ...data };
-      renderArtBody({
-        ...data,
-        kind: artKind,
-        query: artQueryDraft,
-        searching: false,
-      });
-    } catch (e) {
-      if (gen !== artGen) return;
-      artSearching = false;
-      renderArtBody({
-        ...(artMeta || {}),
-        rel_path: artRel,
-        kind: artKind,
-        query: artQueryDraft,
-        message: e.message || String(e),
-        candidates: [],
-      });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function applyArtUrl(url) {
-    if (!artRel || !mount() || !url) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    let ok = false;
-    const rel = artRel;
-    try {
-      const api = getApi() || (await waitForApi());
-      setBusy(true);
-      appendLog(
-        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
-        "info"
-      );
-      const res = await api.apply_dspico_artwork_url(
-        mount(),
-        rel,
-        artKind,
-        url
-      );
-      if (res && res.success) {
-        appendLog(res.message || "Arte gravada.", "success");
-        ok = true;
-      } else {
-        appendLog((res && res.error) || "Falha ao gravar arte.", "error");
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
-    if (ok) {
-      await openArtPanel(rel, true);
-      refresh();
-    }
-  }
-
-  async function pickArtFile() {
-    if (!artRel || !mount()) return;
-    if (typeof isHardBusy === "function" ? isHardBusy() : busy) {
-      appendLog("Aguarde a operação em andamento terminar.", "warn");
-      return;
-    }
-    let ok = false;
-    const rel = artRel;
-    try {
-      const api = getApi() || (await waitForApi());
-      if (!api || typeof api.pick_image_file !== "function") {
-        appendLog("Diálogo de imagem indisponível.", "error");
-        return;
-      }
-      const picked = await api.pick_image_file();
-      if (!picked || !picked.success) {
-        appendLog(
-          `Erro ao escolher imagem: ${(picked && picked.error) || "falha"}`,
-          "error"
-        );
-        return;
-      }
-      if (picked.cancelled || !picked.path) return;
-      setBusy(true);
-      appendLog(
-        artKind === "icon" ? "A gravar ícone…" : "A gravar capa…",
-        "info"
-      );
-      const res = await api.set_dspico_artwork(
-        mount(),
-        rel,
-        artKind,
-        picked.path
-      );
-      if (res && res.success) {
-        appendLog(res.message || "Arte gravada.", "success");
-        ok = true;
-      } else {
-        appendLog((res && res.error) || "Falha ao gravar arte.", "error");
-      }
-    } catch (e) {
-      appendLog(e.message || String(e), "error");
-    } finally {
-      setBusy(false);
-    }
-    if (ok) {
-      await openArtPanel(rel, true);
-      refresh();
-    }
+  /** Capas em lote: a tela RouteDex → Capas (lista o que falta, escolhe e busca só capas). */
+  function runDspicoArtworkBatch() {
+    if (typeof RouteDex !== "undefined" && RouteDex.showTab) RouteDex.showTab("covers");
+    if (window.R1K && R1K.shell) R1K.shell.go("dspico", "routedex");
   }
 
   function closeDspicoOverlay(id) {
@@ -1562,7 +1133,7 @@ const Dspico = (() => {
           return (
             `<div class="rom-x-dupe-group">` +
             `<p class="rom-x-dupe-group-title">${name}</p>` +
-            `<p class="rom-x-dupe-group-sub">A importar: ${src}</p>` +
+            `<p class="rom-x-dupe-group-sub">Importando: ${src}</p>` +
             (existing
               ? `<ul class="text-[11px] text-fg-mute mb-2 list-disc pl-4">${existing}</ul>`
               : "") +
@@ -1609,11 +1180,12 @@ const Dspico = (() => {
     const list = Array.isArray(paths) ? paths.filter(Boolean) : [];
     if (!list.length) return;
     setBusy(true);
-    appendLog("A verificar duplicatas…", "info");
+    appendLog("Verificando duplicatas…", "info");
     let resolutions = {};
     try {
       const api = getApi() || (await waitForApi());
-      const destRel = gamesDestRel(gamesCwd);
+      const bySystem = importBySystem();
+      const destRel = bySystem ? "" : gamesDestRel(gamesCwd);
       const check = await api.check_dspico_import_conflicts(m, list, destRel);
       if (!check || !check.success) {
         appendLog(
@@ -1633,17 +1205,22 @@ const Dspico = (() => {
         setBusy(true);
       }
       appendLog(
-        `A importar ${list.length} item(ns) para Games/…`,
+        bySystem
+          ? `Importando ${list.length} item(ns) para a pasta de cada sistema em Games/…`
+          : `Importando ${list.length} item(ns) para Games/…`,
         "info"
       );
       const res = await api.import_dspico_games(
         m,
         list,
         destRel,
-        resolutions
+        resolutions,
+        bySystem,
+        true
       );
       if (res && res.success) appendLog(res.message || "Importado.", "success");
       else appendLog((res && res.error) || "Falha ao importar.", "error");
+      showImportResults((res && res.stats && res.stats.items) || []);
     } catch (e) {
       appendLog(e.message || String(e), "error");
     } finally {
@@ -1652,10 +1229,49 @@ const Dspico = (() => {
     }
   }
 
+  const IMPORT_KEY = "routepico.import.bySystem";
+  function importBySystem() {
+    const cb = document.getElementById("dspico-games-bysystem");
+    return !!(cb && cb.checked);
+  }
+
+  /** Resultado de cada arquivo da importação (PicoDex DropImport). */
+  function showImportResults(items) {
+    const box = document.getElementById("dspico-import-results");
+    if (!box) return;
+    if (!items.length) {
+      box.classList.add("hidden");
+      box.innerHTML = "";
+      return;
+    }
+    const LABEL = {
+      added: "Adicionado",
+      duplicate: "Pulado (já está no cartão ou veio duas vezes)",
+      "unknown-type": "Pulado (não é um ROM suportado)",
+      skipped: "Pulado (arquivo de sistema)",
+      failed: "Falhou",
+    };
+    const COVER = { fetched: ", capa encontrada", none: ", sem capa no catálogo", error: ", capa falhou" };
+    const added = items.filter((i) => i.status === "added").length;
+    box.className = "note pdx-import";
+    box.innerHTML = `
+      <div class="flex items-center justify-between gap-2"><strong>Importação concluída · ${added === 1 ? "1 adicionado" : `${added} adicionados`}</strong>
+        <button type="button" class="btn-ghost btn-sm" id="dspico-import-dismiss">Fechar</button></div>
+      <ul class="pdx-import-list" aria-label="Resultado da importação">${items
+        .map(
+          (i) => `<li><span class="truncate" title="${escapeHtml(i.rel || i.name)}">${escapeHtml(i.name)}</span>
+            <span class="${i.status === "added" ? "text-ok" : i.status === "failed" ? "text-danger" : "text-fg-mute"}">${escapeHtml(
+              (LABEL[i.status] || i.status) + (i.status === "added" ? COVER[i.cover] || "" : "") + (i.error ? ` (${i.error})` : "")
+            )}</span></li>`
+        )
+        .join("")}</ul>`;
+    box.querySelector("#dspico-import-dismiss").onclick = () => showImportResults([]);
+  }
+
   async function openDspicoDupesSheet() {
     const m = mount();
     if (!m) {
-      alert("Seleccione um cartão SD primeiro.");
+      alert("Selecione um cartão SD primeiro.");
       return;
     }
     if (typeof busy !== "undefined" && busy) {
@@ -1774,10 +1390,10 @@ const Dspico = (() => {
       return;
     }
     const total = toDeleteGames.length + toDeleteRetro.length;
-    if (!confirm(`Apagar ${total} ficheiro(s) duplicado(s)?`)) return;
+    if (!confirm(`Apagar ${total} arquivo(s) duplicado(s)?`)) return;
 
     setBusy(true);
-    appendLog(`A remover ${total} duplicata(s)…`, "info");
+    appendLog(`Removendo ${total} duplicata(s)…`, "info");
     try {
       const api = getApi() || (await waitForApi());
       if (toDeleteGames.length) {
@@ -1806,7 +1422,7 @@ const Dspico = (() => {
   }
 
   function onNativeDrop(paths) {
-    if (typeof appMode !== "undefined" && appMode !== "dspico") return;
+    if (!(window.R1K && R1K.shell && R1K.shell.current() === "dspico")) return;
     if (section !== "games") setSection("games");
     importPaths(paths);
   }
@@ -1818,7 +1434,7 @@ const Dspico = (() => {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A carregar catálogo…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Carregando catálogo…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.list_dspico_emulators(m || "");
@@ -1885,11 +1501,11 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Emuladores (Pico-Launcher)</h3>
+            <h3 class="section-label">Emuladores (Pico-Launcher)</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               Copia NDS para <code>/_pico/emulators/</code> (ou <code>/Emulators/</code> se manual),
               cria <code>/ROMs/…</code> e configura <code>fileAssociations</code>.
-              Jogos NDS/DSi ficam em <code>Games/</code>. BIOS proprietária não é descarregada.
+              Jogos NDS/DSi ficam em <code>Games/</code>. BIOS proprietária não é baixada.
               Se escolher GBARunner3 e 2, só o 3 fica associado a <code>.gba</code>.
             </p>
           </div>
@@ -1898,12 +1514,13 @@ const Dspico = (() => {
               ? catBlocks
               : `<div class="note note--warn">Nenhum emulador com pin disponível neste build.</div>`
           }
-          <div class="flex flex-wrap gap-2">
-            <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-popular">Seleccionar populares</button>
+          <div class="sticky-actions">
+            <span class="sticky-actions-note" id="dspico-emu-count">Nenhum selecionado</span>
+            <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-popular">Selecionar populares</button>
             <button type="button" class="btn-ghost !text-[11px]" id="dspico-emu-clear">Limpar</button>
             <button type="button" class="btn-primary" id="dspico-emu-install" ${
               available.length ? "" : "disabled"
-            }>Instalar seleccionados</button>
+            }>Instalar selecionados</button>
           </div>
           <div id="dspico-emu-result" class="text-[12px] text-fg-mute hidden"></div>
         </section>`;
@@ -1911,12 +1528,20 @@ const Dspico = (() => {
       const popularBtn = document.getElementById("dspico-emu-popular");
       const clearBtn = document.getElementById("dspico-emu-clear");
       const installBtn = document.getElementById("dspico-emu-install");
+      const countEl = document.getElementById("dspico-emu-count");
+      const syncCount = () => {
+        const n = el.querySelectorAll(".dspico-emu-cb:checked").length;
+        if (countEl) countEl.textContent = n ? `${n} selecionado${n === 1 ? "" : "s"}` : "Nenhum selecionado";
+      };
+      el.querySelectorAll(".dspico-emu-cb").forEach((cb) => cb.addEventListener("change", syncCount));
+      syncCount();
 
       if (popularBtn) {
         popularBtn.onclick = () => {
           el.querySelectorAll(".dspico-emu-cb").forEach((cb) => {
             cb.checked = cb.getAttribute("data-popular") === "1";
           });
+          syncCount();
         };
       }
       if (clearBtn) {
@@ -1924,6 +1549,7 @@ const Dspico = (() => {
           el.querySelectorAll(".dspico-emu-cb").forEach((cb) => {
             cb.checked = false;
           });
+          syncCount();
         };
       }
       if (installBtn) {
@@ -1932,7 +1558,7 @@ const Dspico = (() => {
             el.querySelectorAll(".dspico-emu-cb:checked")
           ).map((c) => c.value);
           if (!ids.length) {
-            alert("Seleccione pelo menos um emulador.");
+            alert("Selecione pelo menos um emulador.");
             return;
           }
           if (
@@ -2011,20 +1637,20 @@ const Dspico = (() => {
     el.innerHTML = `
       <section class="panel p-5 space-y-4">
         <div>
-          <h3 class="text-sm font-semibold text-fg">Emunand / DSiWare</h3>
+          <h3 class="section-label">Emunand / DSiWare</h3>
           <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
-            Conforme o README do Pico Loader: DSiWare e ROMs com secure area encriptada
+            Conforme o README do Pico Loader: DSiWare e ROMs com secure area criptografada
             precisam de <code>/_pico/biosnds7.rom</code> (BIOS ARM7 de <strong>DS</strong>, não DSi)
-            e pastas NAND no cartão. Importe apenas dumps <em>seus</em> — o app não descarrega BIOS/NAND.
+            e pastas NAND no cartão. Importe apenas dumps <em>seus</em> — o app não baixa BIOS/NAND.
           </p>
         </div>
         <ul class="text-[12px] space-y-1">
-          <li>${files.biosnds7 ? "✅" : "○"} <code>_pico/biosnds7.rom</code></li>
-          <li>${files.twl_font ? "✅" : "○"} <code>sys/TWLFontTable.dat</code></li>
-          <li>${emu.photo ? "✅" : "○"} <code>photo/</code></li>
-          <li>${emu.shared1 ? "✅" : "○"} <code>shared1/</code></li>
-          <li>${emu.shared2_0000 ? "✅" : "○"} <code>shared2/0000/</code></li>
-          <li>${emu.sys ? "✅" : "○"} <code>sys/</code></li>
+          <li class="state-row ${files.biosnds7 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!files.biosnds7)} <code>_pico/biosnds7.rom</code></li>
+          <li class="state-row ${files.twl_font ? "text-ok" : "text-fg-mute"}">${stateIcon(!!files.twl_font)} <code>sys/TWLFontTable.dat</code></li>
+          <li class="state-row ${emu.photo ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.photo)} <code>photo/</code></li>
+          <li class="state-row ${emu.shared1 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.shared1)} <code>shared1/</code></li>
+          <li class="state-row ${emu.shared2_0000 ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.shared2_0000)} <code>shared2/0000/</code></li>
+          <li class="state-row ${emu.sys ? "text-ok" : "text-fg-mute"}">${stateIcon(!!emu.sys)} <code>sys/</code></li>
         </ul>
         <div class="flex flex-col sm:flex-row gap-2 flex-wrap">
           <button type="button" class="btn-secondary" id="dspico-emunand-skel">Criar pastas emunand</button>
@@ -2032,7 +1658,7 @@ const Dspico = (() => {
           <button type="button" class="btn-ghost" id="dspico-import-font">Importar TWLFontTable.dat…</button>
         </div>
         <div class="note note--warn">
-          Não use dumps de terceiros. Obtenha o BIOS/font a partir da sua consola.
+          Não use dumps de terceiros. Obtenha o BIOS/font a partir do seu console.
         </div>
       </section>`;
     document.getElementById("dspico-emunand-skel").onclick = async () => {
@@ -2075,7 +1701,7 @@ const Dspico = (() => {
       el.innerHTML = needDriveHtml();
       return;
     }
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A ler settings…</p></section>`;
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Lendo settings…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.get_dspico_settings(m);
@@ -2097,8 +1723,8 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Pico Launcher — settings.json</h3>
-            <p class="text-[12px] text-fg-mute mt-1">Ficheiro <code>/_pico/settings.json</code> (chaves documentadas no Usage oficial).</p>
+            <h3 class="section-label">Pico Launcher: settings.json</h3>
+            <p class="text-[12px] text-fg-mute mt-1">Arquivo <code>/_pico/settings.json</code> (chaves documentadas no Usage oficial).</p>
           </div>
           <label class="block text-[12px]">
             <span class="text-fg-mute">Tema (pasta em _pico/themes/)</span>
@@ -2138,7 +1764,7 @@ const Dspico = (() => {
               s.language || "english"
             )}">
           </label>
-          <button type="button" class="btn-primary" id="dspico-save-settings">Guardar definições</button>
+          <button type="button" class="btn-primary" id="dspico-save-settings">Salvar configurações</button>
         </section>`;
       document.getElementById("dspico-save-settings").onclick = async () => {
         const patch = {
@@ -2168,8 +1794,8 @@ const Dspico = (() => {
   async function renderFirmware(gen, m) {
     const el = document.getElementById("dspico-section-firmware");
     if (!el) return;
-    // Firmware não precisa do SD seleccionado, mas mostramos contexto
-    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">A procurar RPI-RP2…</p></section>`;
+    // Firmware não precisa do SD selecionado, mas mostramos contexto
+    el.innerHTML = `<section class="panel p-5"><p class="text-fg-mute text-[12px]">Procurando RPI-RP2…</p></section>`;
     try {
       const api = getApi() || (await waitForApi());
       const data = await api.list_rp2_volumes();
@@ -2198,23 +1824,23 @@ const Dspico = (() => {
       el.innerHTML = `
         <section class="panel p-5 space-y-4">
           <div>
-            <h3 class="text-sm font-semibold text-fg">Firmware do cartucho (RP2040)</h3>
+            <h3 class="section-label">Firmware do cartucho (RP2040)</h3>
             <p class="text-[12px] text-fg-mute mt-1 leading-relaxed">
               O firmware <strong>não</strong> vai no microSD. Em BOOTSEL aparece o volume
               <code>RPI-RP2</code>. Só gravamos o <code>.uf2</code> oficial pinado de
-              <code>LNH-team/dspico-firmware</code> — sem ficheiros de terceiros.
+              <code>LNH-team/dspico-firmware</code> — sem arquivos de terceiros.
             </p>
           </div>
           <ol class="guide-list list-decimal text-[12px] text-fg-soft space-y-1">
             <li>Retire o microSD do cartucho (ou use BOOTSEL se o firmware já estiver instalado).</li>
-            <li>Ligue o DSPico ao PC por USB até aparecer <code>RPI-RP2</code>.</li>
-            <li>Actualize a lista abaixo e grave o UF2 oficial (quando disponível nas releases LNH).</li>
+            <li>Conecte o DSPico ao PC por USB até aparecer <code>RPI-RP2</code>.</li>
+            <li>Atualize a lista abaixo e grave o UF2 oficial (quando disponível nas releases LNH).</li>
           </ol>
           <div class="note ${ready ? "note--ok" : "note--warn"}">
             ${
               ready
                 ? "Asset .uf2 oficial pinado — pode gravar."
-                : "As releases LNH actuais <strong>não publicam</strong> DSpico.uf2 (é preciso compilar via GUIDE). O botão de gravação fica desactivado até existir pin oficial — builds community/hybrid são rejeitados."
+                : "As releases LNH atuais <strong>não publicam</strong> DSpico.uf2 (é preciso compilar via GUIDE). O botão de gravação fica desativado até existir pin oficial — builds community/hybrid são rejeitados."
             }
           </div>
           <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
@@ -2226,7 +1852,7 @@ const Dspico = (() => {
           </div>
           <button type="button" class="btn-primary" id="dspico-flash-uf2" ${
             ready && vols.length ? "" : "disabled"
-          }>Descarregar e gravar UF2 oficial</button>
+          }>Baixar e gravar UF2 oficial</button>
           ${linksHtml(links)}
         </section>`;
       bindLinkButtons(el);
@@ -2237,7 +1863,7 @@ const Dspico = (() => {
           const sel = document.getElementById("dspico-rp2-select");
           const path = sel && sel.value;
           if (!path) {
-            alert("Nenhum volume RPI-RP2 seleccionado.");
+            alert("Nenhum volume RPI-RP2 selecionado.");
             return;
           }
           if (
@@ -2272,12 +1898,12 @@ const Dspico = (() => {
     leave,
     refresh,
     setSection,
+    selectSection,
     onDrivesUpdated,
     onNativeDrop,
     addGames,
     importPaths,
     openArtPanel,
-    closeArtPanel,
     runDspicoArtworkBatch,
   };
 })();

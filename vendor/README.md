@@ -1,15 +1,13 @@
-# Vendor — pacotes base incluídos
+# Vendor
 
-## `GEiv4.2_EN`
+## `GEiv4.2_EN` (não distribuído)
 
-Kernel / MoonShell do flashcard **Galaxy Eagle i (GEi)** usado pelo Route Pico quando não há outra pasta completa em `~/Downloads/GEiv4.2_EN` ou no cache.
+O kernel e o MoonShell do flashcard **Galaxy Eagle i (GEi)** são software do fabricante, sem licença que permita redistribuição. Por isso a pasta `vendor/GEiv4.2_EN` **não faz parte do repositório nem do app** (está no `.gitignore` e fora do `packaging/RoutePico.spec`).
 
-Conteúdo esperado na raiz:
+O Route Pico procura o pacote, nesta ordem:
 
-- `_DS_MENU.DAT`, `_DS_MSHL.NDS` (obrigatórios)
-- `_DS_MENU.INI` (opcional)
-- `_SYSTEM_/`, `MOONSHL/` (copiados se existirem)
+1. `~/Downloads/GEiv4.2_EN` (o caminho que o assistente pede ao usuário);
+2. `~/.route_1_kit_cache/GEiv4.2_EN`;
+3. `vendor/GEiv4.2_EN` numa cópia local de desenvolvimento, se existir.
 
-Não inclui `roms/` nem ficheiros `.sav` de sessão do utilizador.
-
-Origem desta cópia: backup local do MicroSD GEi (`Backup_DSI_SD_*`). O cartão ligado pode falhar à leitura; use um backup saudável para actualizar este pacote.
+Arquivos obrigatórios na raiz: `_DS_MENU.DAT` e `_DS_MSHL.NDS`; `_DS_MENU.INI`, `_SYSTEM_/` e `MOONSHL/` são copiados se existirem.

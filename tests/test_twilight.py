@@ -291,7 +291,7 @@ def test_install_r4_copies_kernel_only(tmp_path, monkeypatch):
 
 
 def test_install_r4_rollback_on_mid_failure(tmp_path, monkeypatch):
-    """Falha a meio deve reverter ficheiros novos e restaurar os que existiam."""
+    """Falha no meio deve reverter arquivos novos e restaurar os que existiam."""
     downloads = tmp_path / "Downloads"
     downloads.mkdir()
     src = downloads / "MyR4"

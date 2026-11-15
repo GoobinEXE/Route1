@@ -167,7 +167,7 @@ def test_browse_lists_retro_in_games(tmp_path):
 
 
 def test_dup_index_cache_reused(tmp_path):
-    """Índice de duplicatas partilha o mesmo objecto em cache (TTL)."""
+    """Índice de duplicatas compartilha o mesmo objeto em cache (TTL)."""
     from tests.conftest import make_nds
 
     _minimal_dspico_sd(tmp_path)
@@ -403,8 +403,9 @@ def test_organize_dspico_platform_layout(tmp_path):
     assert ok, msg
     assert (tmp_path / "Games" / "nds").is_dir()
     assert any((tmp_path / "Games" / "nds").glob("*.nds"))
-    assert (tmp_path / "Games" / "dsi").is_dir()
-    assert any((tmp_path / "Games" / "dsi").glob("*.dsi"))
+    # PicoDex: .dsi pertence ao sistema "nds" → Games/nds/ (sem pasta dsi/).
+    assert any((tmp_path / "Games" / "nds").glob("*.dsi"))
+    assert not (tmp_path / "Games" / "dsi").exists()
     assert (tmp_path / "Games" / "gb").is_dir()
     assert any((tmp_path / "Games" / "gb").glob("*.gb"))
 
@@ -528,3 +529,29 @@ def test_dspico_import_conflict_skip_and_replace(tmp_path):
     files = list(games.glob("*.nds"))
     assert len(files) == 1
     assert files[0].stat().st_size > 0x200 + 100
+
+
+def test_import_by_system_places_each_rom_in_its_system_folder(tmp_path):
+    """PicoDex importer: Games/<pasta do sistema>/, resultado por arquivo."""
+    from tests.conftest import make_nds
+
+    _minimal_dspico_sd(tmp_path)
+    (tmp_path / "Games" / "Aberta").mkdir(parents=True, exist_ok=True)
+    src = tmp_path / "host"
+    src.mkdir()
+    make_nds(str(src / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    (src / "Tetris.gb").write_bytes(b"GB" * 64)
+    (src / "Zelda.gbc").write_bytes(b"GBC" * 64)
+    (src / "notes.txt").write_text("x")
+
+    ok, msg, stats = dspico.import_dspico_games(
+        str(tmp_path), [str(p) for p in sorted(src.iterdir())], dest_rel_dir="Aberta", by_system=True
+    )
+    assert ok, msg
+    assert (tmp_path / "Games" / "nds" / "Kart.nds").is_file()
+    assert (tmp_path / "Games" / "gb" / "Tetris.gb").is_file()
+    assert (tmp_path / "Games" / "gb" / "Zelda.gbc").is_file()  # gb e gbc dividem a pasta
+    assert not any((tmp_path / "Games" / "Aberta").iterdir())
+    added = {i["name"]: i for i in stats["items"] if i["status"] == "added"}
+    assert added["Kart.nds"]["rel"] == "Games/nds/Kart.nds"
+    assert set(added) == {"Kart.nds", "Tetris.gb", "Zelda.gbc"}

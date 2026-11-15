@@ -38,7 +38,7 @@ _TRUE_LITERALS = frozenset({"1", "true", "yes", "on"})
 _FALSE_LITERALS = frozenset({"0", "false", "no", "off", ""})
 
 
-# --- Wrappers lazy (arranque leve; monkeypatch em testes via app.<nome>) ----
+# --- Wrappers lazy (inicialização leve; monkeypatch em testes via app.<nome>) ----
 
 
 def is_safe_mount_path(path):
@@ -448,7 +448,13 @@ class Api:
 
     @_run_mount_op(min_free_mb=8)
     def import_dspico_games(
-        self, mount_path, host_paths=None, dest_rel_dir="", conflict_resolutions=None
+        self,
+        mount_path,
+        host_paths=None,
+        dest_rel_dir="",
+        conflict_resolutions=None,
+        by_system=False,
+        fetch_covers=False,
     ):
         from core.dspico import import_dspico_games as do_import_dspico_games
         from core.rom_manager import normalize_conflict_resolutions
@@ -456,32 +462,55 @@ class Api:
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
-            return _reject("Lista de ficheiros inválida.")
+            return _reject("Lista de arquivos inválida.")
         expanded = []
         for raw in host_paths:
             if not isinstance(raw, str):
                 continue
-            p, err = _as_path_str(raw, label="ficheiro")
+            p, err = _as_path_str(raw, label="arquivo")
             if err:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum arquivo válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
         resolutions = normalize_conflict_resolutions(conflict_resolutions)
         if resolutions is None:
             return _reject("Resoluções de conflito inválidas.")
+        by_system_b, err = _as_bool(by_system, default=False)
+        if err:
+            return _reject(err)
+        fetch_covers_b, err = _as_bool(fetch_covers, default=False)
+        if err:
+            return _reject(err)
         success, msg, stats = do_import_dspico_games(
             mount_path,
             expanded,
             dest_rel_dir=dest,
             log_callback=add_log,
             conflict_resolutions=resolutions,
+            by_system=by_system_b,
         )
+        stats = stats or {}
+        # Como a PicoDex: logo após copiar, busca a capa dos jogos novos (só o par
+        # exato do catálogo; nunca sobrescreve). Ainda dentro do OP_LOCK.
+        if success and fetch_covers_b:
+            from core.library_views import fetch_missing_covers
+
+            added = [i for i in stats.get("items", []) if i.get("status") == "added" and i.get("bucket") != "apps"]
+            if added:
+                try:
+                    covers = fetch_missing_covers(mount_path, [i["rel"] for i in added], log=add_log)
+                    by_rel = {r["rel"]: r["status"] for r in covers.get("results", [])}
+                    for i in added:
+                        st = by_rel.get(i["rel"])
+                        i["cover"] = "fetched" if st == "written" else ("none" if st in ("no-match", None) else "error")
+                except Exception as e:  # capas são um bônus: nunca derrubam a importação
+                    add_log(f"⚠️ Capas após importar: {redact_text(str(e))}")
         result = _api_result(success, msg)
-        result["stats"] = stats or {}
+        result["stats"] = stats
         return result
 
     def find_duplicate_dspico_games(self, mount_path):
@@ -514,17 +543,17 @@ class Api:
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
-            return _reject("Lista de ficheiros inválida.")
+            return _reject("Lista de arquivos inválida.")
         expanded = []
         for raw in host_paths:
             if not isinstance(raw, str):
                 continue
-            p, err = _as_path_str(raw, label="ficheiro")
+            p, err = _as_path_str(raw, label="arquivo")
             if err:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum arquivo válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -623,7 +652,7 @@ class Api:
         return result
 
     def get_dspico_game_artwork(self, mount_path, rel_path=""):
-        """Estado actual de capa/ícone Pico Launcher para um jogo em Games/."""
+        """Estado atual de capa/ícone Pico Launcher para um jogo em Games/."""
         from core.pico_artwork import get_dspico_game_artwork as do_get_dspico_game_artwork
 
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
@@ -771,13 +800,13 @@ class Api:
         return result
 
     def pick_dspico_bios_file(self):
-        """Escolher dump local biosnds7.rom (não descarrega da rede)."""
+        """Escolher dump local biosnds7.rom (não baixa da rede)."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
                 caption="BIOS ARM7",
-                filters=("BIOS ARM7 (*.rom *.bin)", "Todos os ficheiros (*.*)"),
+                filters=("BIOS ARM7 (*.rom *.bin)", "Todos os arquivos (*.*)"),
                 multiple=False,
             )
         except Exception as e:
@@ -793,11 +822,11 @@ class Api:
     def pick_dspico_font_file(self):
         """Escolher TWLFontTable.dat local."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
                 caption="TWLFontTable",
-                filters=("TWLFontTable (*.dat)", "Todos os ficheiros (*.*)"),
+                filters=("TWLFontTable (*.dat)", "Todos os arquivos (*.*)"),
                 multiple=False,
             )
         except Exception as e:
@@ -905,7 +934,7 @@ class Api:
                 continue
             clean_ids.append(eid)
         if not clean_ids:
-            return _reject("Seleccione pelo menos um emulador.")
+            return _reject("Selecione pelo menos um emulador.")
         success, msg, details = do_install_dspico_emulators(
             mount_path, clean_ids, log_callback=add_log
         )
@@ -934,7 +963,7 @@ class Api:
             OP_LOCK.release()
 
     def flash_dspico_firmware(self, rp2_mount_path):
-        """Grava UF2 oficial LNH no RPI-RP2 — sem path de ficheiro da UI."""
+        """Grava UF2 oficial LNH no RPI-RP2 — sem path de arquivo da UI."""
         from core.dspico import flash_dspico_firmware as do_flash_dspico_firmware, is_rp2_volume
 
         rp2_mount_path, err = _as_path_str(
@@ -957,9 +986,9 @@ class Api:
             OP_LOCK.release()
 
     def pick_dspico_rom_files(self):
-        """Diálogo multi-ficheiro: ROMs DSPico (todos os emuladores) e arquivos."""
+        """Diálogo multiarquivo: ROMs DSPico (todos os emuladores) e arquivos."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             from core.dspico_emulators import dspico_rom_picker_filter_labels
 
@@ -1050,7 +1079,7 @@ class Api:
             OP_LOCK.release()
 
     def list_rom_dir(self, mount_path, rel_dir=""):
-        """Lista pastas + ROMs num nível sob /roms/."""
+        """Lista pastas + ROMs em um nível sob /roms/."""
         from core.rom_manager import list_rom_dir as do_list_rom_dir
 
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
@@ -1094,7 +1123,7 @@ class Api:
             OP_LOCK.release()
 
     def browse_roms(self, mount_path, rel_dir=""):
-        """Pasta actual + árvore numa só aquisição de OP_LOCK (evita falso 'em andamento')."""
+        """Pasta atual + árvore em uma só aquisição de OP_LOCK (evita falso 'em andamento')."""
         from core.rom_manager import browse_roms as do_browse_roms
 
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
@@ -1117,7 +1146,7 @@ class Api:
             OP_LOCK.release()
 
     def rom_details(self, mount_path, rel_path=""):
-        """Detalhes de um jogo (capa, ícone, como corre) — leitura sob OP_LOCK."""
+        """Detalhes de um jogo (capa, ícone, como roda) — leitura sob OP_LOCK."""
         from core.rom_manager import rom_details as do_rom_details
 
         mount_path, err = _as_path_str(mount_path, label="caminho do cartão")
@@ -1171,7 +1200,7 @@ class Api:
     def pick_image_file(self):
         """Diálogo para escolher PNG/BMP (capa/ícone TWiLight ou DSPico)."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
                 caption="Capa ou ícone (PNG ou BMP)",
@@ -1179,7 +1208,7 @@ class Api:
                     "PNG ou BMP (*.png *.bmp)",
                     "PNG (*.png)",
                     "BMP (*.bmp)",
-                    "Todos os ficheiros (*.*)",
+                    "Todos os arquivos (*.*)",
                 ),
                 multiple=False,
             )
@@ -1233,7 +1262,7 @@ class Api:
                 continue
             cleaned.append(p.replace("\\", "/").lstrip("/"))
         if not cleaned:
-            return _reject("Nenhum jogo seleccionado.")
+            return _reject("Nenhum jogo selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1245,9 +1274,9 @@ class Api:
         return result
 
     def pick_rom_files(self):
-        """Diálogo multi-ficheiro: ROMs e arquivos (.zip/.7z/.rar)."""
+        """Diálogo multiarquivo: ROMs e arquivos (.zip/.7z/.rar)."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
                 caption="Importar ROMs / arquivos",
@@ -1258,7 +1287,7 @@ class Api:
                     "ROMs (*.nds *.dsi *.ids *.gba *.gb *.gbc *.nes *.sfc *.smc "
                     "*.md *.gen *.sms *.gg *.pce *.col *.a26 *.ws *.ngp)",
                     "Arquivos (*.zip *.7z *.7zip *.rar)",
-                    "Todos os ficheiros (*.*)",
+                    "Todos os arquivos (*.*)",
                 ),
                 multiple=True,
             )
@@ -1321,17 +1350,17 @@ class Api:
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
-            return _reject("Lista de ficheiros inválida.")
+            return _reject("Lista de arquivos inválida.")
         expanded = []
         for raw in host_paths:
             if not isinstance(raw, str):
                 continue
-            p, err = _as_path_str(raw, label="ficheiro")
+            p, err = _as_path_str(raw, label="arquivo")
             if err:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum arquivo válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1386,17 +1415,17 @@ class Api:
         if host_paths is None:
             host_paths = []
         if not isinstance(host_paths, (list, tuple)):
-            return _reject("Lista de ficheiros inválida.")
+            return _reject("Lista de arquivos inválida.")
         expanded = []
         for raw in host_paths:
             if not isinstance(raw, str):
                 continue
-            p, err = _as_path_str(raw, label="ficheiro")
+            p, err = _as_path_str(raw, label="arquivo")
             if err:
                 continue
             expanded.append(expand_user_path(p) if p.startswith("~") else p)
         if not expanded:
-            return _reject("Nenhum ficheiro válido seleccionado.")
+            return _reject("Nenhum arquivo válido selecionado.")
         dest = dest_rel_dir if isinstance(dest_rel_dir, str) else ""
         if "\x00" in dest:
             return _reject("Destino inválido.")
@@ -1442,7 +1471,7 @@ class Api:
                 continue
             cleaned_rels.append(p.replace("\\", "/").lstrip("/"))
         if not cleaned_rels:
-            return _reject("Nenhum jogo seleccionado.")
+            return _reject("Nenhum jogo selecionado.")
 
         backup = ""
         if mode == "backup":
@@ -1519,7 +1548,7 @@ class Api:
 
     @_run_mount_op(min_free_mb=2)
     def fetch_rom_artwork(self, mount_path, rel_path=""):
-        """Descarrega capa/ícone (GameTDB ou Libretro) para um jogo em /roms/."""
+        """Baixa capa/ícone (GameTDB ou Libretro) para um jogo em /roms/."""
         from core.artwork import fetch_rom_artwork as do_fetch_rom_artwork
 
         rel, err = _as_path_str(rel_path, label="caminho do jogo")
@@ -1629,7 +1658,7 @@ class Api:
         if sys.platform == "darwin":
             add_log(
                 "No macOS, pode abrir uma janela do Terminal para confirmares "
-                "a palavra-passe do sudo (cluster 32 KB)."
+                "a senha do sudo (cluster 32 KB)."
             )
         ok, msg, _drive = preflight(mount_path, min_free_mb=1, require_fat=False)
         if not ok:
@@ -1638,7 +1667,7 @@ class Api:
         add_log(msg)
         return _api_result(success, msg)
 
-    # --- Actualizações DSPico / Utilidades / prefs --------------------------
+    # --- Atualizações DSPico / Utilidades / prefs --------------------------
 
     def check_dspico_updates(self, mount_path=""):
         from core.updates import check_dspico_updates as _check
@@ -1770,7 +1799,7 @@ class Api:
     # --- RouteDex (biblioteca nativa; baseado no PicoDex de rasalopa, MIT) ---
 
     def _routedex_read(self, mount_path, fn, *args):
-        """Leitura RouteDex: valida a montagem, corre sob OP_LOCK sem preflight de escrita."""
+        """Leitura RouteDex: valida a montagem, roda sob OP_LOCK sem preflight de escrita."""
         from core.routedex import RouteDexError
 
         path, err = _as_path_str(mount_path, label="caminho do cartão")
@@ -1797,7 +1826,7 @@ class Api:
             return None, err
         p = expand_user_path(p) if p.startswith("~") else p
         if not os.path.isfile(p):
-            return None, f"{label}: ficheiro não encontrado."
+            return None, f"{label}: arquivo não encontrado."
         return p, None
 
     def get_routedex_overview(self, mount_path):
@@ -1836,6 +1865,214 @@ class Api:
 
         return self._routedex_read(mount_path, check_health)
 
+    def get_routedex_compat(self, mount_path, rel):
+        """Ficha de compatibilidade do Pico Loader para um jogo NDS (só leitura)."""
+        from core.loader_compat import game_compat
+        from core.routedex import resolve_card_path
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        if not r.lower().endswith((".nds", ".dsi", ".srl")):
+            return _reject("A ficha de compatibilidade é só para jogos de DS.")
+        return self._routedex_read(mount_path, lambda p: game_compat(p, resolve_card_path(p, r)))
+
+    # --- Vistas da PicoDex: biblioteca por sistema, galeria, capas, estatísticas
+
+    def get_routedex_library(self, mount_path):
+        from core.library_views import library_overview
+
+        return self._routedex_read(mount_path, library_overview)
+
+    def get_routedex_gallery(self, mount_path, system_id):
+        from core.library_views import system_gallery
+
+        return self._routedex_read(mount_path, system_gallery, str(system_id or "")[:16])
+
+    def get_routedex_gallery_covers(self, mount_path, rels):
+        from core.library_views import gallery_covers
+
+        return self._routedex_read(mount_path, gallery_covers, rels if isinstance(rels, list) else [])
+
+    def get_routedex_covers_by_name(self, mount_path, file_names):
+        from core.library_views import gallery_covers_by_name
+
+        return self._routedex_read(mount_path, gallery_covers_by_name, file_names if isinstance(file_names, list) else [])
+
+    def get_missing_covers(self, mount_path):
+        from core.library_views import missing_covers
+
+        return self._routedex_read(mount_path, missing_covers)
+
+    @_run_mount_op(min_free_mb=8)
+    def fetch_missing_covers(self, mount_path, rels):
+        from core.library_views import fetch_missing_covers
+
+        if not isinstance(rels, list):
+            return _reject("Lista inválida.")
+        return fetch_missing_covers(mount_path, [str(r) for r in rels][:500], log=add_log)
+
+    def get_routedex_stats(self, mount_path):
+        from core.library_views import play_stats
+
+        return self._routedex_read(mount_path, play_stats)
+
+    # --- Associações de arquivo (settings.json → fileAssociations)
+
+    def get_file_associations(self, mount_path):
+        from core.dspico import get_file_associations
+
+        return self._routedex_read(mount_path, get_file_associations)
+
+    @_run_mount_op(min_free_mb=1)
+    def set_file_associations(self, mount_path, items):
+        from core.dspico import set_file_associations
+
+        ok, msg = set_file_associations(mount_path, items, log_callback=add_log)
+        return _api_result(ok, msg)
+
+    # --- Janela de capa e ícone / banner de pasta (PicoDex CoverPicker, BannerEditor)
+
+    def _art_call(self, fn, *args):
+        from core.art_picker import ArtPickerError
+        from core.routedex import RouteDexError
+
+        try:
+            return fn(*args)
+        except (ArtPickerError, RouteDexError) as e:
+            return _reject(str(e))
+        except Exception as e:
+            return _reject(e)
+
+    def get_art_picker_context(self, mount_path, rel):
+        from core.art_picker import ArtPickerError, picker_context
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+
+        def run(p):
+            try:
+                return picker_context(p, r)
+            except ArtPickerError as e:
+                return _reject(str(e))
+
+        return self._routedex_read(mount_path, run)
+
+    def search_art_catalog(self, repo, query="", kind="boxarts", title="", game_code="", system_id=""):
+        from core.art_picker import catalog_search
+
+        return self._art_call(
+            catalog_search, str(repo or ""), str(query or "")[:120], str(kind or "boxarts"),
+            str(title or "")[:200], str(game_code or "")[:8], str(system_id or "")[:16],
+        )
+
+    def get_art_catalog_thumbs(self, repo, names, kind="boxarts"):
+        from core.art_picker import catalog_thumbs
+
+        return self._art_call(catalog_thumbs, str(repo or ""), names, str(kind or "boxarts"))
+
+    def get_art_catalog_image(self, repo, name, kind="boxarts"):
+        from core.art_picker import catalog_image
+
+        return self._art_call(catalog_image, str(repo or ""), str(name or ""), str(kind or "boxarts"))
+
+    def get_art_remote_image(self, url):
+        from core.art_picker import remote_image
+
+        return self._art_call(remote_image, str(url or ""))
+
+    def pick_art_image(self):
+        """Escolhe uma imagem do computador e devolve-a como data URL (a UI compõe)."""
+        from core.art_picker import host_image
+
+        if self._picker is None:
+            return _reject("Diálogo de arquivos indisponível.")
+        try:
+            cancelled, paths = self._picker.open_files(
+                caption="Escolher imagem",
+                filters=("Imagens (*.png;*.jpg;*.jpeg;*.webp;*.gif;*.bmp)", "Todos os arquivos (*.*)"),
+                multiple=False,
+            )
+        except Exception as e:
+            return _reject(e)
+        if cancelled or not paths:
+            return {"success": True, "cancelled": True}
+        out = host_image(paths[0])
+        if out.get("success"):
+            out["name"] = os.path.basename(paths[0])
+        return out
+
+    def encode_art(self, kind, rgba_b64):
+        from core.art_picker import encode_art
+
+        return self._art_call(encode_art, str(kind or ""), rgba_b64)
+
+    def get_icon_sources(self, mount_path, rel, query=""):
+        """Candidatas a ícone (ROM, SteamGridDB, logos libretro). Rede sem OP_LOCK."""
+        from core.art_picker import icon_sources
+
+        path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return self._art_call(icon_sources, path, r, str(query or "")[:120])
+
+    @_run_mount_op(min_free_mb=1)
+    def save_game_art(self, mount_path, rel, cover_token=None, icon_token=None):
+        from core.art_picker import save_art
+
+        r, err = _as_path_str(rel, label="jogo")
+        if err:
+            return _reject(err)
+        return self._art_call(save_art, mount_path, r, cover_token, icon_token, add_log)
+
+    def get_banner_context(self, mount_path, rel_folder):
+        from core.art_picker import ArtPickerError, banner_context
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+
+        def run(p):
+            try:
+                return banner_context(p, rf)
+            except ArtPickerError as e:
+                return _reject(str(e))
+
+        return self._routedex_read(mount_path, run)
+
+    def get_banner_icon_sources(self, mount_path, rel_folder, query="", game=""):
+        from core.art_picker import banner_icon_sources
+
+        path, err = _as_path_str(mount_path, label="caminho do cartão")
+        if err:
+            return _reject(err)
+        unsafe = _reject_if_unsafe_mount(path)
+        if unsafe:
+            return unsafe
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        return self._art_call(banner_icon_sources, path, rf, str(query or "")[:120], str(game or "")[:255])
+
+    @_run_mount_op(min_free_mb=1)
+    def save_folder_banner(self, mount_path, rel_folder, title, icon_token=None, keep_icon=False):
+        from core.art_picker import save_banner
+
+        rf, err = _as_path_str(rel_folder, label="pasta")
+        if err:
+            return _reject(err)
+        keep, err = _as_bool(keep_icon, default=False)
+        if err:
+            return _reject(err)
+        return self._art_call(save_banner, mount_path, rf, str(title or "")[:127], icon_token, keep, add_log)
+
     @_run_mount_op(min_free_mb=1)
     def remove_routedex_items(self, mount_path, rels):
         from core.routedex import remove_card_items
@@ -1860,8 +2097,8 @@ class Api:
         from core.routedex import export_screenshot
 
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
-        cancelled, folder = self._picker.open_folder(caption="Guardar captura em")
+            return _reject("Diálogo de arquivos indisponível.")
+        cancelled, folder = self._picker.open_folder(caption="Salvar captura em")
         if cancelled or not folder:
             return {"success": True, "cancelled": True}
         sid = str(shot_id or "")
@@ -1945,11 +2182,11 @@ class Api:
     def pick_usrcheat_file(self):
         """Escolher usrcheat.dat local (base de cheats R4/Pico Launcher)."""
         if self._picker is None:
-            return _reject("Diálogo de ficheiros indisponível.")
+            return _reject("Diálogo de arquivos indisponível.")
         try:
             cancelled, paths = self._picker.open_files(
                 caption="Base de cheats",
-                filters=("Base de cheats (*.dat)", "Todos os ficheiros (*.*)"),
+                filters=("Base de cheats (*.dat)", "Todos os arquivos (*.*)"),
                 multiple=False,
             )
         except Exception as e:
@@ -2034,7 +2271,7 @@ class Api:
 
 
 def _user_data_dir() -> str:
-    """Pasta de dados do utilizador (compat; preferir core.prefs.user_data_dir)."""
+    """Pasta de dados do usuário (compat; preferir core.prefs.user_data_dir)."""
     from core.prefs import user_data_dir
 
     return user_data_dir()

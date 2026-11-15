@@ -5,8 +5,32 @@ from __future__ import annotations
 import struct
 import zlib
 
-from core import pico_artwork, pico_bmp
+import pytest
+
+from core import pico_artwork, pico_bmp, picodex_rules
 from tests.conftest import make_nds
+
+# Catálogos libretro-thumbnails simulados (sem rede nos testes).
+FAKE_CATALOGS = {
+    "Nintendo_-_Nintendo_DS": [
+        "Mario Kart DS (USA, Australia).png",
+        "Mario Kart DS (Europe) (En,Fr,De,Es,It).png",
+        "Mario Kart DS (Japan).png",
+    ],
+    "Nintendo_-_Game_Boy_Advance": ["Metroid Fusion (USA).png", "Metroid Fusion (Europe) (En,Fr,De,Es,It).png"],
+    "Sega_-_Mega_Drive_-_Genesis": ["Sonic The Hedgehog (USA, Europe).png"],
+    "Nintendo_-_Game_Boy": ["Tetris (World) (Rev 1).png"],
+}
+
+
+@pytest.fixture(autouse=True)
+def _no_network_catalog(monkeypatch):
+    def fake_fetch(repo, **_kw):
+        if repo not in FAKE_CATALOGS:
+            raise picodex_rules.CatalogError("sem catálogo no teste")
+        return list(FAKE_CATALOGS[repo])
+
+    monkeypatch.setattr(picodex_rules, "fetch_catalog", fake_fetch)
 
 
 def _png_rgba(w: int, h: int, rgba: bytes) -> bytes:
@@ -81,12 +105,6 @@ def test_image_bytes_to_pico_bmp_accepts_oversized():
     assert (iw, ih) == (32, 32)
 
 
-def test_search_name_variants_include_regions():
-    names = pico_artwork._search_name_variants("Mario Kart DS", "Mario Kart DS.nds")
-    assert any("Mario Kart DS" in n for n in names)
-    assert any("(USA)" in n for n in names)
-
-
 def test_get_and_set_dspico_artwork(fake_sd, monkeypatch, tmp_path):
     games = fake_sd / "Games"
     games.mkdir()
@@ -107,9 +125,10 @@ def test_get_and_set_dspico_artwork(fake_sd, monkeypatch, tmp_path):
         str(fake_sd), "Kart.nds", "cover", str(src)
     )
     assert ok is True, msg
+    # Regra da PicoDex: um só destino, por game code.
     dest = fake_sd / "_pico" / "covers" / "nds" / "AMCE.bmp"
     assert dest.is_file()
-    assert (fake_sd / "_pico" / "covers" / "user" / "Kart.nds.bmp").is_file()
+    assert not (fake_sd / "_pico" / "covers" / "user" / "Kart.nds.bmp").exists()
 
     meta2 = pico_artwork.get_dspico_game_artwork(str(fake_sd), "Kart.nds")
     assert meta2["has_cover"] is True
@@ -122,7 +141,25 @@ def test_get_and_set_dspico_artwork(fake_sd, monkeypatch, tmp_path):
     )
     assert ok is True, msg
     assert (fake_sd / "_pico" / "icons" / "nds" / "AMCE.bmp").is_file()
-    assert (fake_sd / "_pico" / "icons" / "user" / "Kart.nds.bmp").is_file()
+    assert not (fake_sd / "_pico" / "icons" / "user" / "Kart.nds.bmp").exists()
+
+
+def test_existing_user_art_is_replaced_in_place(fake_sd, monkeypatch, tmp_path):
+    games = fake_sd / "Games"
+    games.mkdir()
+    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    user = fake_sd / "_pico" / "covers" / "user" / "Kart.nds.bmp"
+    user.parent.mkdir(parents=True)
+    user.write_bytes(b"BM" + b"\x00" * 200)
+    monkeypatch.setattr(pico_artwork, "is_safe_mount_path", lambda p: True)
+    monkeypatch.setattr(pico_artwork, "sync_volume", lambda *a, **k: None)
+    src = tmp_path / "c.png"
+    src.write_bytes(_solid_png(80, 60))
+    ok, msg, _ = pico_artwork.set_dspico_artwork_file(str(fake_sd), "Kart.nds", "cover", str(src))
+    assert ok, msg
+    # user/ tem prioridade no launcher: gravar em nds/ seria um "no-op" silencioso.
+    assert user.read_bytes()[:2] == b"BM" and len(user.read_bytes()) > 202
+    assert not (fake_sd / "_pico" / "covers" / "nds" / "AMCE.bmp").exists()
 
 
 def test_search_dspico_artwork_candidates(fake_sd, monkeypatch):
@@ -150,7 +187,7 @@ def test_search_dspico_artwork_candidates(fake_sd, monkeypatch):
     )
     assert data["success"] is True
     assert data["candidates"]
-    # Pesquisa sonda existência (HEAD) mas não descarrega o PNG.
+    # Pesquisa sonda existência (HEAD) mas não baixa o PNG.
     assert called["get"] == 0
     assert called["exists"] > 0
     preview = data["candidates"][0]["preview"]
@@ -270,24 +307,26 @@ def test_retro_artwork_user_bucket(fake_sd, monkeypatch, tmp_path):
     assert entry["has_cover"] is True
 
 
-def test_collect_candidates_include_jsdelivr(fake_sd, monkeypatch):
+def test_collect_candidates_picodex_first_with_region(fake_sd):
     games = fake_sd / "Games"
     games.mkdir()
-    make_nds(str(games / "Kart.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
+    make_nds(str(games / "Mario Kart DS.nds"), title=b"MARIOKARTDS", code=b"AMCE", maker=b"01")
     items = pico_artwork._collect_candidate_urls(
         kind="cover",
         platform="nds",
-        basename="Kart.nds",
+        basename="Mario Kart DS.nds",
         tid="AMCE",
         title="Mario Kart DS",
         query="",
     )
-    sources = {i["source"] for i in items}
-    assert "gametdb" in sources
-    assert "libretro" in sources
-    assert "jsdelivr" in sources
-    assert any("cdn.jsdelivr.net" in i["url"] for i in items)
-
+    assert items[0]["source"] == "picodex"
+    # AMCE termina em E (EUA): a região vem do game code também no NDS (melhoria
+    # sobre a PicoDex, que só usa o código no GBA e cai em Europe → USA → World).
+    assert "Mario%20Kart%20DS%20%28USA" in items[0]["url"]
+    assert items[0]["url"].startswith("https://raw.githubusercontent.com/libretro-thumbnails/Nintendo_-_Nintendo_DS/")
+    sources = [i["source"] for i in items]
+    assert "gametdb" in sources and sources.index("gametdb") > sources.index("picodex")
+    assert not any(i["source"] in ("libretro", "jsdelivr") for i in items)
 
 def test_collect_candidates_genesis_not_nds():
     items = pico_artwork._collect_candidate_urls(
@@ -299,22 +338,23 @@ def test_collect_candidates_genesis_not_nds():
         query="",
     )
     assert items
-    assert all("Nintendo%20DS" not in u["url"] and "Nintendo DS" not in u["url"] for u in items)
-    assert any("Mega%20Drive" in u["url"] or "Genesis" in u["url"] for u in items)
+    assert all("Nintendo_DS" not in u["url"] for u in items)
+    assert items[0]["url"].endswith("Sonic%20The%20Hedgehog%20%28USA%2C%20Europe%29.png")
 
 
 def test_collect_candidates_gba_skips_gametdb_ds():
     items = pico_artwork._collect_candidate_urls(
         kind="cover",
         platform="gba",
-        basename="Metroid.gba",
-        tid="AXVE",
-        title="Metroid",
+        basename="Metroid Fusion.gba",
+        tid="AMTE",
+        title="Metroid Fusion",
         query="",
     )
     assert items
     assert not any(i["source"] == "gametdb" for i in items)
-    assert any("Game%20Boy%20Advance" in i["url"] for i in items)
+    # Game code GBA terminado em E → USA primeiro (REGION_PREFS_BY_GBA_CODE).
+    assert "Game_Boy_Advance" in items[0]["url"] and "%28USA%29" in items[0]["url"]
 
 
 def test_search_filters_dead_urls(fake_sd, monkeypatch):
@@ -332,7 +372,9 @@ def test_search_filters_dead_urls(fake_sd, monkeypatch):
     )
     assert data["success"]
     assert data["candidates"]
-    assert all("AMCE" in c["url"] for c in data["candidates"])
+    # Opções da PicoDex vêm do catálogo (existem); as outras fontes são sondadas.
+    probed = [c for c in data["candidates"] if c["source"] != "picodex"]
+    assert probed and all("AMCE" in c["url"] for c in probed)
 
 
 def test_generate_dspico_artwork_batch_cover_icon_and_missing(fake_sd, monkeypatch):

@@ -1,6 +1,6 @@
 """Cliente SteamGridDB (API v2) — fonte principal de capas e ícones.
 
-Requer chave API do utilizador (prefs `steamgriddb_api_key` ou env
+Requer chave API do usuário (prefs `steamgriddb_api_key` ou env
 `STEAMGRIDDB_API_KEY`). Sem chave, as funções devolvem listas vazias / None
 e o pipeline cai para GameTDB / Libretro.
 
@@ -72,7 +72,7 @@ def _log_api_failure(status: Optional[int], *, reason: str) -> None:
     if code in (401, 403):
         msg = (
             f"SteamGridDB: chave rejeitada (HTTP {code}) — "
-            "verifique a chave em Definições."
+            "verifique a chave em Configurações."
         )
     elif code:
         msg = f"SteamGridDB: falha na API (HTTP {code})."

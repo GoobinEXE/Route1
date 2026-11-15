@@ -1,0 +1,11 @@
+Logo do DSPico (framboesa)
+Copyright (c) LNH team
+Fonte: https://github.com/LNH-team/dspico-hardware/tree/main/dspico-artwork-design/logo
+Licença: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+Texto completo: https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+Uso no Route Pico: a framboesa aparece sem alterações de forma ou cor nos ícones do
+programa (static/assets/logo.svg, static/assets/logo-small.svg e os PNG/ICO/ICNS gerados
+por tools/build_icons.py), combinada com a seta de rota. Esses ícones são obras derivadas
+e são distribuídos sob a mesma licença CC BY-SA 4.0. O resto do Route Pico mantém a sua
+própria licença.
